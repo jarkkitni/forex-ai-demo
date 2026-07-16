@@ -3,7 +3,7 @@ ForexAI Pro — API Server
 เชื่อม Claude AI + ราคา Forex/BTC + LINE Notification
 รัน: python api_server.py
 """
-import os, json, requests
+import os, json, requests, traceback
 from datetime import datetime
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -25,47 +25,44 @@ signal_history = []  # เก็บประวัติสัญญาณ (in-m
 
 def fetch_forex(base: str, quote: str) -> dict:
     """ดึงราคา Forex จาก frankfurter.app (ฟรี ไม่ต้อง key)"""
-    r = requests.get(f"https://api.frankfurter.app/latest?from={base}&to={quote}", timeout=5)
+    r = requests.get(f"https://api.frankfurter.app/latest?from={base}&to={quote}", timeout=10)
     r.raise_for_status()
     d = r.json()
     price = d["rates"][quote]
-    # ดึง rate เมื่อวาน เพื่อคำนวณ % change
-    try:
-        r2 = requests.get(
-            f"https://api.frankfurter.app/2024-01-01..?from={base}&to={quote}&amount=1",
-            timeout=5
-        )
-        # fallback: ใช้ mock change
-        change_pct = round((price - price * 0.998), 5)
-    except Exception:
-        change_pct = 0.0
     return {"price": price, "change_pct": 0.05, "base": base, "quote": quote}
 
 
-def fetch_crypto(coin_id: str, symbol: str) -> dict:
-    """ดึงราคา Crypto จาก CoinGecko (ฟรี ไม่ต้อง key ไม่ block cloud)"""
+def fetch_kraken(pair: str, result_key: str) -> dict:
+    """ดึงราคา Crypto จาก Kraken (ฟรีแท้จริง ไม่ต้อง key ไม่ block cloud)"""
     r = requests.get(
-        f"https://api.coingecko.com/api/v3/simple/price"
-        f"?ids={coin_id}&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true",
+        f"https://api.kraken.com/0/public/Ticker?pair={pair}",
         timeout=10,
         headers={"Accept": "application/json"}
     )
     r.raise_for_status()
-    d = r.json()[coin_id]
+    d = r.json()
+    if d.get("error"):
+        raise Exception(f"Kraken error: {d['error']}")
+    ticker = d["result"][result_key]
+    price   = float(ticker["c"][0])   # last trade price
+    open_p  = float(ticker["o"])      # today's opening price
+    change_pct = ((price - open_p) / open_p) * 100 if open_p else 0.0
+    volume  = float(ticker["v"][1])   # 24h volume
     return {
-        "price":      float(d["usd"]),
-        "change_pct": float(d.get("usd_24h_change", 0.0)),
-        "volume":     float(d.get("usd_24h_vol", 0.0)),
-        "symbol":     symbol,
+        "price":      price,
+        "change_pct": round(change_pct, 2),
+        "high":       float(ticker["h"][1]),
+        "low":        float(ticker["l"][1]),
+        "volume":     volume,
     }
 
 
 def fetch_btc() -> dict:
-    return fetch_crypto("bitcoin", "BTC")
+    return fetch_kraken("XBTUSD", "XXBTZUSD")
 
 
 def fetch_eth() -> dict:
-    return fetch_crypto("ethereum", "ETH")
+    return fetch_kraken("ETHUSD", "XETHZUSD")
 
 
 # ---------- Claude AI Analysis ----------
@@ -119,7 +116,9 @@ def get_all_prices():
         }
         return jsonify({"success": True, "data": data})
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+        tb = traceback.format_exc()
+        print(f"[ERROR] /api/prices: {e}\n{tb}", flush=True)
+        return jsonify({"success": False, "error": str(e), "traceback": tb}), 500
 
 
 @app.route("/api/analyze", methods=["POST"])
@@ -205,7 +204,6 @@ def health():
 @app.route("/")
 def index():
     """Serve dashboard HTML"""
-    import os
     html_path = os.path.join(os.path.dirname(__file__), "dashboard.html")
     with open(html_path, "r", encoding="utf-8") as f:
         return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
