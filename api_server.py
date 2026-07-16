@@ -42,31 +42,30 @@ def fetch_forex(base: str, quote: str) -> dict:
     return {"price": price, "change_pct": 0.05, "base": base, "quote": quote}
 
 
-def fetch_btc() -> dict:
-    """ดึงราคา BTC/USDT จาก Binance (ฟรี ไม่ต้อง key)"""
-    r = requests.get("https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT", timeout=5)
+def fetch_crypto(coin_id: str, symbol: str) -> dict:
+    """ดึงราคา Crypto จาก CoinGecko (ฟรี ไม่ต้อง key ไม่ block cloud)"""
+    r = requests.get(
+        f"https://api.coingecko.com/api/v3/simple/price"
+        f"?ids={coin_id}&vs_currencies=usd&include_24hr_change=true&include_24hr_vol=true",
+        timeout=10,
+        headers={"Accept": "application/json"}
+    )
     r.raise_for_status()
-    d = r.json()
+    d = r.json()[coin_id]
     return {
-        "price":      float(d["lastPrice"]),
-        "change_pct": float(d["priceChangePercent"]),
-        "high":       float(d["highPrice"]),
-        "low":        float(d["lowPrice"]),
-        "volume":     float(d["volume"]),
+        "price":      float(d["usd"]),
+        "change_pct": float(d.get("usd_24h_change", 0.0)),
+        "volume":     float(d.get("usd_24h_vol", 0.0)),
+        "symbol":     symbol,
     }
+
+
+def fetch_btc() -> dict:
+    return fetch_crypto("bitcoin", "BTC")
 
 
 def fetch_eth() -> dict:
-    """ดึงราคา ETH/USDT"""
-    r = requests.get("https://api.binance.com/api/v3/ticker/24hr?symbol=ETHUSDT", timeout=5)
-    r.raise_for_status()
-    d = r.json()
-    return {
-        "price":      float(d["lastPrice"]),
-        "change_pct": float(d["priceChangePercent"]),
-        "high":       float(d["highPrice"]),
-        "low":        float(d["lowPrice"]),
-    }
+    return fetch_crypto("ethereum", "ETH")
 
 
 # ---------- Claude AI Analysis ----------
