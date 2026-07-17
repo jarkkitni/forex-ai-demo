@@ -7,7 +7,7 @@
 <style>
   *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI','Leelawadee UI',Tahoma,sans-serif}
   body{background:#0f1420;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:22px 12px}
-  h1{color:#e8ecf4;font-size:20px;margin-bottom:4px}
+  h1{color:#e8ecf4;font-size:20px;margin-bottom:4px;text-align:center}
   .sub{color:#7c8aa5;font-size:13px;margin-bottom:16px;text-align:center;line-height:1.6}
   .wrap{display:flex;gap:20px;flex-wrap:wrap;justify-content:center}
 
@@ -25,12 +25,34 @@
   .me{background:#0284c7;color:#fff;align-self:flex-end;border-bottom-right-radius:5px}
   .alert{background:#fef2f2;border:1.5px solid #fca5a5;color:#991b1b;align-self:flex-start;font-weight:600}
   .okmsg{background:#f0fdf4;border:1.5px solid #86efac;color:#166534;align-self:flex-start}
+  .info{background:#f1f5f9;border:1.5px solid #cbd5e1;color:#475569;align-self:flex-start}
+
   .quick{display:flex;flex-wrap:wrap;gap:6px;align-self:flex-start;max-width:96%}
   .quick button{background:#fff;border:1.5px solid #0284c7;color:#0284c7;border-radius:16px;
                 padding:8px 14px;font-size:13px;cursor:pointer;transition:.12s;font-weight:600}
   .quick button:hover{background:#0284c7;color:#fff}
   .quick button.warn{border-color:#dc2626;color:#dc2626}
   .quick button.warn:hover{background:#dc2626;color:#fff}
+  /* ปุ่มข้าม — สีเทา แยกจากปุ่มค่าจริงชัดเจน (สเปก Garuda ข้อ 5) */
+  .quick button.skip{border-color:#94a3b8;color:#64748b;border-style:dashed;background:#f8fafc}
+  .quick button.skip:hover{background:#64748b;color:#fff;border-style:solid}
+  /* ปุ่มย้อนกลับ */
+  .quick button.back{border-color:#cbd5e1;color:#64748b;font-weight:500}
+  .quick button.back:hover{background:#e2e8f0;color:#334155}
+
+  /* ฟอร์มพิมพ์เอง */
+  .manual{align-self:flex-start;background:#fff;border:1.5px solid #0284c7;border-radius:14px;
+          padding:12px;max-width:94%;animation:pop .22s}
+  .manual label{display:block;font-size:12px;font-weight:700;color:#334;margin-bottom:4px}
+  .manual input{width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;
+                font-size:13px;margin-bottom:9px;font-family:inherit;outline:none}
+  .manual input:focus{border-color:#0284c7}
+  .manual .mrow{display:flex;gap:7px}
+  .manual .mrow button{flex:1;border:none;border-radius:9px;padding:9px;font-size:13px;
+                       font-weight:700;cursor:pointer}
+  .manual .ok{background:#0284c7;color:#fff}
+  .manual .cancel{background:#e2e8f0;color:#475569}
+
   .typing{align-self:flex-start;color:#98a2b3;font-size:12px;padding-left:6px}
   .bar{padding:10px;background:#fff;border-top:1px solid #e4e7ec;text-align:center}
   .bar button{background:#eef2f7;border:none;border-radius:14px;padding:8px 18px;font-size:13px;cursor:pointer;color:#334}
@@ -41,12 +63,16 @@
   .card h3{color:#38bdf8;font-size:14px;margin-bottom:10px}
   .card .note{color:#7c8aa5;font-size:11.5px;line-height:1.55;margin-bottom:10px}
   .rec{background:#1b2440;border:1px solid #2c3a63;border-radius:11px;padding:11px;margin-bottom:8px;animation:pop .25s}
-  .rec .rt{color:#fff;font-weight:700;font-size:13px;margin-bottom:4px;display:flex;justify-content:space-between}
+  .rec .rt{color:#fff;font-weight:700;font-size:13px;margin-bottom:5px;display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap}
   .rec .rr{color:#aab6d3;font-size:11.5px;line-height:1.7}
+  .rec .soft{background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:7px;
+             padding:5px 7px;font-size:11px;margin-top:6px;line-height:1.5}
+  .rec .miss{color:#64748b;font-style:italic}
   .empty{color:#4a5878;font-size:12px;text-align:center;padding:24px 0;border:1.5px dashed #26304a;border-radius:11px}
   .pill{font-size:10px;font-weight:800;border-radius:99px;padding:2px 8px}
   .p-ok{background:#052e16;color:#4ade80}
   .p-bad{background:#450a0a;color:#f87171}
+  .p-man{background:#1e1b4b;color:#a5b4fc}
   .filters{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11.5px}
   .fbox{background:#1b2440;border:1px solid #2c3a63;border-radius:8px;padding:8px;text-align:center}
   .fbox b{color:#38bdf8;display:block;font-size:13px}
@@ -55,7 +81,7 @@
 </head>
 <body>
   <h1>🏥 Demo — ระบบบันทึกฟอกไต (สำหรับพยาบาล)</h1>
-  <div class="sub">กดปุ่มในแชทเพื่อลองเล่น · ไม่ต้องพิมพ์เลย · บันทึกครบใน 6 ขั้น</div>
+  <div class="sub">กดปุ่มล้วน · ย้อนกลับได้ทุกขั้น · ข้ามค่าที่วัดไม่ได้ · พิมพ์ค่าเองได้</div>
 
   <div class="wrap">
     <div class="phone">
@@ -67,7 +93,7 @@
         </div>
       </div>
       <div class="chat" id="chat"></div>
-      <div class="bar"><button onclick="reset()">↺ เริ่มใหม่</button></div>
+      <div class="bar"><button onclick="reset()">↺ เริ่มใหม่ทั้งหมด</button></div>
     </div>
 
     <div class="side">
@@ -83,8 +109,8 @@
       </div>
 
       <div class="card">
-        <h3>📋 บันทึกล่าสุด</h3>
-        <div class="note">พอกดยืนยัน ข้อมูลจะขึ้นที่นี่ + แจ้งเตือนหัวหน้าเวร</div>
+        <h3>📋 บันทึกล่าสุด (จอหัวหน้าเวร)</h3>
+        <div class="note">พอกดยืนยัน ข้อมูลจะขึ้นที่นี่ทันที</div>
         <div id="recs"><div class="empty">ยังไม่มีบันทึก<br>ลองกดในแชทฝั่งซ้าย</div></div>
       </div>
     </div>
@@ -95,8 +121,8 @@
 const FILTERS = { 'F7':96, 'F60':82, 'F80':110, 'F100':132 };
 const CUTOFF_PCT = 80;      // ต่ำกว่านี้ = เตือนให้เปลี่ยน
 const MAX_REUSE  = 20;      // ใช้ซ้ำสูงสุด
+const SKIP = 'ข้ามขั้นตอนนี้';
 
-// คนไข้ตัวอย่าง (ของจริงดึงจากฐานข้อมูล)
 const PATIENTS = {
   'คุณสมชาย (HN 4412)': { filter:'F80', uses:5, schedule:'จ-พ-ศ' },
   'คุณมาลี (HN 3387)':  { filter:'F60', uses:18, schedule:'อ-พฤ-ส' },
@@ -107,31 +133,68 @@ const DAYS = ['อาทิตย์','จันทร์','อังคาร',
 const chat = document.getElementById('chat');
 const recs = document.getElementById('recs');
 let S = {};
+let history = [];   // [{fn, state}] — สเปก Garuda ฟีเจอร์ 1
 
 const el = h => { const d=document.createElement('div'); d.innerHTML=h; return d.firstElementChild; };
 const scroll = () => chat.scrollTop = chat.scrollHeight;
 
-function bot(t, cls='bot', delay=520){
+// helper แสดงค่าที่อาจถูกข้าม (สเปก Garuda ข้อ 2)
+function fmt(val, unit=''){
+  return (val === null || val === undefined) ? 'ไม่ได้บันทึก' : `${val}${unit}`;
+}
+const fmtHtml = (val, unit='') =>
+  (val === null || val === undefined) ? '<span class="miss">ไม่ได้บันทึก</span>' : `${val}${unit}`;
+
+// ---------- navigation (สเปก Garuda ฟีเจอร์ 1) ----------
+function goto(fn){
+  history.push({ fn, state: structuredClone(S) });
+  fn();
+}
+function goBack(){
+  if(history.length < 2) return;
+  history.pop();                       // ทิ้งสเต็ปปัจจุบัน
+  const prev = history.pop();          // ดึงสเต็ปก่อนหน้า
+  S = structuredClone(prev.state);     // คืน state ตอนก่อนเข้าสเต็ปนั้น
+  chat.appendChild(el('<div class="msg info">◀ ย้อนกลับ — แก้ไขค่าได้เลยค่ะ</div>'));
+  scroll();
+  goto(prev.fn);
+}
+
+function bot(t, cls='bot', delay=480){
   return new Promise(r=>{
     const ty = el('<div class="typing">กำลังพิมพ์...</div>'); chat.appendChild(ty); scroll();
     setTimeout(()=>{ ty.remove(); chat.appendChild(el(`<div class="msg ${cls}">${t}</div>`)); scroll(); r(); }, delay);
   });
 }
 const me = t => { chat.appendChild(el(`<div class="msg me">${t}</div>`)); scroll(); };
-function ask(opts, fn){
+
+/**
+ * ask(options, callback, opts)
+ *  option = string | {t, warn, skip, manual}
+ *  opts.back = true → เพิ่มปุ่ม "◀ ย้อนกลับ"
+ */
+function ask(opts, fn, cfg={}){
   const q = el('<div class="quick"></div>');
   opts.forEach(o=>{
-    const label = typeof o==='string' ? o : o.t;
-    const b=document.createElement('button');
-    b.textContent=label;
-    if(typeof o!=='string' && o.warn) b.className='warn';
-    b.onclick=()=>{ q.remove(); me(label); fn(label); };
+    const isObj = typeof o === 'object';
+    const label = isObj ? o.t : o;
+    const b = document.createElement('button');
+    b.textContent = label;
+    if(isObj && o.warn)   b.className = 'warn';
+    if(label === SKIP)    b.className = 'skip';
+    if(isObj && o.manual) b.className = 'skip';
+    b.onclick = () => { q.remove(); me(label); fn(label); };
     q.appendChild(b);
   });
+  if(cfg.back !== false && history.length >= 2){
+    const bb=document.createElement('button');
+    bb.textContent='◀ ย้อนกลับ'; bb.className='back';
+    bb.onclick=()=>{ q.remove(); goBack(); };
+    q.appendChild(bb);
+  }
   chat.appendChild(q); scroll();
 }
 
-// คำนวณวันนัดถัดไปจากรอบฟอก
 function nextVisit(schedule){
   const map = { 'จ-พ-ศ':[1,3,5], 'อ-พฤ-ส':[2,4,6] };
   const days = map[schedule] || [1,3,5];
@@ -143,12 +206,13 @@ function nextVisit(schedule){
   }
 }
 
-// ===== FLOW =====
+// ===================== FLOW =====================
 async function start(){
-  S = {};
+  S = {}; history = [];
   await bot('สวัสดีค่ะ 🏥 ระบบบันทึกรอบฟอกไต\nเลือกได้เลยค่ะ');
-  ask(['👤 คนไข้เดิม', '🆕 คนไข้ใหม่ (ครั้งแรก)'], c =>
-    c.includes('ใหม่') ? newPatient() : pickPatient());
+  ask(['👤 คนไข้เดิม', '🆕 คนไข้ใหม่ (ครั้งแรก)'],
+      c => c.includes('ใหม่') ? goto(newPatient) : goto(pickPatient),
+      {back:false});
 }
 
 // ---------- คนไข้เดิม ----------
@@ -161,20 +225,21 @@ async function pickPatient(){
     S.base = FILTERS[S.filter];
     S.uses = S.p.uses;
     S.isNew = false;
+    S.filterSource = 'auto';
 
     const left = MAX_REUSE - S.uses;
     await bot(
       `📋 <b>${name}</b>\n` +
       `🧪 ตัวกรอง: <b>${S.filter}</b> (100% = ${S.base} ml)\n` +
       `🔁 ใช้มาแล้ว: <b>${S.uses}/${MAX_REUSE}</b> ครั้ง` +
-      (left<=2 ? `\n⚠️ เหลืออีก ${left} ครั้งเท่านั้น` : '') +
+      (left<=2 && left>0 ? `\n⚠️ เหลืออีก ${left} ครั้งเท่านั้น` : '') +
       `\n📅 รอบ: ${S.p.schedule}`
     );
     if(S.uses >= MAX_REUSE){
       await bot(`🔴 ตัวกรองใช้ครบ ${MAX_REUSE} ครั้งแล้วค่ะ\nต้องเปลี่ยนตัวกรองใหม่ก่อนฟอก`, 'alert');
-      return ask([{t:'🧪 เปลี่ยนตัวกรองใหม่'}], ()=> chooseFilter(true));
+      return ask(['🧪 เปลี่ยนตัวกรองใหม่'], ()=> { S.replaceFilter = true; goto(chooseFilter); });
     }
-    weightPre();
+    goto(weightPre);
   });
 }
 
@@ -185,46 +250,105 @@ async function newPatient(){
   ask(['คุณอนันต์ (HN 6301)'], async n=>{
     S.name = n;
     await bot('รอบฟอกของคนไข้คนนี้คือรอบไหนคะ');
-    ask(['จ-พ-ศ','อ-พฤ-ส'], async sc=>{
+    ask(['จ-พ-ศ','อ-พฤ-ส'], sc=>{
       S.p = { schedule: sc, uses: 0 };
       S.uses = 0;
-      weightPre();
+      goto(weightPre);
     });
   });
 }
 
-// ---------- น้ำหนัก/ความดัน ----------
+// ---------- น้ำหนัก/ความดัน ก่อนฟอก (มีปุ่มข้าม — สเปก Garuda งาน 2) ----------
 async function weightPre(){
   await bot('น้ำหนักก่อนฟอกค่ะ (กก.)');
-  ask(['62.5','64.0','65.8','67.2'], async w=>{
-    S.wPre = parseFloat(w);
+  ask(['62.5','64.0','65.8','67.2', SKIP], async w=>{
+    if(w === SKIP){
+      S.wPre = null; S.wPreSkipped = true;
+      await bot('⏭️ ข้ามการบันทึกน้ำหนักก่อนฟอก\n(จะคำนวณ UF ไม่ได้)', 'info');
+    } else {
+      S.wPre = parseFloat(w); S.wPreSkipped = false;
+    }
     await bot('ความดันก่อนฟอกค่ะ');
-    ask(['128/82','142/90','155/95','118/75'], async bp=>{
-      S.bpPre = bp;
-      const sys = parseInt(bp.split('/')[0]);
-      if(sys >= 150) await bot(`⚠️ ความดันสูง (${bp}) — แจ้งพยาบาลหัวหน้าเวรแล้วค่ะ`, 'alert');
-      S.isNew ? chooseFilter(false) : measureTCV();
+    ask(['128/82','142/90','155/95','118/75', SKIP], async bp=>{
+      if(bp === SKIP){
+        S.bpPre = null; S.bpPreSkipped = true;
+        await bot('⏭️ ข้ามการวัดความดันก่อนฟอก', 'info');
+      } else {
+        S.bpPre = bp; S.bpPreSkipped = false;
+        const sys = parseInt(bp.split('/')[0]);
+        if(sys >= 150) await bot(`⚠️ ความดันสูง (${bp}) — แจ้งพยาบาลหัวหน้าเวรแล้วค่ะ`, 'alert');
+      }
+      S.isNew ? goto(chooseFilter) : goto(measureTCV);
     });
   });
 }
 
-// ---------- เลือกตัวกรอง (คนไข้ใหม่ / เปลี่ยนใหม่) ----------
-async function chooseFilter(isReplace){
+// ---------- เลือกตัวกรอง (+ พิมพ์เอง — สเปก Garuda ฟีเจอร์ 2) ----------
+async function chooseFilter(){
+  const isReplace = !!S.replaceFilter;
   await bot(
     (isReplace ? '🧪 เลือกตัวกรองใหม่ค่ะ' : '🧪 เลือกตัวกรองสำหรับคนไข้ใหม่ค่ะ') +
     '\n<i>แพทย์/พยาบาลเป็นผู้เลือกตามความเหมาะสมของคนไข้</i>'
   );
-  ask(Object.keys(FILTERS).map(f=>`${f} (${FILTERS[f]} ml)`), async pick=>{
+  const opts = Object.keys(FILTERS).map(f=>`${f} (${FILTERS[f]} ml)`);
+  opts.push({ t:'✏️ พิมพ์ค่าเอง / หมายเหตุ', manual:true });
+
+  ask(opts, async pick=>{
+    if(pick.includes('พิมพ์ค่าเอง')) return manualFilterForm();
     S.filter = pick.split(' ')[0];
     S.base = FILTERS[S.filter];
     S.uses = 0;
+    S.filterSource = 'auto';
+    S.filterNote = '';
+    S.tcv = null; S.pct = null;
     await bot(
       `✅ บันทึกตัวกรอง <b>${S.filter}</b>\n` +
       `ค่าเริ่มต้น 100% = <b>${S.base} ml</b>\n` +
-      `ครั้งที่ 1 จาก ${MAX_REUSE}`, 'okmsg'
-    );
-    weightPost();
+      `ครั้งที่ 1 จาก ${MAX_REUSE}`, 'okmsg');
+    goto(weightPost);
   });
+}
+
+function manualFilterForm(){
+  const f = el(`<div class="manual">
+      <label>ชื่อ/เบอร์ตัวกรอง</label>
+      <input id="mf_name" placeholder="เช่น F70 หรือ ยี่ห้ออื่น">
+      <label>ค่าเริ่มต้น 100% (ml)</label>
+      <input id="mf_val" type="number" inputmode="decimal" placeholder="เช่น 105">
+      <label>หมายเหตุ / เหตุผล</label>
+      <input id="mf_note" placeholder="เช่น ตัวกรองสำรอง แพทย์อนุมัติ">
+      <div class="mrow">
+        <button class="ok">✓ ยืนยัน</button>
+        <button class="cancel">ยกเลิก</button>
+      </div>
+    </div>`);
+  chat.appendChild(f); scroll();
+
+  f.querySelector('.cancel').onclick = () => { f.remove(); goto(chooseFilter); };
+  f.querySelector('.ok').onclick = async () => {
+    const name = f.querySelector('#mf_name').value.trim();
+    const val  = parseFloat(f.querySelector('#mf_val').value);
+    const note = f.querySelector('#mf_note').value.trim();
+    if(!name || !(val > 0)){
+      f.querySelector('#mf_name').style.borderColor = name ? '#cbd5e1' : '#dc2626';
+      f.querySelector('#mf_val').style.borderColor  = val>0 ? '#cbd5e1' : '#dc2626';
+      return;
+    }
+    f.remove();
+    me(`✏️ ${name} · ${val} ml`);
+    S.filter = name;
+    S.base = val;
+    S.uses = 0;
+    S.filterSource = 'manual';   // แท็กไว้สำหรับ audit log
+    S.filterNote = note;
+    S.tcv = null; S.pct = null;
+    await bot(
+      `✅ บันทึกตัวกรอง <b>${name}</b> (พิมพ์เอง)\n` +
+      `ค่าเริ่มต้น 100% = <b>${val} ml</b>\n` +
+      (note ? `📝 ${note}\n` : '') +
+      `ครั้งที่ 1 จาก ${MAX_REUSE}`, 'okmsg');
+    goto(weightPost);
+  };
 }
 
 // ---------- วัด TCV (คนไข้เดิม) ----------
@@ -233,79 +357,123 @@ async function measureTCV(){
   const opts = [
     (S.base*0.95).toFixed(0), (S.base*0.88).toFixed(0),
     (S.base*0.82).toFixed(0), (S.base*0.74).toFixed(0),
-  ];
-  ask(opts.map(v=>`${v} ml`), async v=>{
+  ].map(v=>`${v} ml`);
+
+  ask(opts, async v=>{
     const tcv = parseFloat(v);
     S.tcv = tcv;
     S.pct = Math.round(tcv / S.base * 100);
-    S.uses += 1;
+    S.uses = S.p.uses + 1;
 
     if(S.pct < CUTOFF_PCT){
       await bot(
         `🔴 <b>${tcv} ml = ${S.pct}%</b> ของค่าเริ่มต้น\n` +
         `ต่ำกว่าเกณฑ์ ${CUTOFF_PCT}% — ควรเปลี่ยนตัวกรอง`, 'alert');
-      return ask([{t:'🧪 เปลี่ยนตัวกรองใหม่'}, {t:'ยืนยันใช้ต่อ (บันทึกเหตุผล)', warn:true}],
-        c => c.includes('เปลี่ยน') ? chooseFilter(true) : (S.override=true, weightPost()));
+      return ask(['🧪 เปลี่ยนตัวกรองใหม่', {t:'ยืนยันใช้ต่อ', warn:true}],
+        c => {
+          if(c.includes('เปลี่ยน')){ S.replaceFilter = true; goto(chooseFilter); }
+          else { S.override = true; goto(weightPost); }
+        });
     }
     await bot(`✅ <b>${tcv} ml = ${S.pct}%</b> — ผ่านเกณฑ์ ใช้ต่อได้ค่ะ\nครั้งที่ ${S.uses}/${MAX_REUSE}`, 'okmsg');
-    weightPost();
+    goto(weightPost);
   });
 }
 
-// ---------- หลังฟอก ----------
+// ---------- น้ำหนัก/ความดัน หลังฟอก (มีปุ่มข้าม) ----------
 async function weightPost(){
   await bot('น้ำหนักหลังฟอกค่ะ (กก.)');
-  const base = S.wPre || 65;
-  ask([(base-2.5).toFixed(1),(base-3.0).toFixed(1),(base-3.5).toFixed(1)], async w=>{
-    S.wPost = parseFloat(w);
-    S.uf = (S.wPre - S.wPost).toFixed(1);
+  const base = (S.wPre != null) ? S.wPre : 65;
+  const opts = [(base-2.5).toFixed(1),(base-3.0).toFixed(1),(base-3.5).toFixed(1)];
+  opts.push(SKIP);
+
+  ask(opts, async w=>{
+    if(w === SKIP){
+      S.wPost = null; S.wPostSkipped = true; S.uf = null;
+      await bot('⏭️ ข้ามการบันทึกน้ำหนักหลังฟอก\n(คำนวณ UF ไม่ได้)', 'info');
+    } else {
+      S.wPost = parseFloat(w); S.wPostSkipped = false;
+      // UF คำนวณได้ก็ต่อเมื่อมี wPre จริงเท่านั้น
+      S.uf = (S.wPre != null) ? (S.wPre - S.wPost).toFixed(1) : null;
+      if(S.uf === null) await bot('ℹ️ คำนวณ UF ไม่ได้ (ไม่ได้บันทึกน้ำหนักก่อนฟอก)', 'info');
+    }
     await bot('ความดันหลังฟอกค่ะ');
-    ask(['118/76','125/80','105/65'], async bp=>{
-      S.bpPost = bp;
-      confirm();
+    ask(['118/76','125/80','105/65', SKIP], async bp=>{
+      if(bp === SKIP){
+        S.bpPost = null; S.bpPostSkipped = true;
+        await bot('⏭️ ข้ามการวัดความดันหลังฟอก', 'info');
+      } else {
+        S.bpPost = bp; S.bpPostSkipped = false;
+      }
+      goto(confirmStep);
     });
   });
 }
 
 // ---------- สรุป + ยืนยัน ----------
-async function confirm(){
+async function confirmStep(){
   const nv = nextVisit(S.p.schedule);
   S.next = nv;
+  const skipped = [
+    S.wPreSkipped  && 'น้ำหนักก่อน',
+    S.bpPreSkipped && 'ความดันก่อน',
+    S.wPostSkipped && 'น้ำหนักหลัง',
+    S.bpPostSkipped&& 'ความดันหลัง',
+  ].filter(Boolean);
+
   await bot(
     `📋 <b>สรุปรอบฟอก</b>\n` +
     `━━━━━━━━━━\n` +
     `👤 ${S.name}\n` +
-    `⚖️ ${S.wPre} → ${S.wPost} กก. (UF ${S.uf} ล.)\n` +
-    `🩺 ${S.bpPre} → ${S.bpPost}\n` +
-    `🧪 ${S.filter} · ` + (S.tcv ? `${S.tcv} ml (${S.pct}%)` : `ใหม่ (${S.base} ml)`) + `\n` +
+    `⚖️ ${fmt(S.wPre,' กก.')} → ${fmt(S.wPost,' กก.')}\n` +
+    `💧 UF: ${fmt(S.uf,' ล.')}\n` +
+    `🩺 ${fmt(S.bpPre)} → ${fmt(S.bpPost)}\n` +
+    `🧪 ${S.filter}` + (S.filterSource==='manual' ? ' (พิมพ์เอง)' : '') + ' · ' +
+      (S.tcv != null ? `${S.tcv} ml (${S.pct}%)` : `ใหม่ (${S.base} ml)`) + `\n` +
+    (S.filterNote ? `📝 ${S.filterNote}\n` : '') +
     `🔁 ครั้งที่ ${S.uses}/${MAX_REUSE}\n` +
     `📅 นัดถัดไป: <b>${nv.txt}</b> (อีก ${nv.days} วัน)\n` +
+    (skipped.length ? `⏭️ ข้าม: ${skipped.join(', ')}\n` : '') +
     `━━━━━━━━━━\n` +
     `ยืนยันบันทึกไหมคะ`
   );
-  ask(['✅ ยืนยันบันทึก','❌ แก้ไข'], async c=>{
-    if(c.includes('ยืนยัน')){
-      await bot('บันทึกเรียบร้อยค่ะ 🎉\nส่งแจ้งเตือนนัดถัดไปให้คนไข้ทาง LINE แล้ว', 'okmsg');
-      push();
-      ask(['🏥 บันทึกคนไข้คนต่อไป'], () => start());
-    } else { await bot('ยกเลิกค่ะ เริ่มใหม่นะคะ'); start(); }
+  ask(['✅ ยืนยันบันทึก'], async ()=>{
+    await bot('บันทึกเรียบร้อยค่ะ 🎉\nส่งแจ้งเตือนนัดถัดไปให้คนไข้ทาง LINE แล้ว', 'okmsg');
+    push();
+    // หลังยืนยัน = final ไม่มีปุ่มย้อนกลับ (สเปก Garuda ฟีเจอร์ 1 ข้อ 5)
+    history = [];
+    ask(['🏥 บันทึกคนไข้คนต่อไป'], () => start(), {back:false});
   });
 }
 
+// ---------- จอหัวหน้าเวร ----------
 function push(){
   if(recs.querySelector('.empty')) recs.innerHTML='';
   const t = new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
-  const warn = S.pct && S.pct < CUTOFF_PCT;
+  const low = S.pct != null && S.pct < CUTOFF_PCT;
+
+  // soft reminder — สีเทา ไม่ใช่แดง (สเปก Garuda ข้อ 3)
+  const softs = [];
+  if(S.bpPreSkipped)  softs.push('ไม่ได้วัดความดันก่อนฟอก — แนะนำวัดในครั้งถัดไป');
+  if(S.bpPostSkipped) softs.push('ไม่ได้วัดความดันหลังฟอก');
+  if(S.uf === null)   softs.push('ไม่มีค่า UF (น้ำหนักไม่ครบ)');
+
   recs.prepend(el(`<div class="rec">
     <div class="rt"><span>${S.name.split(' (')[0]}</span>
-      <span class="pill ${warn?'p-bad':'p-ok'}">${warn?'ตัวกรองต่ำ':'ปกติ'}</span></div>
+      <span>
+        ${low ? '<span class="pill p-bad">ตัวกรองต่ำ</span>' : '<span class="pill p-ok">ปกติ</span>'}
+        ${S.filterSource==='manual' ? '<span class="pill p-man">พิมพ์เอง</span>' : ''}
+      </span></div>
     <div class="rr">
-      ⚖️ ${S.wPre}→${S.wPost} กก. · UF ${S.uf} ล.<br>
-      🩺 ${S.bpPre} → ${S.bpPost}<br>
-      🧪 ${S.filter} ${S.tcv?`· ${S.tcv}ml (${S.pct}%)`:'· ตัวใหม่'} · ${S.uses}/${MAX_REUSE}<br>
+      ⚖️ ${fmtHtml(S.wPre,' ')}→${fmtHtml(S.wPost,' กก.')} · UF ${fmtHtml(S.uf,' ล.')}<br>
+      🩺 ${fmtHtml(S.bpPre)} → ${fmtHtml(S.bpPost)}<br>
+      🧪 ${S.filter} ${S.tcv!=null?`· ${S.tcv}ml (${S.pct}%)`:'· ตัวใหม่'} · ${S.uses}/${MAX_REUSE}<br>
+      ${S.filterNote ? `📝 ${S.filterNote}<br>` : ''}
       📅 นัดถัดไป: <b style="color:#38bdf8">${S.next.txt}</b><br>
       🕐 บันทึก ${t} น.
-    </div></div>`));
+    </div>
+    ${softs.length ? `<div class="soft">ℹ️ ${softs.join('<br>ℹ️ ')}</div>` : ''}
+  </div>`));
 }
 
 const reset = () => { chat.innerHTML=''; start(); };
