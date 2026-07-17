@@ -90,6 +90,10 @@ n8n automation, Web Dashboard, Python, Supabase
     return json.loads(raw)
 
 
+def _job_url(job_id: str) -> str:
+    return f"https://jobboard.fastwork.co/jobs/{job_id}"
+
+
 def _build_line_message(job: dict, analysis: dict, matched: list) -> str:
     job_id = job.get("id", "")
     score = analysis.get("fit_score", 0)
@@ -107,7 +111,7 @@ def _build_line_message(job: dict, analysis: dict, matched: list) -> str:
         f"✍️ ร่างข้อเสนอ (copy ไปใช้ได้เลย):\n\n"
         f"{analysis.get('proposal','')}\n"
         f"━━━━━━━━━━━━\n"
-        f"🔗 fastwork.co/job-board"
+        f"🔗 กดยื่นงานเลย:\n{_job_url(job_id)}"
     )
 
 
@@ -151,6 +155,9 @@ def run_hunter(anthropic_client, push_line_fn, line_user_id: str,
         entry = {
             "time": datetime.now(timezone.utc).isoformat(),
             "job_id": job.get("id"),
+            "title": (job.get("title") or "").strip()[:80],
+            "budget": job.get("budget") or "-",
+            "url": _job_url(job.get("id", "")),
             "score": analysis.get("fit_score", 0),
             "summary": analysis.get("summary", ""),
         }
