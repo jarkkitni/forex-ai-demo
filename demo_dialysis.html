@@ -67,6 +67,9 @@
   .rec .rr{color:#aab6d3;font-size:11.5px;line-height:1.7}
   .rec .soft{background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:7px;
              padding:5px 7px;font-size:11px;margin-top:6px;line-height:1.5}
+  /* น้ำหนัก = ค่าจำเป็น — เด่นกว่า soft แต่ไม่แดงเท่า alert ความดันสูง */
+  .rec .wmiss{background:#2d2410;border:1px solid #78350f;color:#fbbf24;border-radius:7px;
+              padding:5px 7px;font-size:11px;margin-top:6px;line-height:1.5;font-weight:600}
   .rec .miss{color:#64748b;font-style:italic}
   .empty{color:#4a5878;font-size:12px;text-align:center;padding:24px 0;border:1.5px dashed #26304a;border-radius:11px}
   .pill{font-size:10px;font-weight:800;border-radius:99px;padding:2px 8px}
@@ -258,15 +261,45 @@ async function newPatient(){
   });
 }
 
-// ---------- น้ำหนัก/ความดัน ก่อนฟอก (มีปุ่มข้าม — สเปก Garuda งาน 2) ----------
+/**
+ * ฟอร์มระบุเหตุผลตอนข้ามค่าที่จำเป็น (น้ำหนัก)
+ * — พยาบาลยืนยันว่า "ควรบังคับกรอกน้ำหนัก" แต่ยังต้องรองรับเคสวัดไม่ได้จริง
+ * → ข้ามได้ แต่ต้องบอกเหตุผล = มี audit trail
+ */
+function reasonForm(label, onDone){
+  return new Promise(res=>{
+    const f = el(`<div class="manual" style="border-color:#f59e0b">
+        <label style="color:#b45309">⚠️ ${label} เป็นค่าจำเป็น</label>
+        <div style="font-size:11.5px;color:#64748b;line-height:1.5;margin-bottom:8px">
+          ถ้าวัดไม่ได้จริงๆ ระบุเหตุผลเพื่อบันทึกไว้ค่ะ</div>
+        <label>เหตุผลที่ไม่ได้บันทึก *</label>
+        <input id="rf_note" placeholder="เช่น เครื่องชั่งเสีย / คนไข้นอนติดเตียง">
+        <div class="mrow">
+          <button class="ok" style="background:#f59e0b">✓ ยืนยันข้าม</button>
+          <button class="cancel">◀ กลับไปกรอก</button>
+        </div>
+      </div>`);
+    chat.appendChild(f); scroll();
+    f.querySelector('.cancel').onclick = () => { f.remove(); res(null); };
+    f.querySelector('.ok').onclick = () => {
+      const note = f.querySelector('#rf_note').value.trim();
+      if(!note){ f.querySelector('#rf_note').style.borderColor = '#dc2626'; return; }
+      f.remove(); me(`⏭️ ข้าม — ${note}`); res(note);
+    };
+  });
+}
+
+// ---------- น้ำหนัก/ความดัน ก่อนฟอก ----------
 async function weightPre(){
-  await bot('น้ำหนักก่อนฟอกค่ะ (กก.)');
+  await bot('น้ำหนักก่อนฟอกค่ะ (กก.)\n<i>ค่าจำเป็น — ใช้คำนวณ UF</i>');
   ask(['62.5','64.0','65.8','67.2', SKIP], async w=>{
     if(w === SKIP){
-      S.wPre = null; S.wPreSkipped = true;
-      await bot('⏭️ ข้ามการบันทึกน้ำหนักก่อนฟอก\n(จะคำนวณ UF ไม่ได้)', 'info');
+      const reason = await reasonForm('น้ำหนักก่อนฟอก');
+      if(reason === null) return goto(weightPre);   // กดกลับไปกรอก
+      S.wPre = null; S.wPreSkipped = true; S.wPreSkipReason = reason;
+      await bot(`⏭️ ข้ามน้ำหนักก่อนฟอก — บันทึกเหตุผลแล้ว\n(จะคำนวณ UF ไม่ได้)`, 'info');
     } else {
-      S.wPre = parseFloat(w); S.wPreSkipped = false;
+      S.wPre = parseFloat(w); S.wPreSkipped = false; S.wPreSkipReason = '';
     }
     await bot('ความดันก่อนฟอกค่ะ');
     ask(['128/82','142/90','155/95','118/75', SKIP], async bp=>{
@@ -382,17 +415,19 @@ async function measureTCV(){
 
 // ---------- น้ำหนัก/ความดัน หลังฟอก (มีปุ่มข้าม) ----------
 async function weightPost(){
-  await bot('น้ำหนักหลังฟอกค่ะ (กก.)');
+  await bot('น้ำหนักหลังฟอกค่ะ (กก.)\n<i>ค่าจำเป็น — ใช้ประเมิน dry weight + UF</i>');
   const base = (S.wPre != null) ? S.wPre : 65;
   const opts = [(base-2.5).toFixed(1),(base-3.0).toFixed(1),(base-3.5).toFixed(1)];
   opts.push(SKIP);
 
   ask(opts, async w=>{
     if(w === SKIP){
-      S.wPost = null; S.wPostSkipped = true; S.uf = null;
-      await bot('⏭️ ข้ามการบันทึกน้ำหนักหลังฟอก\n(คำนวณ UF ไม่ได้)', 'info');
+      const reason = await reasonForm('น้ำหนักหลังฟอก');
+      if(reason === null) return goto(weightPost);   // กดกลับไปกรอก
+      S.wPost = null; S.wPostSkipped = true; S.wPostSkipReason = reason; S.uf = null;
+      await bot('⏭️ ข้ามน้ำหนักหลังฟอก — บันทึกเหตุผลแล้ว\n(คำนวณ UF ไม่ได้)', 'info');
     } else {
-      S.wPost = parseFloat(w); S.wPostSkipped = false;
+      S.wPost = parseFloat(w); S.wPostSkipped = false; S.wPostSkipReason = '';
       // UF คำนวณได้ก็ต่อเมื่อมี wPre จริงเท่านั้น
       S.uf = (S.wPre != null) ? (S.wPre - S.wPost).toFixed(1) : null;
       if(S.uf === null) await bot('ℹ️ คำนวณ UF ไม่ได้ (ไม่ได้บันทึกน้ำหนักก่อนฟอก)', 'info');
@@ -415,9 +450,9 @@ async function confirmStep(){
   const nv = nextVisit(S.p.schedule);
   S.next = nv;
   const skipped = [
-    S.wPreSkipped  && 'น้ำหนักก่อน',
+    S.wPreSkipped  && `น้ำหนักก่อน (${S.wPreSkipReason})`,
     S.bpPreSkipped && 'ความดันก่อน',
-    S.wPostSkipped && 'น้ำหนักหลัง',
+    S.wPostSkipped && `น้ำหนักหลัง (${S.wPostSkipReason})`,
     S.bpPostSkipped&& 'ความดันหลัง',
   ].filter(Boolean);
 
@@ -458,6 +493,11 @@ function push(){
   if(S.bpPostSkipped) softs.push('ไม่ได้วัดความดันหลังฟอก');
   if(S.uf === null)   softs.push('ไม่มีค่า UF (น้ำหนักไม่ครบ)');
 
+  // น้ำหนัก = ค่าจำเป็น ถ้าข้ามต้องเด่นกว่า soft reminder ทั่วไป
+  const weightMiss = [];
+  if(S.wPreSkipped)  weightMiss.push(`ไม่ได้ชั่งน้ำหนักก่อนฟอก — ${S.wPreSkipReason}`);
+  if(S.wPostSkipped) weightMiss.push(`ไม่ได้ชั่งน้ำหนักหลังฟอก — ${S.wPostSkipReason}`);
+
   recs.prepend(el(`<div class="rec">
     <div class="rt"><span>${S.name.split(' (')[0]}</span>
       <span>
@@ -472,6 +512,7 @@ function push(){
       📅 นัดถัดไป: <b style="color:#38bdf8">${S.next.txt}</b><br>
       🕐 บันทึก ${t} น.
     </div>
+    ${weightMiss.length ? `<div class="wmiss">⚠️ ${weightMiss.join('<br>⚠️ ')}</div>` : ''}
     ${softs.length ? `<div class="soft">ℹ️ ${softs.join('<br>ℹ️ ')}</div>` : ''}
   </div>`));
 }
