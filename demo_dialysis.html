@@ -86,7 +86,37 @@
   <h1>🏥 Demo — ระบบบันทึกฟอกไต (สำหรับพยาบาล)</h1>
   <div class="sub">กดปุ่มล้วน · ย้อนกลับได้ทุกขั้น · ข้ามค่าที่วัดไม่ได้ · พิมพ์ค่าเองได้</div>
 
-  <div class="wrap">
+  <!-- หน้าล็อกอิน -->
+  <div id="gate" style="display:none;width:100%;max-width:380px;margin-top:30px">
+    <div style="background:#141b2d;border:1px solid #26304a;border-radius:18px;padding:24px">
+      <div style="text-align:center;font-size:38px;margin-bottom:6px">🏥</div>
+      <div style="color:#e8ecf4;font-size:17px;font-weight:700;text-align:center;margin-bottom:4px">
+        ระบบบันทึกฟอกไต</div>
+      <div style="color:#7c8aa5;font-size:12.5px;text-align:center;margin-bottom:20px;line-height:1.6">
+        สำหรับเจ้าหน้าที่ศูนย์เท่านั้น<br>ข้อมูลคนไข้เป็นความลับ</div>
+
+      <label style="display:block;color:#aab6d3;font-size:12.5px;font-weight:600;margin-bottom:5px">
+        ชื่อผู้บันทึก *</label>
+      <input id="g_nurse" placeholder="เช่น พ.ญาดา / พยาบาลเวรเช้า" autocomplete="off"
+        style="width:100%;background:#0f1420;border:1px solid #2c3a63;border-radius:10px;
+               color:#e8ecf4;padding:11px 13px;font-size:14px;margin-bottom:13px;outline:none;font-family:inherit">
+
+      <label style="display:block;color:#aab6d3;font-size:12.5px;font-weight:600;margin-bottom:5px">
+        รหัสเข้าใช้งาน *</label>
+      <input id="g_pin" type="password" inputmode="numeric" placeholder="••••••" autocomplete="off"
+        style="width:100%;background:#0f1420;border:1px solid #2c3a63;border-radius:10px;
+               color:#e8ecf4;padding:11px 13px;font-size:14px;margin-bottom:15px;outline:none;
+               letter-spacing:3px;font-family:inherit">
+
+      <button id="g_btn" style="width:100%;background:#0284c7;color:#fff;border:none;border-radius:10px;
+               padding:12px;font-size:14.5px;font-weight:700;cursor:pointer">เข้าใช้งาน</button>
+      <div id="g_err" style="color:#f87171;font-size:12.5px;margin-top:10px;display:none;line-height:1.5"></div>
+      <div style="color:#4a5878;font-size:11px;margin-top:14px;text-align:center;line-height:1.6">
+        ไม่มีรหัส? ติดต่อผู้ดูแลระบบ<br>ห้ามแชร์รหัสให้บุคคลภายนอก</div>
+    </div>
+  </div>
+
+  <div class="wrap" id="app" style="display:none">
     <div class="phone">
       <div class="hd">
         <div class="av">🏥</div>
@@ -213,6 +243,53 @@ function nextVisit(schedule){
   }
 }
 
+// ===================== auth =====================
+let PIN = '';   // เก็บในหน่วยความจำ ไม่เก็บถาวร — ปิดแท็บ = ต้องใส่ใหม่
+
+const api = (url, opt={}) => fetch(url, {
+  ...opt,
+  headers: { 'Content-Type':'application/json', 'X-Center-Pin': PIN, ...(opt.headers||{}) },
+});
+
+async function gate(){
+  const cfg = await (await fetch('/api/dialysis/config')).json();
+  DB_ON = !!cfg.db_connected;
+
+  // ยังไม่ตั้งรหัส + ไม่ต่อ DB = โหมด demo เปิดเลย
+  if(!cfg.pin_required && !DB_ON){ showApp(); return; }
+
+  document.getElementById('gate').style.display = 'block';
+  const err = m => { const e=document.getElementById('g_err'); e.textContent=m; e.style.display='block'; };
+  const btn = document.getElementById('g_btn');
+  const doLogin = async () => {
+    const nurse = document.getElementById('g_nurse').value.trim();
+    const pin   = document.getElementById('g_pin').value.trim();
+    if(!nurse) return err('กรุณาระบุชื่อผู้บันทึก');
+    if(cfg.pin_required && !pin) return err('กรุณาใส่รหัสเข้าใช้งาน');
+    btn.disabled = true; btn.textContent = 'กำลังตรวจสอบ...';
+    try{
+      const r = await (await fetch('/api/dialysis/login', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ pin, nurse })
+      })).json();
+      if(!r.success) throw new Error(r.error || 'เข้าใช้งานไม่ได้');
+      PIN = pin; NURSE = r.nurse;
+      document.getElementById('gate').style.display = 'none';
+      showApp();
+    }catch(e){
+      btn.disabled=false; btn.textContent='เข้าใช้งาน';
+      err('❌ ' + e.message);
+    }
+  };
+  btn.onclick = doLogin;
+  document.getElementById('g_pin').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+}
+
+function showApp(){
+  document.getElementById('app').style.display = 'flex';
+  start();
+}
+
 // ===================== เชื่อมฐานข้อมูล =====================
 async function loadPatients(){
   try{
@@ -220,7 +297,7 @@ async function loadPatients(){
     DB_ON = !!cfg.db_connected;
     if(!DB_ON) return false;
 
-    const r = await (await fetch('/api/dialysis/patients')).json();
+    const r = await (await api('/api/dialysis/patients')).json();
     if(!r.success) { DB_ON = false; return false; }
 
     PATIENTS = {};
@@ -238,7 +315,7 @@ async function loadPatients(){
 function dbBadge(){
   const b = document.getElementById('dbb');
   if(!b) return;
-  b.textContent = DB_ON ? '🟢 บันทึกจริง' : '🟡 โหมดทดลอง (ไม่บันทึก)';
+  b.textContent = (DB_ON ? '🟢 บันทึกจริง' : '🟡 โหมดทดลอง') + (NURSE ? ` · ${NURSE}` : '');
   b.style.color = DB_ON ? '#4ade80' : '#fbbf24';
 }
 
@@ -352,9 +429,8 @@ async function newPatient(){
 
     if(DB_ON){
       try{
-        const r = await (await fetch('/api/dialysis/patients',{
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({name, hn, schedule: sch, note})
+        const r = await (await api('/api/dialysis/patients',{
+          method:'POST', body: JSON.stringify({name, hn, schedule: sch, note})
         })).json();
         if(!r.success) throw new Error(r.error||'บันทึกไม่สำเร็จ');
         S.pid = r.patient.id;
@@ -593,9 +669,8 @@ async function confirmStep(){
     if(DB_ON && S.pid){
       await bot('กำลังบันทึกลงระบบ...', 'info', 200);
       try{
-        const r = await (await fetch('/api/dialysis/visits',{
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({
+        const r = await (await api('/api/dialysis/visits',{
+          method:'POST', body: JSON.stringify({
             patient_id: S.pid, schedule: S.p.schedule,
             filter: S.filter, base: S.base, uses: S.uses,
             tcv: S.tcv ?? null, pct: S.pct ?? null,
@@ -663,7 +738,7 @@ function push(){
 }
 
 const reset = () => { chat.innerHTML=''; start(); };
-start();
+gate();
 </script>
 </body>
 </html>

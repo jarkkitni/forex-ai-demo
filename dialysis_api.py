@@ -15,6 +15,9 @@ from datetime import datetime, date, timedelta
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
 
+# รหัสเข้าใช้งานของศูนย์ (ตั้งใน Render: DIALYSIS_PIN)
+CENTER_PIN = os.environ.get("DIALYSIS_PIN", "")
+
 # ค่าคงที่จากศูนย์ (ต้องตรงกับใน demo_dialysis.html)
 FILTERS = {"F7": 96, "F60": 82, "F80": 110, "F100": 132}
 CUTOFF_PCT = 80

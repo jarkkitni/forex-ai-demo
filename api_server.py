@@ -468,20 +468,47 @@ def demo_dialysis():
 
 # ---------- Dialysis API (ต่อ Supabase จริง) ----------
 
+def _pin_ok() -> bool:
+    """ตรวจรหัสศูนย์จาก header — กันคนนอกเข้าถึงข้อมูลคนไข้"""
+    if not dialysis_api.CENTER_PIN:
+        return True  # ยังไม่ตั้งรหัส = โหมดเปิด (ต้องตั้งก่อนใช้จริง)
+    return request.headers.get("X-Center-Pin", "") == dialysis_api.CENTER_PIN
+
+
+def _need_pin():
+    return jsonify({"success": False, "error": "unauthorized", "need_pin": True}), 401
+
+
 @app.route("/api/dialysis/config", methods=["GET"])
 def dialysis_config():
-    """บอก frontend ว่าต่อ DB ได้ไหม + ค่าคงที่ของศูนย์"""
+    """บอก frontend ว่าต่อ DB ได้ไหม + ต้องใส่รหัสไหม + ค่าคงที่ของศูนย์"""
     return jsonify({
         "success": True,
         "db_connected": dialysis_api.is_configured(),
+        "pin_required": bool(dialysis_api.CENTER_PIN),
         "filters": dialysis_api.FILTERS,
         "cutoff_pct": dialysis_api.CUTOFF_PCT,
         "max_reuse": dialysis_api.MAX_REUSE,
     })
 
 
+@app.route("/api/dialysis/login", methods=["POST"])
+def dialysis_login():
+    """ตรวจรหัสศูนย์ + ชื่อผู้บันทึก"""
+    d = request.get_json(force=True) or {}
+    pin = str(d.get("pin", ""))
+    nurse = str(d.get("nurse", "")).strip()
+    if not nurse:
+        return jsonify({"success": False, "error": "กรุณาระบุชื่อผู้บันทึก"}), 400
+    if dialysis_api.CENTER_PIN and pin != dialysis_api.CENTER_PIN:
+        return jsonify({"success": False, "error": "รหัสไม่ถูกต้อง"}), 401
+    return jsonify({"success": True, "nurse": nurse[:60]})
+
+
 @app.route("/api/dialysis/patients", methods=["GET"])
 def dialysis_patients():
+    if not _pin_ok():
+        return _need_pin()
     if not dialysis_api.is_configured():
         return jsonify({"success": False, "error": "ยังไม่ได้ตั้งค่า Supabase"}), 503
     try:
@@ -493,6 +520,8 @@ def dialysis_patients():
 
 @app.route("/api/dialysis/patients", methods=["POST"])
 def dialysis_create_patient():
+    if not _pin_ok():
+        return _need_pin()
     if not dialysis_api.is_configured():
         return jsonify({"success": False, "error": "ยังไม่ได้ตั้งค่า Supabase"}), 503
     try:
@@ -511,6 +540,8 @@ def dialysis_create_patient():
 
 @app.route("/api/dialysis/visits", methods=["POST"])
 def dialysis_save_visit():
+    if not _pin_ok():
+        return _need_pin()
     if not dialysis_api.is_configured():
         return jsonify({"success": False, "error": "ยังไม่ได้ตั้งค่า Supabase"}), 503
     try:
@@ -525,6 +556,8 @@ def dialysis_save_visit():
 
 @app.route("/api/dialysis/visits", methods=["GET"])
 def dialysis_recent_visits():
+    if not _pin_ok():
+        return _need_pin()
     if not dialysis_api.is_configured():
         return jsonify({"success": False, "error": "ยังไม่ได้ตั้งค่า Supabase"}), 503
     try:
