@@ -9,6 +9,7 @@ from flask_cors import CORS
 import anthropic
 
 import fastwork_hunter
+import dialysis_api
 
 app  = Flask(__name__)
 CORS(app)
@@ -463,6 +464,84 @@ def demo_dialysis():
     p = os.path.join(os.path.dirname(__file__), "demo_dialysis.html")
     with open(p, "r", encoding="utf-8") as f:
         return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
+# ---------- Dialysis API (ต่อ Supabase จริง) ----------
+
+@app.route("/api/dialysis/config", methods=["GET"])
+def dialysis_config():
+    """บอก frontend ว่าต่อ DB ได้ไหม + ค่าคงที่ของศูนย์"""
+    return jsonify({
+        "success": True,
+        "db_connected": dialysis_api.is_configured(),
+        "filters": dialysis_api.FILTERS,
+        "cutoff_pct": dialysis_api.CUTOFF_PCT,
+        "max_reuse": dialysis_api.MAX_REUSE,
+    })
+
+
+@app.route("/api/dialysis/patients", methods=["GET"])
+def dialysis_patients():
+    if not dialysis_api.is_configured():
+        return jsonify({"success": False, "error": "ยังไม่ได้ตั้งค่า Supabase"}), 503
+    try:
+        return jsonify({"success": True, "patients": dialysis_api.list_patients()})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/dialysis/patients", methods=["POST"])
+def dialysis_create_patient():
+    if not dialysis_api.is_configured():
+        return jsonify({"success": False, "error": "ยังไม่ได้ตั้งค่า Supabase"}), 503
+    try:
+        d = request.get_json(force=True) or {}
+        p = dialysis_api.create_patient(
+            name=d.get("name", ""), hn=d.get("hn", ""),
+            schedule=d.get("schedule", ""), note=d.get("note", ""),
+        )
+        return jsonify({"success": True, "patient": p})
+    except ValueError as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/dialysis/visits", methods=["POST"])
+def dialysis_save_visit():
+    if not dialysis_api.is_configured():
+        return jsonify({"success": False, "error": "ยังไม่ได้ตั้งค่า Supabase"}), 503
+    try:
+        saved = dialysis_api.save_visit(request.get_json(force=True) or {})
+        return jsonify({"success": True, "visit": saved})
+    except ValueError as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/dialysis/visits", methods=["GET"])
+def dialysis_recent_visits():
+    if not dialysis_api.is_configured():
+        return jsonify({"success": False, "error": "ยังไม่ได้ตั้งค่า Supabase"}), 503
+    try:
+        return jsonify({"success": True, "visits": dialysis_api.recent_visits()})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/dialysis/tomorrow", methods=["GET"])
+def dialysis_tomorrow():
+    """พรุ่งนี้ใครมาบ้าง"""
+    if not dialysis_api.is_configured():
+        return jsonify({"success": False, "error": "ยังไม่ได้ตั้งค่า Supabase"}), 503
+    try:
+        return jsonify({"success": True, "patients": dialysis_api.tomorrow_list()})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @app.route("/demo/<biz>")
