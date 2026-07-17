@@ -23,6 +23,29 @@ LINE_CHANNEL_SECRET = os.environ.get("LINE_CHANNEL_SECRET", "")
 signal_history   = []  # in-memory สัญญาณ (เก็บ 20 ล่าสุด)
 registered_users = []  # userId ที่ลงทะเบียนผ่าน /webhook
 
+# ---- Visitor tracking (in-memory, รีเซ็ตเมื่อ restart) ----
+visit_stats = {
+    "total":       0,      # ครั้งทั้งหมดตั้งแต่ boot
+    "today":       0,      # ครั้งของวันนี้ (UTC)
+    "today_date":  "",     # วันที่ของ counter today
+    "unique_ips":  set(),  # IP ไม่ซ้ำตั้งแต่ boot
+    "last_visit":  "",     # เวลา visit ล่าสุด
+}
+
+
+def _track_visit():
+    from datetime import timezone
+    now   = datetime.now(timezone.utc)
+    today = now.strftime("%Y-%m-%d")
+    if visit_stats["today_date"] != today:
+        visit_stats["today_date"] = today
+        visit_stats["today"] = 0
+    visit_stats["total"] += 1
+    visit_stats["today"] += 1
+    ip = request.headers.get("X-Forwarded-For", request.remote_addr or "?").split(",")[0].strip()
+    visit_stats["unique_ips"].add(ip)
+    visit_stats["last_visit"] = now.strftime("%H:%M UTC")
+
 
 # ---------- Price Helpers ----------
 
@@ -358,8 +381,25 @@ def hunter_log():
     return jsonify({"success": True, "log": fastwork_hunter.get_hunter_log()})
 
 
+@app.route("/api/stats", methods=["GET"])
+def get_stats():
+    """สถิติรวมสำหรับ Desktop Widget"""
+    return jsonify({
+        "success":          True,
+        "visits_total":     visit_stats["total"],
+        "visits_today":     visit_stats["today"],
+        "unique_visitors":  len(visit_stats["unique_ips"]),
+        "last_visit":       visit_stats["last_visit"],
+        "line_users":       len(registered_users) + (1 if LINE_USER_ID else 0),
+        "signal_count":     len(signal_history),
+        "hunter_checked":   len(fastwork_hunter.get_hunter_log()),
+        "hunter_alerts":    sum(1 for e in fastwork_hunter.get_hunter_log() if e.get("alerted")),
+    })
+
+
 @app.route("/")
 def index():
+    _track_visit()
     html_path = os.path.join(os.path.dirname(__file__), "dashboard.html")
     with open(html_path, "r", encoding="utf-8") as f:
         return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
