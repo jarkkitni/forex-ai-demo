@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demo — __BIZ_NAME__ Auto-Reply Bot</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI','Leelawadee UI',Tahoma,sans-serif; }
+  body { background:#0f1420; min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:24px 12px; }
+  h1 { color:#e8ecf4; font-size:20px; margin-bottom:4px; }
+  .sub { color:#7c8aa5; font-size:13px; margin-bottom:18px; }
+  .wrap { display:flex; gap:24px; flex-wrap:wrap; justify-content:center; }
+
+  /* ---------- Phone ---------- */
+  .phone { width:375px; background:#fff; border-radius:28px; overflow:hidden;
+           box-shadow:0 20px 60px rgba(0,0,0,.5); border:6px solid #1a2233; }
+  .fb-header { background:linear-gradient(90deg,#0084ff,#0064d2); color:#fff; padding:14px 16px;
+               display:flex; align-items:center; gap:10px; }
+  .fb-header .avatar { width:38px; height:38px; border-radius:50%; background:#ffd6e8;
+                       display:flex; align-items:center; justify-content:center; font-size:20px; }
+  .fb-header .name { font-weight:700; font-size:15px; }
+  .fb-header .status { font-size:11px; opacity:.85; }
+  .chat { height:520px; overflow-y:auto; padding:14px 12px; background:#f0f2f5;
+          display:flex; flex-direction:column; gap:8px; }
+  .msg { max-width:78%; padding:9px 13px; border-radius:18px; font-size:13.5px; line-height:1.45;
+         animation:pop .25s ease; white-space:pre-line; }
+  @keyframes pop { from{opacity:0; transform:translateY(6px);} to{opacity:1;} }
+  .bot  { background:#fff; color:#111; align-self:flex-start; border-bottom-left-radius:6px;
+          box-shadow:0 1px 2px rgba(0,0,0,.08); }
+  .user { background:#0084ff; color:#fff; align-self:flex-end; border-bottom-right-radius:6px; }
+  .quick { display:flex; flex-wrap:wrap; gap:6px; align-self:flex-start; max-width:95%; }
+  .quick button { background:#fff; border:1.5px solid #0084ff; color:#0084ff; border-radius:18px;
+                  padding:7px 14px; font-size:13px; cursor:pointer; transition:.15s; }
+  .quick button:hover { background:#0084ff; color:#fff; }
+  .cards { display:flex; gap:8px; overflow-x:auto; align-self:flex-start; max-width:95%; padding-bottom:4px; }
+  .card { min-width:150px; background:#fff; border-radius:14px; overflow:hidden;
+          box-shadow:0 1px 3px rgba(0,0,0,.12); }
+  .card .img { height:80px; display:flex; align-items:center; justify-content:center; font-size:34px; }
+  .card .body { padding:8px 10px; }
+  .card .title { font-weight:700; font-size:12.5px; }
+  .card .price { color:#0084ff; font-weight:700; font-size:12px; margin-top:2px; }
+  .typing { align-self:flex-start; color:#98a2b3; font-size:12px; padding-left:6px; }
+  .reset-bar { padding:10px; background:#fff; border-top:1px solid #e4e7ec; text-align:center; }
+  .reset-bar button { background:#eef2f7; border:none; border-radius:16px; padding:8px 18px;
+                      font-size:13px; cursor:pointer; color:#334; }
+
+  /* ---------- Admin panel ---------- */
+  .admin { width:330px; background:#141b2d; border-radius:20px; padding:18px;
+           border:1px solid #26304a; height:fit-content; }
+  .admin h3 { color:#00e47a; font-size:15px; margin-bottom:12px; }
+  .admin .note { color:#7c8aa5; font-size:12px; margin-bottom:14px; line-height:1.5; }
+  .booking-card { background:#1b2440; border:1px solid #2c3a63; border-radius:12px;
+                  padding:12px; margin-bottom:10px; animation:pop .3s ease; }
+  .booking-card .bk-head { display:flex; justify-content:space-between; margin-bottom:6px; }
+  .booking-card .bk-title { color:#fff; font-weight:700; font-size:13px; }
+  .booking-card .bk-new { background:#00e47a; color:#03130b; font-size:10px; font-weight:700;
+                          border-radius:8px; padding:2px 8px; }
+  .booking-card .bk-row { color:#aab6d3; font-size:12px; line-height:1.7; }
+  .empty { color:#4a5878; font-size:12px; text-align:center; padding:30px 0; border:1.5px dashed #26304a; border-radius:12px; }
+</style>
+</head>
+<body>
+  <h1>__EMOJI__ Demo — ระบบตอบแชทอัตโนมัติ __BIZ_NAME__</h1>
+  <div class="sub">__TAGLINE__ · ตัวอย่างระบบ Facebook / Instagram Auto-Reply — กดปุ่มในแชทลองเล่นได้เลย</div>
+
+  <div class="wrap">
+    <!-- Phone -->
+    <div class="phone">
+      <div class="fb-header">
+        <div class="avatar">__EMOJI__</div>
+        <div>
+          <div class="name">__BIZ_NAME__ (Demo)</div>
+          <div class="status">ตอบกลับทันที · Messenger + Instagram</div>
+        </div>
+      </div>
+      <div class="chat" id="chat"></div>
+      <div class="reset-bar"><button onclick="resetChat()">↺ เริ่มใหม่</button></div>
+    </div>
+
+    <!-- Admin -->
+    <div class="admin">
+      <h3>📲 ฝั่งแอดมิน (ร้าน)</h3>
+      <div class="note">เมื่อลูกค้าจองคิวในแชท ระบบจะสรุปข้อมูลส่งแจ้งเตือนแอดมินทันที — ไม่ต้องนั่งเฝ้าแชท ไม่มีคิวหลุด</div>
+      <div id="bookings"><div class="empty">ยังไม่มีการจองใหม่<br>ลองกดจองคิวในแชทฝั่งซ้าย</div></div>
+    </div>
+  </div>
+
+<script>
+const chat = document.getElementById('chat');
+const bookings = document.getElementById('bookings');
+let booking = {};
+
+const CFG = __CONFIG_JSON__;
+const SERVICES = CFG.services_map;
+
+function el(html){ const d=document.createElement('div'); d.innerHTML=html; return d.firstElementChild; }
+function scroll(){ chat.scrollTop = chat.scrollHeight; }
+
+function botMsg(text, delay=600){
+  return new Promise(res=>{
+    const t = el(`<div class="typing">กำลังพิมพ์...</div>`);
+    chat.appendChild(t); scroll();
+    setTimeout(()=>{ t.remove();
+      chat.appendChild(el(`<div class="msg bot">${text}</div>`)); scroll(); res();
+    }, delay);
+  });
+}
+function userMsg(text){
+  chat.appendChild(el(`<div class="msg user">${text}</div>`)); scroll();
+}
+function quickReplies(opts, handler){
+  const q = el(`<div class="quick"></div>`);
+  opts.forEach(o=>{
+    const b = document.createElement('button'); b.textContent = o;
+    b.onclick = ()=>{ q.remove(); userMsg(o); handler(o); };
+    q.appendChild(b);
+  });
+  chat.appendChild(q); scroll();
+}
+function serviceCards(){
+  const c = el(`<div class="cards"></div>`);
+  Object.entries(SERVICES).forEach(([name,s])=>{
+    const card = el(`<div class="card">
+      <div class="img" style="background:${s.bg}">${s.emoji}</div>
+      <div class="body"><div class="title">${name}</div><div class="price">${s.price}</div></div>
+    </div>`);
+    c.appendChild(card);
+  });
+  chat.appendChild(c); scroll();
+}
+
+async function start(){
+  await botMsg(CFG.greeting);
+  quickReplies(['ดูบริการ + ราคา',CFG.book_word,'โปรโมชั่น','เวลาทำการ / ที่อยู่'], mainMenu);
+}
+
+async function mainMenu(choice){
+  if(choice==='ดูบริการ + ราคา'){
+    await botMsg('บริการของร้านเรามีดังนี้ค่ะ 👇 (เลื่อนดูได้เลย)');
+    serviceCards();
+    await botMsg('สนใจบริการไหน กดจองคิวได้เลยนะคะ 😊', 800);
+    quickReplies([CFG.book_word,'โปรโมชั่น','กลับเมนูหลัก'], mainMenu);
+  }
+  else if(choice==='โปรโมชั่น'){
+    await botMsg(CFG.promo);
+    quickReplies([CFG.book_word,'ดูบริการ + ราคา','กลับเมนูหลัก'], mainMenu);
+  }
+  else if(choice==='เวลาทำการ / ที่อยู่'){
+    await botMsg(CFG.hours);
+    quickReplies([CFG.book_word,'กลับเมนูหลัก'], mainMenu);
+  }
+  else if(choice===CFG.book_word){
+    booking = {};
+    await botMsg('ได้เลยค่ะ 🥰 อยากจองบริการไหนคะ?');
+    quickReplies(Object.keys(SERVICES), pickService);
+  }
+  else { start(); }
+}
+
+async function pickService(svc){
+  booking.service = svc;
+  await botMsg(`เลือก "${svc}" นะคะ ✨\nสะดวกวันไหนคะ?`);
+  quickReplies(['วันนี้','พรุ่งนี้','เสาร์นี้','อาทิตย์นี้'], pickDay);
+}
+async function pickDay(day){
+  booking.day = day;
+  await botMsg('ช่วงเวลาไหนสะดวกคะ?');
+  quickReplies(['10:00-12:00','13:00-15:00','15:00-17:00','17:00-19:00'], pickTime);
+}
+async function pickTime(time){
+  booking.time = time;
+  await botMsg('ขอทราบชื่อ + เบอร์ติดต่อด้วยค่ะ 📱\n(ในระบบจริง ลูกค้าพิมพ์เองได้เลย — เดโมนี้กดปุ่มแทนนะคะ)');
+  quickReplies(['คุณเมย์ 08x-xxx-xxxx'], confirm);
+}
+async function confirm(contact){
+  booking.contact = contact;
+  await botMsg(`สรุปการจองค่ะ 📋\n\n💇‍♀️ บริการ: ${booking.service}\n📅 วัน: ${booking.day}\n🕐 เวลา: ${booking.time}\n👤 ${booking.contact}\n\nยืนยันเลยไหมคะ?`);
+  quickReplies(['✅ ยืนยันจอง','❌ ยกเลิก'], async (c)=>{
+    if(c.includes('ยืนยัน')){
+      await botMsg('จองคิวเรียบร้อยค่ะ 🎉\nระบบแจ้งเตือนแอดมินแล้ว เดี๋ยวทางร้านยืนยันนัดอีกครั้งนะคะ\nขอบคุณที่ใช้บริการค่ะ 💕');
+      pushBooking();
+      quickReplies(['กลับเมนูหลัก'], mainMenu);
+    } else {
+      await botMsg('ยกเลิกแล้วค่ะ มีอะไรให้ช่วยอีกไหมคะ 😊');
+      quickReplies([CFG.book_word,'ดูบริการ + ราคา','กลับเมนูหลัก'], mainMenu);
+    }
+  });
+}
+function pushBooking(){
+  if(bookings.querySelector('.empty')) bookings.innerHTML='';
+  const now = new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+  bookings.prepend(el(`<div class="booking-card">
+    <div class="bk-head"><span class="bk-title">🔔 จองคิวใหม่!</span><span class="bk-new">NEW</span></div>
+    <div class="bk-row">💇‍♀️ ${booking.service}<br>📅 ${booking.day} · ${booking.time}<br>👤 ${booking.contact}<br>🕐 รับเรื่อง ${now} น.</div>
+  </div>`));
+}
+resetChat = ()=>{ chat.innerHTML=''; start(); };
+start();
+</script>
+</body>
+</html>

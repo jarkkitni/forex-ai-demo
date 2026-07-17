@@ -432,13 +432,69 @@ def manifest():
     })
 
 
+def _load_demo_configs() -> dict:
+    p = os.path.join(os.path.dirname(__file__), "demo_configs.json")
+    with open(p, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _render_demo(biz: str) -> str:
+    """สร้างหน้า demo จาก template เดียว + config ของแต่ละธุรกิจ"""
+    cfg = _load_demo_configs()[biz]
+    # แปลง services list → map ที่ frontend ใช้
+    cfg["services_map"] = {
+        s["name"]: {"emoji": s["emoji"], "price": s["price"], "bg": s["bg"]}
+        for s in cfg["services"]
+    }
+    tpl_path = os.path.join(os.path.dirname(__file__), "demo_generic.html")
+    with open(tpl_path, "r", encoding="utf-8") as f:
+        html = f.read()
+    return (html
+            .replace("__CONFIG_JSON__", json.dumps(cfg, ensure_ascii=False))
+            .replace("__BIZ_NAME__", cfg["biz_name"])
+            .replace("__EMOJI__", cfg["emoji"])
+            .replace("__TAGLINE__", cfg["tagline"]))
+
+
+@app.route("/demo/<biz>")
+def demo_by_biz(biz):
+    """Demo ตามประเภทธุรกิจ: /demo/beauty /demo/clinic /demo/restaurant /demo/spa"""
+    _track_visit()
+    try:
+        return _render_demo(biz), 200, {"Content-Type": "text/html; charset=utf-8"}
+    except KeyError:
+        avail = ", ".join(_load_demo_configs().keys())
+        return f"ไม่พบ demo '{biz}' — ที่มี: {avail}", 404
+    except Exception as e:
+        traceback.print_exc()
+        return f"error: {e}", 500
+
+
+@app.route("/api/demos", methods=["GET"])
+def list_demos():
+    """รายการ demo ทั้งหมด (ไว้โชว์ในหน้ารวม/ส่งลูกค้า)"""
+    cfgs = _load_demo_configs()
+    return jsonify({
+        "success": True,
+        "demos": [
+            {"slug": k, "name": v["biz_name"], "emoji": v["emoji"],
+             "tagline": v["tagline"], "url": f"/demo/{k}"}
+            for k, v in cfgs.items()
+        ],
+    })
+
+
 @app.route("/beauty")
 def beauty_demo():
-    """Demo ระบบตอบแชท + จองคิว Beauty Salon (สำหรับลูกค้าลองเล่น)"""
+    """ลิงก์เดิมที่ส่งลูกค้าไปแล้ว — คงไว้ ห้ามลบ (ชี้ไป /demo/beauty)"""
     _track_visit()
-    html_path = os.path.join(os.path.dirname(__file__), "demo_beauty_salon.html")
-    with open(html_path, "r", encoding="utf-8") as f:
-        return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+    try:
+        return _render_demo("beauty"), 200, {"Content-Type": "text/html; charset=utf-8"}
+    except Exception:
+        # fallback ไฟล์เดิม เผื่อ template ใหม่พัง
+        html_path = os.path.join(os.path.dirname(__file__), "demo_beauty_salon.html")
+        with open(html_path, "r", encoding="utf-8") as f:
+            return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
 
 
 @app.route("/")
