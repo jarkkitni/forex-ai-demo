@@ -610,6 +610,170 @@ BIZ_LABEL = {
 }
 
 
+BASE_URL = "https://forex-ai-demo.onrender.com"
+
+# หน้า landing ตามคำค้นหา (SEO) — เนื้อหาต่างกัน แต่ชี้มาที่ /botkit
+SEO_PAGES = {
+    "line-bot": {
+        "h1": "รับทำ LINE Bot สำหรับธุรกิจ",
+        "title": "รับทำ LINE Bot ราคาเริ่ม ฿590/เดือน | ตอบแชท + จองคิวอัตโนมัติ",
+        "desc": "รับทำ LINE Bot / LINE OA สำหรับร้านค้า คลินิก ร้านอาหาร ตอบแชทอัตโนมัติ 24 ชม. รับจองคิว แจ้งเตือนเข้า LINE ลองฟรีก่อนตัดสินใจ",
+        "kw": "รับทำ line bot, line oa, line messaging api, บอทไลน์, ไลน์บอทร้านค้า",
+        "lead": "ให้ LINE ของร้านตอบลูกค้าเองได้ 24 ชม. — ถามราคา ดูบริการ จองคิว ครบจบในแชท",
+        "points": [
+            "ตอบแชทอัตโนมัติทันที ไม่ต้องมีคนเฝ้า",
+            "รับจองคิว เก็บชื่อ-เบอร์-เวลา ส่งให้แอดมิน",
+            "Rich Menu + Flex Message สวยงาม",
+            "เชื่อม LINE OA ที่มีอยู่แล้วได้เลย",
+        ],
+    },
+    "bot-jongkiw": {
+        "h1": "รับทำระบบจองคิวออนไลน์",
+        "title": "รับทำระบบจองคิวออนไลน์ ผ่าน LINE/Facebook | เริ่ม ฿590/เดือน",
+        "desc": "ระบบจองคิวอัตโนมัติผ่านแชท ลูกค้าจองเองได้ 24 ชม. เก็บข้อมูลครบ แจ้งเตือนแอดมินทันที เหมาะกับร้านเสริมสวย คลินิก สปา",
+        "kw": "ระบบจองคิว, จองคิวออนไลน์, ระบบนัดหมาย, booking system, จองคิวผ่านไลน์",
+        "lead": "ลูกค้าจองคิวเองได้ตลอด 24 ชม. — ไม่มีคิวหลุด ไม่ต้องนั่งเฝ้าแชท",
+        "points": [
+            "ลูกค้าเลือกบริการ-วัน-เวลาเองในแชท",
+            "เก็บชื่อ เบอร์ บริการ อัตโนมัติ",
+            "แจ้งเตือนเจ้าของร้านทันทีที่มีคนจอง",
+            "ดูคิวทั้งหมดในหน้าเดียว",
+        ],
+    },
+    "chatbot-clinic": {
+        "h1": "รับทำ Chatbot สำหรับคลินิก",
+        "title": "รับทำ Chatbot คลินิก + ระบบนัดหมาย | ตอบคำถามคนไข้อัตโนมัติ",
+        "desc": "Chatbot สำหรับคลินิกความงาม ทันตกรรม กายภาพ ตอบคำถามราคา คัดกรองคนไข้ นัดหมายอัตโนมัติ พร้อมระบบบันทึกข้อมูลคนไข้",
+        "kw": "chatbot คลินิก, ระบบคลินิก, บอทคลินิกความงาม, ระบบนัดหมายคนไข้",
+        "lead": "ให้บอทตอบคำถามราคา คัดกรองคนไข้ และนัดหมายแทนแอดมิน",
+        "points": [
+            "ตอบคำถามราคา/บริการ ที่ถูกถามซ้ำๆ",
+            "คัดกรองคนไข้ก่อนส่งต่อให้แพทย์",
+            "ระบบนัดหมาย + เตือนก่อนถึงวันนัด",
+            "มีระบบบันทึกข้อมูลคนไข้ให้ด้วย (ออปชั่น)",
+        ],
+    },
+}
+
+
+def _seo_page(slug: str) -> str:
+    p = SEO_PAGES[slug]
+    pts = "".join(f"<li>{x}</li>" for x in p["points"])
+    demos = "".join(
+        f'<a class="d" href="/demo/{k}" target="_blank">{v["emoji"]} {v["biz_name"]}</a>'
+        for k, v in _load_demo_configs().items()
+    )
+    return f"""<!DOCTYPE html><html lang="th"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{p['title']}</title>
+<meta name="description" content="{p['desc']}">
+<meta name="keywords" content="{p['kw']}">
+<link rel="canonical" href="{BASE_URL}/{slug}">
+<meta name="robots" content="index, follow">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="th_TH">
+<meta property="og:title" content="{p['title']}">
+<meta property="og:description" content="{p['desc']}">
+<meta property="og:url" content="{BASE_URL}/{slug}">
+<script type="application/ld+json">
+{{"@context":"https://schema.org","@type":"Service","name":"{p['h1']}",
+"description":"{p['desc']}","areaServed":{{"@type":"Country","name":"Thailand"}},
+"provider":{{"@type":"Person","name":"Jark","jobTitle":"LINE Bot & AI Agent Developer"}},
+"offers":{{"@type":"Offer","price":"590","priceCurrency":"THB"}}}}
+</script>
+<style>
+*{{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',system-ui,Tahoma,sans-serif}}
+body{{background:#060a16;color:#e2e8f0;line-height:1.6}}
+.w{{max-width:800px;margin:0 auto;padding:40px 20px 60px}}
+h1{{font-size:clamp(26px,5vw,38px);font-weight:800;margin-bottom:14px;line-height:1.3}}
+h1 span{{color:#00e47a}}
+.lead{{font-size:17px;color:#9fb0d0;margin-bottom:26px}}
+ul{{list-style:none;margin:22px 0}}
+li{{padding:9px 0 9px 30px;position:relative;font-size:15.5px;color:#c7d3e8}}
+li::before{{content:"✓";position:absolute;left:0;color:#00e47a;font-weight:800;font-size:17px}}
+h2{{font-size:20px;margin:32px 0 12px}}
+.demos{{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0 30px}}
+.d{{background:#0e1526;border:1px solid #1c2740;border-radius:12px;padding:12px 16px;
+   text-decoration:none;color:#e2e8f0;font-weight:600;font-size:14px}}
+.d:hover{{border-color:#00e47a}}
+.cta{{display:inline-block;background:#00e47a;color:#03130b;padding:15px 32px;border-radius:12px;
+     font-weight:800;text-decoration:none;font-size:16px;margin-top:8px}}
+.price{{background:#0e1526;border:1px solid #1c2740;border-radius:14px;padding:18px;margin:24px 0}}
+.price b{{color:#00e47a;font-size:22px}}
+footer{{margin-top:40px;padding-top:22px;border-top:1px solid #1c2740;color:#5b6b8c;font-size:13px}}
+footer a{{color:#22d3ee}}
+</style></head><body><div class="w">
+<h1>{p['h1']}<br><span>ลองฟรีก่อนตัดสินใจ</span></h1>
+<p class="lead">{p['lead']}</p>
+<ul>{pts}</ul>
+
+<h2>🎪 ลองเล่นระบบจริงได้เลย</h2>
+<p style="color:#9fb0d0;font-size:14.5px">กดเข้าไปคุยกับบอทได้เลย เหมือนเป็นลูกค้าจริง ไม่ต้องสมัคร</p>
+<div class="demos">{demos}</div>
+
+<div class="price">
+  💰 <b>เริ่มต้น ฿590/เดือน</b><br>
+  <span style="color:#9fb0d0;font-size:14px">ไม่มีค่าติดตั้ง · ยกเลิกได้ทุกเมื่อ · ไม่ผูกมัด</span>
+</div>
+
+<a class="cta" href="/botkit">ดูแพ็กเกจทั้งหมด →</a>
+
+<h2>❓ คำถามที่พบบ่อย</h2>
+<ul>
+  <li>ไม่ต้องมีเซิร์ฟเวอร์ ไม่ต้องมีความรู้เทคนิค — เราดูแลให้หมด</li>
+  <li>ไม่มีค่า API เพิ่ม — Facebook/Instagram/LINE API ฟรี</li>
+  <li>ใช้งานได้ภายใน 2-3 วัน</li>
+  <li>ยกเลิกได้ทุกเมื่อ ไม่มีสัญญาผูกมัด</li>
+</ul>
+
+<footer>
+  BotKit by Jark — LINE Bot &amp; AI Agent Developer<br>
+  <a href="/botkit">ดูแพ็กเกจ</a> · <a href="/line-bot">รับทำ LINE Bot</a> ·
+  <a href="/bot-jongkiw">ระบบจองคิว</a> · <a href="/chatbot-clinic">Chatbot คลินิก</a>
+</footer>
+</div></body></html>"""
+
+
+@app.route("/<slug>")
+def seo_landing(slug):
+    """หน้า landing ตามคำค้นหา (SEO)"""
+    if slug not in SEO_PAGES:
+        from flask import abort
+        abort(404)
+    _track_visit()
+    return _seo_page(slug), 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
+@app.route("/sitemap.xml")
+def sitemap():
+    urls = ["/", "/botkit"] + [f"/{k}" for k in SEO_PAGES] + \
+           [f"/demo/{k}" for k in _load_demo_configs()]
+    today = datetime.now().strftime("%Y-%m-%d")
+    items = "".join(
+        f"<url><loc>{BASE_URL}{u}</loc><lastmod>{today}</lastmod>"
+        f"<changefreq>weekly</changefreq>"
+        f"<priority>{'1.0' if u in ('/botkit','/') else '0.8'}</priority></url>"
+        for u in urls
+    )
+    xml = ('<?xml version="1.0" encoding="UTF-8"?>'
+           '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+           f'{items}</urlset>')
+    return xml, 200, {"Content-Type": "application/xml; charset=utf-8"}
+
+
+@app.route("/robots.txt")
+def robots():
+    txt = (
+        "User-agent: *\n"
+        "Allow: /\n"
+        "Disallow: /monitor\n"          # จอภายใน ไม่ให้ index
+        "Disallow: /demo/dialysis\n"    # มีข้อมูลคนไข้ ห้าม index เด็ดขาด
+        "Disallow: /api/\n"
+        f"\nSitemap: {BASE_URL}/sitemap.xml\n"
+    )
+    return txt, 200, {"Content-Type": "text/plain; charset=utf-8"}
+
+
 @app.route("/botkit")
 def botkit_page():
     """หน้าขาย BotKit (self-serve เฟส 1)"""
