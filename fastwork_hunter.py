@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 JOBBOARD_URL = "https://jobboard-api.fastwork.co/api/jobs"
 
 # ====== สกิลที่เรารับงาน ======
+# เกรด A — ตรงเป้า (แจ้งเตือนเต็มรูปแบบ + ร่างข้อเสนอ)
 SKILL_KEYWORDS = [
     # bot & AI
     "bot", "บอท", "chatbot", "แชทบอท", "ai", "เอไอ", "ปัญญาประดิษฐ์",
@@ -19,6 +20,15 @@ SKILL_KEYWORDS = [
     "dashboard", "ระบบหลังบ้าน", "python", "supabase",
     # trading
     "forex", "เทรด", "trading", "signal", "สัญญาณ", "indicator", "mt4", "mt5",
+]
+
+# เกรด B — เฉียดสกิล (แจ้งเตือนแบบสรุปสั้น ให้ตัดสินใจเอง)
+GRADE_B_KEYWORDS = [
+    "google sheet", "google sheets", "กูเกิลชีท", "excel", "เอ็กเซล",
+    "ระบบ", "เว็บไซต์", "website", "แอพ", "แอป", "app",
+    "dashboard", "รายงาน", "สรุปข้อมูล", "ดึงข้อมูล", "scraping", "scrape",
+    "เก็บข้อมูล", "ฐานข้อมูล", "database", "แจ้งเตือน", "notification",
+    "โปรแกรม", "script", "สคริปต์", "เชื่อมต่อ", "integrate",
 ]
 
 # keyword ที่ไม่เอา (งานไม่ตรงสาย)
@@ -38,17 +48,25 @@ def _fetch_jobs() -> list:
     return data.get("data", [])
 
 
-def _match_skills(job: dict) -> list:
-    """คืน list ของ keyword ที่ match (ว่าง = ไม่ตรง)"""
+def _match_skills(job: dict) -> tuple:
+    """คืน (grade, matched_keywords) — grade: 'A' / 'B' / None"""
     text = (job.get("description") or "").lower()
     tag = ((job.get("tag") or {}).get("name") or "").lower()
     full = f"{text} {tag}"
 
     for bad in EXCLUDE_KEYWORDS:
         if bad in full:
-            return []
+            return (None, [])
 
-    return [kw for kw in SKILL_KEYWORDS if kw in full]
+    matched_a = [kw for kw in SKILL_KEYWORDS if kw in full]
+    if matched_a:
+        return ("A", matched_a)
+
+    matched_b = [kw for kw in GRADE_B_KEYWORDS if kw in full]
+    if matched_b:
+        return ("B", matched_b)
+
+    return (None, [])
 
 
 def _analyze_job(client, job: dict, matched: list) -> dict:
@@ -95,6 +113,7 @@ def _job_url(job_id: str) -> str:
 
 
 def _build_line_message(job: dict, analysis: dict, matched: list) -> str:
+    """ข้อความเต็ม — งานเกรด A"""
     job_id = job.get("id", "")
     score = analysis.get("fit_score", 0)
     stars = "🔥" if score >= 80 else ("⭐" if score >= 60 else "💡")
@@ -112,6 +131,20 @@ def _build_line_message(job: dict, analysis: dict, matched: list) -> str:
         f"{analysis.get('proposal','')}\n"
         f"━━━━━━━━━━━━\n"
         f"🔗 กดยื่นงานเลย:\n{_job_url(job_id)}"
+    )
+
+
+def _build_line_message_short(job: dict, analysis: dict, matched: list) -> str:
+    """ข้อความสั้น — งานเกรด B (เฉียดสกิล ให้ตัดสินใจเอง)"""
+    job_id = job.get("id", "")
+    score = analysis.get("fit_score", 0)
+    budget = job.get("budget") or "ไม่ระบุ"
+
+    return (
+        f"💼 งานเฉียดสกิล (เกรด B) — {score}/100\n"
+        f"📋 {analysis.get('summary','')}\n"
+        f"💰 งบ: {budget} | 🎯 {', '.join(matched[:3])}\n"
+        f"สนใจไหม? ดูงาน:\n{_job_url(job_id)}"
     )
 
 
@@ -134,16 +167,19 @@ def run_hunter(anthropic_client, push_line_fn, line_user_id: str,
             _seen_job_ids.add(jid)
             continue
 
-        matched = _match_skills(job)
+        grade, matched = _match_skills(job)
         _seen_job_ids.add(jid)
-        if matched:
-            new_matched.append((job, matched))
+        if grade:
+            new_matched.append((job, grade, matched))
+
+    # เกรด A ก่อนเสมอ
+    new_matched.sort(key=lambda x: 0 if x[1] == "A" else 1)
 
     # จำกัดจำนวนที่วิเคราะห์ต่อรอบ (คุมค่า API)
     alerts_sent = 0
     results = []
 
-    for job, matched in new_matched[:max_alerts * 2]:
+    for job, grade, matched in new_matched[:max_alerts * 2]:
         if alerts_sent >= max_alerts:
             break
         try:
@@ -152,19 +188,26 @@ def run_hunter(anthropic_client, push_line_fn, line_user_id: str,
             print(f"[Hunter] analyze failed: {e}", flush=True)
             continue
 
+        score = analysis.get("fit_score", 0)
         entry = {
             "time": datetime.now(timezone.utc).isoformat(),
             "job_id": job.get("id"),
+            "grade": grade,
             "title": (job.get("title") or "").strip()[:80],
             "budget": job.get("budget") or "-",
             "url": _job_url(job.get("id", "")),
-            "score": analysis.get("fit_score", 0),
+            "score": score,
             "summary": analysis.get("summary", ""),
         }
 
-        if analysis.get("fit_score", 0) >= min_score:
-            text = _build_line_message(job, analysis, matched)
-            ok = push_line_fn(line_user_id, text)
+        # เกรด A คะแนน ≥70 → ข้อความเต็ม + ข้อเสนอ
+        # เกรด A/B คะแนน 55-69 → ข้อความสั้น
+        if score >= 70 and grade == "A":
+            ok = push_line_fn(line_user_id, _build_line_message(job, analysis, matched))
+            entry["alerted"] = ok
+            alerts_sent += 1 if ok else 0
+        elif score >= min_score:
+            ok = push_line_fn(line_user_id, _build_line_message_short(job, analysis, matched))
             entry["alerted"] = ok
             alerts_sent += 1 if ok else 0
         else:
