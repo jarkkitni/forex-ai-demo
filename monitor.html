@@ -81,6 +81,32 @@
   .sc-done{color:#9fb0d0;font-size:13px;padding:6px 0;line-height:1.5}
   .sc-done::before{content:"✓ ";color:var(--green);font-weight:800}
 
+  /* roadmap */
+  .rm-vision{background:#0a101f;border:1px solid var(--border);border-radius:12px;
+             padding:12px 14px;margin-bottom:14px;font-size:13.5px;color:var(--text);line-height:1.6}
+  .rm-vision b{color:var(--green)}
+  .rm-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+  .rm-ph{background:#0a101f;border:1px solid var(--border);border-radius:14px;padding:14px;position:relative}
+  .rm-ph.active{border-color:var(--green);box-shadow:0 0 0 1px rgba(0,228,122,.2)}
+  .rm-ph.next{border-color:#2c3a63}
+  .rm-ph h4{font-size:14px;color:var(--text);margin-bottom:3px}
+  .rm-ph .goal{font-size:11.5px;color:var(--dim);margin-bottom:10px;line-height:1.5}
+  .rm-it{display:flex;gap:7px;align-items:flex-start;padding:6px 0;border-bottom:1px solid #131c31;font-size:12.5px}
+  .rm-it:last-child{border-bottom:none}
+  .rm-dot{flex:none;width:8px;height:8px;border-radius:50%;margin-top:5px}
+  .d-waiting{background:var(--amber)} .d-todo{background:#334155}
+  .d-done{background:var(--green)}   .d-blocked{background:#64748b}
+  .rm-t{flex:1;color:var(--text);line-height:1.45}
+  .rm-n{font-size:11px;color:var(--dim);margin-top:1px}
+  .rm-tag{position:absolute;top:-8px;right:12px;font-size:9.5px;font-weight:800;
+          padding:2px 8px;border-radius:99px;background:var(--green);color:#03130b}
+
+  /* assets */
+  .as-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:12px}
+  .as{background:#0a101f;border:1px solid var(--border);border-radius:10px;padding:9px 10px}
+  .as .ae{font-size:16px} .as .an{font-size:12px;font-weight:700;color:var(--text);margin-top:3px}
+  .as .ad{font-size:10.5px;color:var(--dim);line-height:1.4;margin-top:1px}
+
   /* demo cards */
   .demo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
   .demo{display:block;text-decoration:none;background:#0a101f;border:1px solid var(--border);
@@ -168,6 +194,16 @@
         <input id="newtask" placeholder="เพิ่มงานใหม่..." onkeydown="if(event.key==='Enter')addTask()">
         <button onclick="addTask()">＋</button>
       </div>
+    </div>
+
+    <!-- Roadmap -->
+    <div class="card" id="rmCard" style="grid-column:1/-1;display:none">
+      <h3>🗺️ แผนงาน (Roadmap)</h3>
+      <div class="rm-vision" id="rmVision"></div>
+      <div class="rm-cols" id="rmPhases"></div>
+      <div style="font-size:12px;color:var(--dim);font-weight:700;margin:16px 0 0;
+                  text-transform:uppercase;letter-spacing:.6px">🧰 ของที่มีในมือแล้ว</div>
+      <div class="as-grid" id="rmAssets"></div>
     </div>
 
     <!-- BotKit orders -->
@@ -354,8 +390,36 @@ async function loadOrders(){
   }catch(e){}
 }
 
-initBars(); loadStats(); loadJobs(); renderTasks(); loadStatus(); loadDemos(); loadOrders();
-setInterval(()=>{ loadStats(); loadJobs(); loadStatus(); loadOrders(); }, 60000);
+// ---------- roadmap ----------
+async function loadRoadmap(){
+  try{
+    const r = await fetch('/api/roadmap'); const d = await r.json();
+    if(!d.success) return;
+    $('rmCard').style.display='block';
+
+    $('rmVision').innerHTML = `🎯 <b>เป้าหมาย:</b> ${d.vision}
+      <span style="color:var(--dim);font-size:11.5px"> · อัปเดต ${d.date||d.updated||''}</span>`;
+
+    $('rmPhases').innerHTML = (d.phases||[]).map(p=>`
+      <div class="rm-ph ${p.status}">
+        ${p.status==='active' ? '<span class="rm-tag">ทำอยู่</span>' : ''}
+        <h4>${p.emoji} ${p.title}</h4>
+        <div class="goal">${p.goal||''}</div>
+        ${(p.items||[]).map(i=>`
+          <div class="rm-it">
+            <span class="rm-dot d-${i.s}"></span>
+            <div class="rm-t">${i.t}${i.note?`<div class="rm-n">${i.note}</div>`:''}</div>
+          </div>`).join('')}
+      </div>`).join('');
+
+    $('rmAssets').innerHTML = (d.assets||[]).map(a=>`
+      <div class="as"><div class="ae">${a.e}</div>
+        <div class="an">${a.n}</div><div class="ad">${a.d}</div></div>`).join('');
+  }catch(e){}
+}
+
+initBars(); loadStats(); loadJobs(); renderTasks(); loadStatus(); loadDemos(); loadOrders(); loadRoadmap();
+setInterval(()=>{ loadStats(); loadJobs(); loadStatus(); loadOrders(); loadRoadmap(); }, 60000);
 </script>
 </body>
 </html>

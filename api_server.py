@@ -398,6 +398,17 @@ def get_stats():
     })
 
 
+@app.route("/api/roadmap", methods=["GET"])
+def get_roadmap():
+    """แผนงานระยะสั้น-กลาง-ยาว (โชว์ใน NEXUS Monitor)"""
+    try:
+        p = os.path.join(os.path.dirname(__file__), "roadmap.json")
+        with open(p, "r", encoding="utf-8") as f:
+            return jsonify({"success": True, **json.load(f)})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 404
+
+
 @app.route("/api/status", methods=["GET"])
 def get_status_card():
     """การ์ดสถานะงาน (Garuda สร้าง data → SiriAriyaMate render)"""
