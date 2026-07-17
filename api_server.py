@@ -8,6 +8,8 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 import anthropic
 
+import fastwork_hunter
+
 app  = Flask(__name__)
 CORS(app)
 
@@ -214,6 +216,7 @@ def get_history():
 @app.route("/api/send-line", methods=["POST"])
 def send_line():
     """Broadcast Signal ไปยังทุก LINE userId ที่ลงทะเบียน"""
+    # รวบรวม targets: env var + registered users
     targets: list[str] = []
     if LINE_USER_ID and LINE_USER_ID not in targets:
         targets.append(LINE_USER_ID)
@@ -249,6 +252,7 @@ def line_webhook():
     body_bytes = request.get_data()
     body_str   = body_bytes.decode("utf-8")
 
+    # ตรวจ signature (ถ้าตั้ง LINE_CHANNEL_SECRET)
     if LINE_CHANNEL_SECRET:
         sig      = request.headers.get("X-Line-Signature", "")
         digest   = hmac.new(
@@ -270,6 +274,7 @@ def line_webhook():
         already_reg = (user_id == LINE_USER_ID) or (user_id in registered_users)
 
         if etype == "follow":
+            # ผู้ใช้ Add OA → register อัตโนมัติ
             if user_id and not already_reg:
                 registered_users.append(user_id)
             _reply_line(
@@ -306,6 +311,7 @@ def line_webhook():
 
 @app.route("/api/line-users", methods=["GET"])
 def get_line_users():
+    """จำนวน LINE users ที่จะได้รับ Signal"""
     env_count = 1 if (LINE_USER_ID and LINE_USER_ID not in registered_users) else 0
     total     = len(registered_users) + env_count
     return jsonify({
@@ -325,7 +331,31 @@ def health():
         "line_channel_secret": bool(LINE_CHANNEL_SECRET),
         "registered_users":    len(registered_users),
         "signal_count":        len(signal_history),
+        "hunter_log_count":    len(fastwork_hunter.get_hunter_log()),
     })
+
+
+# ---------- FastWork Job Hunter ----------
+
+@app.route("/api/hunter/check", methods=["GET", "POST"])
+def hunter_check():
+    """ดักจับงาน FastWork ที่ตรงสกิล → AI วิเคราะห์ + ร่างข้อเสนอ → LINE
+    เรียกจาก cron ภายนอก (cron-job.org) ทุก 30 นาที"""
+    if not ANTHROPIC_API_KEY or not LINE_TOKEN or not LINE_USER_ID:
+        return jsonify({"success": False, "error": "missing env keys"}), 500
+    try:
+        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        result = fastwork_hunter.run_hunter(client, _push_line, LINE_USER_ID)
+        return jsonify({"success": True, **result})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/hunter/log", methods=["GET"])
+def hunter_log():
+    """ประวัติงานที่ตรวจล่าสุด"""
+    return jsonify({"success": True, "log": fastwork_hunter.get_hunter_log()})
 
 
 @app.route("/")
