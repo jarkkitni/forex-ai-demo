@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#060a16">
+<title>BotKit — บอทตอบแชท + จองคิว สำหรับร้านคุณ เริ่มต้น ฿590/เดือน</title>
+<meta name="description" content="ระบบตอบแชท Facebook/Instagram + จองคิวอัตโนมัติ สำหรับร้านเสริมสวย คลินิก ร้านอาหาร สปา ลองฟรีก่อนตัดสินใจ">
+<style>
+  :root{--bg:#060a16;--card:#0e1526;--border:#1c2740;--green:#00e47a;--cyan:#22d3ee;
+        --amber:#f59e0b;--pink:#f472b6;--text:#e2e8f0;--dim:#5b6b8c;}
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',system-ui,Tahoma,sans-serif}
+  body{background:var(--bg);color:var(--text);
+       background-image:radial-gradient(circle at 15% 5%,#0b1a3a 0%,transparent 45%),
+                        radial-gradient(circle at 85% 60%,#08182c 0%,transparent 40%);}
+  .wrap{max-width:920px;margin:0 auto;padding:28px 18px 60px}
+  a{color:inherit}
+
+  /* hero */
+  .hero{text-align:center;padding:26px 0 30px}
+  .badge{display:inline-block;background:rgba(0,228,122,.12);color:var(--green);
+         border:1px solid rgba(0,228,122,.3);border-radius:99px;padding:5px 14px;
+         font-size:12.5px;font-weight:700;margin-bottom:14px}
+  h1{font-size:clamp(26px,5vw,40px);line-height:1.25;font-weight:800;margin-bottom:12px}
+  h1 span{color:var(--green)}
+  .sub{color:#9fb0d0;font-size:clamp(14px,2.5vw,17px);line-height:1.65;max-width:620px;margin:0 auto}
+  .cta-row{display:flex;gap:10px;justify-content:center;margin-top:22px;flex-wrap:wrap}
+  .btn{display:inline-block;padding:13px 26px;border-radius:12px;font-weight:700;
+       font-size:15px;text-decoration:none;cursor:pointer;border:none;transition:.15s}
+  .btn:active{transform:scale(.97)}
+  .btn-main{background:var(--green);color:#03130b}
+  .btn-ghost{background:transparent;color:var(--text);border:1px solid var(--border)}
+
+  /* sections */
+  .sec{margin-top:38px}
+  .sec-title{font-size:19px;font-weight:800;margin-bottom:4px}
+  .sec-sub{color:var(--dim);font-size:13.5px;margin-bottom:16px}
+
+  /* demos */
+  .demos{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+  .demo{background:var(--card);border:1px solid var(--border);border-radius:14px;
+        padding:16px;text-decoration:none;display:block;position:relative;overflow:hidden;transition:.15s}
+  .demo:hover{border-color:var(--dm)}
+  .demo:active{transform:scale(.97)}
+  .demo::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--dm)}
+  .demo .e{font-size:30px}
+  .demo .n{font-weight:700;font-size:15px;margin-top:8px}
+  .demo .t{color:var(--dim);font-size:11.5px;margin-top:3px;line-height:1.45}
+  .demo .g{color:var(--dm);font-size:12px;font-weight:700;margin-top:10px}
+
+  /* features */
+  .feats{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+  .feat{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px}
+  .feat .fi{font-size:22px}
+  .feat .ft{font-weight:700;font-size:14.5px;margin:6px 0 4px}
+  .feat .fd{color:var(--dim);font-size:12.5px;line-height:1.6}
+
+  /* pricing */
+  .plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+  .plan{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;position:relative}
+  .plan.best{border-color:var(--green);box-shadow:0 0 0 1px rgba(0,228,122,.25)}
+  .plan .tag{position:absolute;top:-10px;left:50%;transform:translateX(-50%);
+             background:var(--green);color:#03130b;font-size:11px;font-weight:800;
+             padding:3px 12px;border-radius:99px;white-space:nowrap}
+  .plan .pn{font-weight:800;font-size:16px}
+  .plan .pp{font-size:30px;font-weight:800;color:var(--green);margin:8px 0 2px}
+  .plan .pp small{font-size:13px;color:var(--dim);font-weight:600}
+  .plan ul{list-style:none;margin-top:12px;font-size:13px;line-height:2}
+  .plan li::before{content:"✓ ";color:var(--green);font-weight:800}
+  .plan .pb{width:100%;margin-top:14px;padding:11px;border-radius:10px;font-weight:700;
+            font-size:14px;cursor:pointer;border:1px solid var(--border);
+            background:transparent;color:var(--text)}
+  .plan.best .pb{background:var(--green);color:#03130b;border-color:var(--green)}
+
+  /* form */
+  #order{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px;margin-top:18px}
+  .fg{margin-bottom:14px}
+  .fg label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+  .fg label span{color:var(--dim);font-weight:400}
+  .fg input,.fg select,.fg textarea{width:100%;background:#0a101f;border:1px solid var(--border);
+    border-radius:10px;color:var(--text);padding:11px 13px;font-size:14px;outline:none;font-family:inherit}
+  .fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--green)}
+  .fg textarea{min-height:80px;resize:vertical}
+  .frow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:560px){.frow{grid-template-columns:1fr}}
+  .note{background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.25);
+        border-radius:10px;padding:12px;font-size:12.5px;color:#9fd8e8;line-height:1.6;margin-bottom:16px}
+  #msg{margin-top:12px;font-size:14px;padding:12px;border-radius:10px;display:none;line-height:1.6}
+  .ok{background:rgba(0,228,122,.12);border:1px solid rgba(0,228,122,.35);color:var(--green)}
+  .err{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);color:#f87171}
+
+  /* faq */
+  .faq{background:var(--card);border:1px solid var(--border);border-radius:12px;
+       padding:14px 16px;margin-bottom:8px}
+  .faq q{font-weight:700;font-size:14px;display:block;margin-bottom:5px}
+  .faq q::before{content:"Q "}
+  .faq p{color:var(--dim);font-size:13px;line-height:1.65}
+
+  footer{text-align:center;color:#2c3a5c;font-size:12px;margin-top:44px;line-height:1.8}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="badge">🤖 ลองฟรีก่อน ไม่ต้องสมัคร ไม่ต้องใส่บัตร</div>
+    <h1>ให้บอทตอบแชทลูกค้า<br>และ<span>รับจองคิวแทนคุณ</span> 24 ชม.</h1>
+    <p class="sub">
+      ลูกค้าทัก Facebook / Instagram ตอนตี 2 ก็มีคนตอบ<br>
+      ถามราคา ดูบริการ จองคิว ได้เองครบ — คุณแค่รอรับลูกค้าที่หน้าร้าน
+    </p>
+    <div class="cta-row">
+      <a href="#demos" class="btn btn-main">▶ ลองเล่นฟรีเลย</a>
+      <a href="#order" class="btn btn-ghost">สั่งทำให้ร้านฉัน</a>
+    </div>
+  </div>
+
+  <!-- DEMOS -->
+  <div class="sec" id="demos">
+    <div class="sec-title">🎪 ลองเล่นตามสายธุรกิจของคุณ</div>
+    <div class="sec-sub">กดเข้าไปคุยกับบอทได้เลย เหมือนเป็นลูกค้าจริง</div>
+    <div class="demos" id="demoList">กำลังโหลด...</div>
+  </div>
+
+  <!-- FEATURES -->
+  <div class="sec">
+    <div class="sec-title">✨ บอททำอะไรให้บ้าง</div>
+    <div class="sec-sub">ทั้งหมดนี้ทำงานเองอัตโนมัติ ไม่ต้องมีคนเฝ้าแชท</div>
+    <div class="feats">
+      <div class="feat"><div class="fi">💬</div><div class="ft">ตอบทันที 24 ชม.</div>
+        <div class="fd">ลูกค้าทักตอนไหนก็มีคนตอบ ไม่เสียลูกค้าเพราะตอบช้า</div></div>
+      <div class="feat"><div class="fi">📅</div><div class="ft">รับจองคิวอัตโนมัติ</div>
+        <div class="fd">เก็บชื่อ เบอร์ บริการ วัน-เวลา แล้วสรุปส่งให้คุณทันที</div></div>
+      <div class="feat"><div class="fi">💰</div><div class="ft">บอกราคา + ส่งแคตตาล็อก</div>
+        <div class="fd">ส่งรูปผลงาน ราคา โปรโมชั่น ให้ลูกค้าดูเองได้</div></div>
+      <div class="feat"><div class="fi">📱</div><div class="ft">FB + IG ระบบเดียว</div>
+        <div class="fd">ตอบทั้ง 2 ช่องทางพร้อมกัน ดูแลที่เดียวจบ</div></div>
+      <div class="feat"><div class="fi">🎯</div><div class="ft">รองรับลูกค้าจากแอด</div>
+        <div class="fd">คนกดแอดเข้ามา บอทต้อนรับด้วยโปรที่ตรงกับแอดนั้น</div></div>
+      <div class="feat"><div class="fi">🔔</div><div class="ft">แจ้งเตือนคุณทันที</div>
+        <div class="fd">มีจองใหม่ = เด้งเข้า LINE คุณเลย ไม่มีคิวหลุด</div></div>
+    </div>
+  </div>
+
+  <!-- PRICING -->
+  <div class="sec">
+    <div class="sec-title">💵 แพ็กเกจ</div>
+    <div class="sec-sub">ไม่มีค่าติดตั้ง · ยกเลิกได้ทุกเมื่อ · ไม่ผูกมัด</div>
+    <div class="plans">
+      <div class="plan">
+        <div class="pn">Starter</div>
+        <div class="pp">฿590<small> /เดือน</small></div>
+        <ul>
+          <li>ตอบแชท FB + IG อัตโนมัติ</li>
+          <li>รับจองคิว 50 ครั้ง/เดือน</li>
+          <li>เมนูบริการ + ราคา</li>
+          <li>แจ้งเตือนเข้า LINE</li>
+          <li>คู่มือใช้งานภาษาไทย</li>
+        </ul>
+        <button class="pb" onclick="pick('Starter')">เลือกแพ็กนี้</button>
+      </div>
+      <div class="plan best">
+        <div class="tag">แนะนำ · คุ้มสุด</div>
+        <div class="pn">Pro</div>
+        <div class="pp">฿1,290<small> /เดือน</small></div>
+        <ul>
+          <li>ทุกอย่างใน Starter</li>
+          <li>AI ตอบฉลาด เข้าใจภาษาคน</li>
+          <li>จองคิวไม่จำกัด</li>
+          <li>ส่งรูปผลงาน + แคตตาล็อก</li>
+          <li>Dashboard ดูสถิติ</li>
+          <li>ปรับข้อความ/ราคาได้ไม่จำกัด</li>
+        </ul>
+        <button class="pb" onclick="pick('Pro')">เลือกแพ็กนี้</button>
+      </div>
+      <div class="plan">
+        <div class="pn">Business</div>
+        <div class="pp">฿2,900<small> /เดือน</small></div>
+        <ul>
+          <li>ทุกอย่างใน Pro</li>
+          <li>รองรับหลายสาขา</li>
+          <li>ปรับแต่ง flow พิเศษ</li>
+          <li>เชื่อมระบบที่มีอยู่</li>
+          <li>Support ด่วน</li>
+        </ul>
+        <button class="pb" onclick="pick('Business')">เลือกแพ็กนี้</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ORDER FORM -->
+  <div class="sec" id="order">
+    <div class="sec-title">📝 สั่งทำให้ร้านคุณ</div>
+    <div class="sec-sub">กรอกไม่ถึง 1 นาที — ยังไม่ต้องจ่ายอะไรตอนนี้</div>
+
+    <div class="note">
+      ℹ️ <b>ขั้นตอนหลังกดส่ง:</b> เราจะทักกลับใน 24 ชม. พร้อมตัวอย่างบอทของร้านคุณให้ดูก่อน
+      พอใจแล้วค่อยจ่าย ไม่พอใจไม่เสียอะไรเลยครับ
+    </div>
+
+    <form id="f" onsubmit="return submitOrder(event)">
+      <div class="frow">
+        <div class="fg">
+          <label>ชื่อร้าน *</label>
+          <input name="shop_name" required placeholder="เช่น Beauty by Nan">
+        </div>
+        <div class="fg">
+          <label>ประเภทธุรกิจ *</label>
+          <select name="biz_type" required>
+            <option value="">— เลือก —</option>
+            <option value="beauty">ร้านเสริมสวย / ทำผม / เล็บ</option>
+            <option value="clinic">คลินิกความงาม</option>
+            <option value="spa">สปา / นวด</option>
+            <option value="restaurant">ร้านอาหาร / คาเฟ่</option>
+            <option value="other">อื่นๆ (ระบุด้านล่าง)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="frow">
+        <div class="fg">
+          <label>ชื่อผู้ติดต่อ *</label>
+          <input name="contact_name" required placeholder="ชื่อเล่นก็ได้">
+        </div>
+        <div class="fg">
+          <label>เบอร์ / LINE ID *</label>
+          <input name="contact" required placeholder="08x-xxx-xxxx หรือ LINE ID">
+        </div>
+      </div>
+
+      <div class="frow">
+        <div class="fg">
+          <label>แพ็กเกจที่สนใจ *</label>
+          <select name="plan" id="planSel" required>
+            <option value="Starter">Starter — ฿590/เดือน</option>
+            <option value="Pro" selected>Pro — ฿1,290/เดือน (แนะนำ)</option>
+            <option value="Business">Business — ฿2,900/เดือน</option>
+            <option value="ยังไม่แน่ใจ">ยังไม่แน่ใจ ขอคำแนะนำ</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>เพจ Facebook / IG <span>(ถ้ามี)</span></label>
+          <input name="page" placeholder="ลิงก์เพจ หรือชื่อเพจ">
+        </div>
+      </div>
+
+      <div class="fg">
+        <label>อยากให้บอทช่วยเรื่องไหนเป็นพิเศษ <span>(ไม่บังคับ)</span></label>
+        <textarea name="need" placeholder="เช่น ลูกค้าถามราคาเยอะมาก ตอบไม่ทัน / อยากให้จองคิวได้เอง / มีโปรอยากให้บอทเสนอ"></textarea>
+      </div>
+
+      <button type="submit" class="btn btn-main" style="width:100%" id="sbtn">
+        ส่งคำขอ — ให้เราทักกลับพร้อมตัวอย่าง
+      </button>
+      <div id="msg"></div>
+    </form>
+  </div>
+
+  <!-- FAQ -->
+  <div class="sec">
+    <div class="sec-title">❓ คำถามที่พบบ่อย</div>
+    <div class="sec-sub">&nbsp;</div>
+    <div class="faq"><q>ต้องมีเซิร์ฟเวอร์หรือความรู้เทคนิคไหม</q>
+      <p>ไม่ต้องเลยครับ เราดูแลระบบให้ทั้งหมด คุณแค่ใช้ Facebook/Instagram ของร้านตามปกติ</p></div>
+    <div class="faq"><q>ต้องเสียค่า API เพิ่มไหม</q>
+      <p>ไม่ครับ Facebook/Instagram API ฟรี ไม่มีค่าใช้จ่ายแอบแฝง จ่ายแค่ค่าแพ็กเกจรายเดือน</p></div>
+    <div class="faq"><q>ตั้งค่ายากไหม ใช้เวลากี่วัน</q>
+      <p>คุณแค่เพิ่มเราเป็น Editor ของเพจ (กด 3 ครั้ง) แล้วส่งข้อมูลร้านมา — ใช้งานได้ภายใน 2-3 วัน</p></div>
+    <div class="faq"><q>อยากแก้ข้อความ/ราคาเองได้ไหม</q>
+      <p>แพ็ก Pro ขึ้นไปแก้ได้ไม่จำกัดครับ ทักมาบอกเรา แก้ให้ภายในวันเดียว</p></div>
+    <div class="faq"><q>ยกเลิกได้ไหม มีสัญญาผูกมัดหรือเปล่า</q>
+      <p>ยกเลิกได้ทุกเมื่อ ไม่มีสัญญาผูกมัด ไม่มีค่าปรับครับ</p></div>
+    <div class="faq"><q>บอทจะตอบมั่วไหม ทำให้ลูกค้าหนีเปล่า</q>
+      <p>บอทตอบตามสคริปต์ที่เราเขียนให้ตรงกับร้านคุณ ถ้าเจอคำถามที่ตอบไม่ได้ จะส่งต่อให้แอดมินทันที ไม่มั่วแน่นอน</p></div>
+  </div>
+
+  <footer>
+    BotKit by Jark — LINE Bot &amp; AI Agent Developer<br>
+    ลองเล่น demo ได้ฟรีทุกสาย · ทักมาถามก่อนได้ ไม่กดดัน
+  </footer>
+</div>
+
+<script>
+const DC={beauty:'#f472b6',clinic:'#22d3ee',restaurant:'#f59e0b',spa:'#a78bfa'};
+
+// load demos
+(async()=>{
+  try{
+    const r=await fetch('/api/demos'); const d=await r.json();
+    document.getElementById('demoList').innerHTML=(d.demos||[]).map(x=>`
+      <a class="demo" href="${x.url}" target="_blank" style="--dm:${DC[x.slug]||'#00e47a'}">
+        <div class="e">${x.emoji}</div>
+        <div class="n">${x.name}</div>
+        <div class="t">${x.tagline}</div>
+        <div class="g">ลองเล่น ▸</div>
+      </a>`).join('');
+  }catch(e){ document.getElementById('demoList').innerHTML='<div style="color:var(--dim)">โหลดไม่ได้ ลองรีเฟรช</div>'; }
+})();
+
+function pick(p){
+  document.getElementById('planSel').value=p;
+  document.getElementById('order').scrollIntoView({behavior:'smooth'});
+}
+
+async function submitOrder(e){
+  e.preventDefault();
+  const btn=document.getElementById('sbtn'), msg=document.getElementById('msg');
+  const fd=new FormData(document.getElementById('f'));
+  const data=Object.fromEntries(fd.entries());
+
+  btn.disabled=true; btn.textContent='กำลังส่ง...';
+  try{
+    const r=await fetch('/api/botkit/order',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    const j=await r.json();
+    if(j.success){
+      msg.className='ok'; msg.style.display='block';
+      msg.innerHTML='✅ <b>ส่งเรียบร้อยแล้วครับ!</b><br>เราจะทักกลับภายใน 24 ชม. พร้อมตัวอย่างบอทของร้านคุณ<br>ระหว่างรอ ลองเล่น demo ด้านบนได้เลยครับ 😊';
+      document.getElementById('f').reset();
+      btn.textContent='ส่งแล้ว ✓';
+    } else { throw new Error(j.error||'ส่งไม่สำเร็จ'); }
+  }catch(err){
+    msg.className='err'; msg.style.display='block';
+    msg.innerHTML='❌ ส่งไม่สำเร็จ ลองใหม่อีกครั้ง หรือทักมาที่ Facebook: Jark Krit ได้เลยครับ';
+    btn.disabled=false; btn.textContent='ส่งคำขอ — ให้เราทักกลับพร้อมตัวอย่าง';
+  }
+  return false;
+}
+</script>
+</body>
+</html>

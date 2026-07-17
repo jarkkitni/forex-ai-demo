@@ -170,6 +170,12 @@
       </div>
     </div>
 
+    <!-- BotKit orders -->
+    <div class="card" id="botkitCard" style="grid-column:1/-1;display:none">
+      <h3>🔥 BotKit — ลูกค้าใหม่ <a href="/botkit" target="_blank" style="color:var(--cyan);font-size:11px;text-decoration:none;font-weight:600">เปิดหน้าขาย ▸</a></h3>
+      <div id="orders"></div>
+    </div>
+
     <!-- Demo showroom -->
     <div class="card" style="grid-column:1/-1">
       <h3>🎪 Demo ทั้งหมด — กดเปิดใช้งานได้เลย</h3>
@@ -327,8 +333,29 @@ async function loadDemos(){
   }catch(e){ $('demos').innerHTML='<div class="empty">โหลดไม่ได้</div>'; }
 }
 
-initBars(); loadStats(); loadJobs(); renderTasks(); loadStatus(); loadDemos();
-setInterval(()=>{ loadStats(); loadJobs(); loadStatus(); }, 60000);
+// ---------- botkit orders ----------
+const BIZ_TH={beauty:'ร้านเสริมสวย',clinic:'คลินิก',spa:'สปา/นวด',restaurant:'ร้านอาหาร',other:'อื่นๆ'};
+async function loadOrders(){
+  try{
+    const r=await fetch('/api/botkit/orders'); const d=await r.json();
+    if(!d.success || !d.count){ $('botkitCard').style.display='none'; return; }
+    $('botkitCard').style.display='block';
+    $('orders').innerHTML=d.orders.map(o=>`
+      <div class="sc-item">
+        <span class="sc-badge b-urgent">ใหม่</span>
+        <div style="flex:1">
+          <div style="font-weight:600">🏪 ${o.shop_name} · <span style="color:var(--amber)">${o.plan}</span></div>
+          <div class="sc-note">${BIZ_TH[o.biz_type]||o.biz_type} · ${o.contact_name} · ${o.contact}
+            ${o.need?'<br>💬 '+o.need.slice(0,60):''}</div>
+        </div>
+        ${o.biz_type&&BIZ_TH[o.biz_type]&&o.biz_type!=='other'
+          ? `<a href="/demo/${o.biz_type}" target="_blank" style="color:var(--cyan);font-size:11px;text-decoration:none;font-weight:700;white-space:nowrap">demo ▸</a>`:''}
+      </div>`).join('');
+  }catch(e){}
+}
+
+initBars(); loadStats(); loadJobs(); renderTasks(); loadStatus(); loadDemos(); loadOrders();
+setInterval(()=>{ loadStats(); loadJobs(); loadStatus(); loadOrders(); }, 60000);
 </script>
 </body>
 </html>

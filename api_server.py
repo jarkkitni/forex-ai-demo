@@ -470,6 +470,77 @@ def demo_by_biz(biz):
         return f"error: {e}", 500
 
 
+botkit_orders = []  # เก็บ order ในหน่วยความจำ (เฟส 1 — ยังไม่ต่อ DB)
+
+BIZ_LABEL = {
+    "beauty": "ร้านเสริมสวย", "clinic": "คลินิกความงาม",
+    "spa": "สปา/นวด", "restaurant": "ร้านอาหาร", "other": "อื่นๆ",
+}
+
+
+@app.route("/botkit")
+def botkit_page():
+    """หน้าขาย BotKit (self-serve เฟส 1)"""
+    _track_visit()
+    p = os.path.join(os.path.dirname(__file__), "botkit.html")
+    with open(p, "r", encoding="utf-8") as f:
+        return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
+@app.route("/api/botkit/order", methods=["POST"])
+def botkit_order():
+    """รับ order จากฟอร์ม → เด้ง LINE หาเจ้าของทันที"""
+    from datetime import timezone
+    try:
+        d = request.get_json(force=True) or {}
+        if not d.get("shop_name") or not d.get("contact"):
+            return jsonify({"success": False, "error": "ข้อมูลไม่ครบ"}), 400
+
+        order = {
+            "time":        datetime.now(timezone.utc).isoformat(),
+            "shop_name":   str(d.get("shop_name", ""))[:100],
+            "biz_type":    str(d.get("biz_type", ""))[:30],
+            "contact_name": str(d.get("contact_name", ""))[:60],
+            "contact":     str(d.get("contact", ""))[:60],
+            "plan":        str(d.get("plan", ""))[:30],
+            "page":        str(d.get("page", ""))[:200],
+            "need":        str(d.get("need", ""))[:500],
+            "status":      "new",
+        }
+        botkit_orders.insert(0, order)
+        del botkit_orders[50:]
+
+        biz = BIZ_LABEL.get(order["biz_type"], order["biz_type"] or "-")
+        demo_url = (f"https://forex-ai-demo.onrender.com/demo/{order['biz_type']}"
+                    if order["biz_type"] in ("beauty", "clinic", "spa", "restaurant")
+                    else "https://forex-ai-demo.onrender.com/botkit")
+
+        msg = (
+            f"🔥 ลูกค้าใหม่จาก BotKit!\n"
+            f"━━━━━━━━━━━━\n"
+            f"🏪 ร้าน: {order['shop_name']}\n"
+            f"📂 ประเภท: {biz}\n"
+            f"💳 สนใจ: {order['plan']}\n"
+            f"👤 {order['contact_name']} | {order['contact']}\n"
+            + (f"📱 เพจ: {order['page']}\n" if order["page"] else "")
+            + (f"💬 ต้องการ: {order['need']}\n" if order["need"] else "")
+            + f"━━━━━━━━━━━━\n"
+            f"🎪 demo สายนี้: {demo_url}\n"
+            f"⏰ ทักกลับภายใน 24 ชม.!"
+        )
+        _push_line(LINE_USER_ID, msg)
+        return jsonify({"success": True})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/botkit/orders", methods=["GET"])
+def botkit_order_list():
+    """รายการ order ล่าสุด (โชว์ใน NEXUS Monitor)"""
+    return jsonify({"success": True, "count": len(botkit_orders), "orders": botkit_orders[:10]})
+
+
 @app.route("/api/demos", methods=["GET"])
 def list_demos():
     """รายการ demo ทั้งหมด (ไว้โชว์ในหน้ารวม/ส่งลูกค้า)"""
