@@ -844,6 +844,16 @@ def robots():
     return txt, 200, {"Content-Type": "text/plain; charset=utf-8"}
 
 
+# ไฟล์ยืนยันความเป็นเจ้าของเว็บ ของ Google Search Console — ห้ามลบ!
+GSC_TOKEN = "google4f947fb5ceb78f37"
+
+
+@app.route(f"/{GSC_TOKEN}.html")
+def google_verify():
+    return (f"google-site-verification: {GSC_TOKEN}.html", 200,
+            {"Content-Type": "text/html; charset=utf-8"})
+
+
 @app.route("/botkit")
 def botkit_page():
     """หน้าขาย BotKit (self-serve เฟส 1)"""
