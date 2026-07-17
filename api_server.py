@@ -9,6 +9,7 @@ from flask_cors import CORS
 import anthropic
 
 import fastwork_hunter
+import rss_hunter
 import dialysis_api
 
 app  = Flask(__name__)
@@ -378,8 +379,25 @@ def hunter_check():
 
 @app.route("/api/hunter/log", methods=["GET"])
 def hunter_log():
-    """ประวัติงานที่ตรวจล่าสุด"""
-    return jsonify({"success": True, "log": fastwork_hunter.get_hunter_log()})
+    """ประวัติงานที่ตรวจล่าสุด (FastWork + RSS รวมกัน)"""
+    log = fastwork_hunter.get_hunter_log() + rss_hunter.get_log()
+    log.sort(key=lambda e: e.get("time", ""), reverse=True)
+    return jsonify({"success": True, "log": log[:20]})
+
+
+@app.route("/api/hunter/rss", methods=["GET", "POST"])
+def hunter_rss():
+    """ดักงานจากทั้งเน็ตผ่าน Google Alerts RSS (cron ยิงทุก 30 นาที)"""
+    if not rss_hunter.is_configured():
+        return jsonify({"success": False, "error": "ยังไม่ได้ตั้ง RSS_FEEDS"}), 503
+    if not ANTHROPIC_API_KEY or not LINE_TOKEN or not LINE_USER_ID:
+        return jsonify({"success": False, "error": "missing env keys"}), 500
+    try:
+        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        return jsonify(rss_hunter.run(client, _push_line, LINE_USER_ID))
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @app.route("/api/stats", methods=["GET"])
