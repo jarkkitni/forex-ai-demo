@@ -456,6 +456,15 @@ def _render_demo(biz: str) -> str:
             .replace("__TAGLINE__", cfg["tagline"]))
 
 
+@app.route("/demo/dialysis")
+def demo_dialysis():
+    """Demo ระบบบันทึกฟอกไต — flow ต่างจาก demo อื่น (พยาบาลบันทึก ไม่ใช่ลูกค้าจอง)"""
+    _track_visit()
+    p = os.path.join(os.path.dirname(__file__), "demo_dialysis.html")
+    with open(p, "r", encoding="utf-8") as f:
+        return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
 @app.route("/demo/<biz>")
 def demo_by_biz(biz):
     """Demo ตามประเภทธุรกิจ: /demo/beauty /demo/clinic /demo/restaurant /demo/spa"""
@@ -545,14 +554,17 @@ def botkit_order_list():
 def list_demos():
     """รายการ demo ทั้งหมด (ไว้โชว์ในหน้ารวม/ส่งลูกค้า)"""
     cfgs = _load_demo_configs()
-    return jsonify({
-        "success": True,
-        "demos": [
-            {"slug": k, "name": v["biz_name"], "emoji": v["emoji"],
-             "tagline": v["tagline"], "url": f"/demo/{k}"}
-            for k, v in cfgs.items()
-        ],
+    demos = [
+        {"slug": k, "name": v["biz_name"], "emoji": v["emoji"],
+         "tagline": v["tagline"], "url": f"/demo/{k}"}
+        for k, v in cfgs.items()
+    ]
+    # demo พิเศษ (flow ต่างจาก template ทั่วไป)
+    demos.append({
+        "slug": "dialysis", "name": "ศูนย์ไตเทียม", "emoji": "🏥",
+        "tagline": "ฟอกไต · บันทึกรอบ + ติดตามตัวกรอง", "url": "/demo/dialysis",
     })
+    return jsonify({"success": True, "demos": demos})
 
 
 @app.route("/beauty")

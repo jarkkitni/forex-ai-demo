@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demo — ระบบบันทึกฟอกไต + ติดตามตัวกรอง</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI','Leelawadee UI',Tahoma,sans-serif}
+  body{background:#0f1420;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:22px 12px}
+  h1{color:#e8ecf4;font-size:20px;margin-bottom:4px}
+  .sub{color:#7c8aa5;font-size:13px;margin-bottom:16px;text-align:center;line-height:1.6}
+  .wrap{display:flex;gap:20px;flex-wrap:wrap;justify-content:center}
+
+  /* phone */
+  .phone{width:390px;background:#fff;border-radius:26px;overflow:hidden;
+         box-shadow:0 20px 60px rgba(0,0,0,.5);border:6px solid #1a2233}
+  .hd{background:linear-gradient(90deg,#0284c7,#0369a1);color:#fff;padding:13px 16px;display:flex;align-items:center;gap:10px}
+  .hd .av{width:36px;height:36px;border-radius:50%;background:#e0f2fe;display:flex;align-items:center;justify-content:center;font-size:19px}
+  .hd .nm{font-weight:700;font-size:15px}
+  .hd .st{font-size:11px;opacity:.85}
+  .chat{height:520px;overflow-y:auto;padding:14px 12px;background:#f0f4f8;display:flex;flex-direction:column;gap:8px}
+  .msg{max-width:82%;padding:9px 13px;border-radius:16px;font-size:13.5px;line-height:1.5;white-space:pre-line;animation:pop .22s ease}
+  @keyframes pop{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
+  .bot{background:#fff;color:#111;align-self:flex-start;border-bottom-left-radius:5px;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+  .me{background:#0284c7;color:#fff;align-self:flex-end;border-bottom-right-radius:5px}
+  .alert{background:#fef2f2;border:1.5px solid #fca5a5;color:#991b1b;align-self:flex-start;font-weight:600}
+  .okmsg{background:#f0fdf4;border:1.5px solid #86efac;color:#166534;align-self:flex-start}
+  .quick{display:flex;flex-wrap:wrap;gap:6px;align-self:flex-start;max-width:96%}
+  .quick button{background:#fff;border:1.5px solid #0284c7;color:#0284c7;border-radius:16px;
+                padding:8px 14px;font-size:13px;cursor:pointer;transition:.12s;font-weight:600}
+  .quick button:hover{background:#0284c7;color:#fff}
+  .quick button.warn{border-color:#dc2626;color:#dc2626}
+  .quick button.warn:hover{background:#dc2626;color:#fff}
+  .typing{align-self:flex-start;color:#98a2b3;font-size:12px;padding-left:6px}
+  .bar{padding:10px;background:#fff;border-top:1px solid #e4e7ec;text-align:center}
+  .bar button{background:#eef2f7;border:none;border-radius:14px;padding:8px 18px;font-size:13px;cursor:pointer;color:#334}
+
+  /* side */
+  .side{width:330px;display:flex;flex-direction:column;gap:12px}
+  .card{background:#141b2d;border:1px solid #26304a;border-radius:16px;padding:16px}
+  .card h3{color:#38bdf8;font-size:14px;margin-bottom:10px}
+  .card .note{color:#7c8aa5;font-size:11.5px;line-height:1.55;margin-bottom:10px}
+  .rec{background:#1b2440;border:1px solid #2c3a63;border-radius:11px;padding:11px;margin-bottom:8px;animation:pop .25s}
+  .rec .rt{color:#fff;font-weight:700;font-size:13px;margin-bottom:4px;display:flex;justify-content:space-between}
+  .rec .rr{color:#aab6d3;font-size:11.5px;line-height:1.7}
+  .empty{color:#4a5878;font-size:12px;text-align:center;padding:24px 0;border:1.5px dashed #26304a;border-radius:11px}
+  .pill{font-size:10px;font-weight:800;border-radius:99px;padding:2px 8px}
+  .p-ok{background:#052e16;color:#4ade80}
+  .p-bad{background:#450a0a;color:#f87171}
+  .filters{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11.5px}
+  .fbox{background:#1b2440;border:1px solid #2c3a63;border-radius:8px;padding:8px;text-align:center}
+  .fbox b{color:#38bdf8;display:block;font-size:13px}
+  .fbox span{color:#7c8aa5}
+</style>
+</head>
+<body>
+  <h1>🏥 Demo — ระบบบันทึกฟอกไต (สำหรับพยาบาล)</h1>
+  <div class="sub">กดปุ่มในแชทเพื่อลองเล่น · ไม่ต้องพิมพ์เลย · บันทึกครบใน 6 ขั้น</div>
+
+  <div class="wrap">
+    <div class="phone">
+      <div class="hd">
+        <div class="av">🏥</div>
+        <div>
+          <div class="nm">ศูนย์ไตเทียม (Demo)</div>
+          <div class="st">ระบบบันทึกรอบฟอก · LINE OA</div>
+        </div>
+      </div>
+      <div class="chat" id="chat"></div>
+      <div class="bar"><button onclick="reset()">↺ เริ่มใหม่</button></div>
+    </div>
+
+    <div class="side">
+      <div class="card">
+        <h3>🧪 ตัวกรองที่ศูนย์ใช้</h3>
+        <div class="note">ค่า 100% (TCV) · เกณฑ์ตัด 80% · ใช้ซ้ำสูงสุด 20 ครั้ง</div>
+        <div class="filters">
+          <div class="fbox"><b>F7</b><span>100% = 96 ml</span></div>
+          <div class="fbox"><b>F60</b><span>100% = 82 ml</span></div>
+          <div class="fbox"><b>F80</b><span>100% = 110 ml</span></div>
+          <div class="fbox"><b>F100</b><span>100% = 132 ml</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>📋 บันทึกล่าสุด</h3>
+        <div class="note">พอกดยืนยัน ข้อมูลจะขึ้นที่นี่ + แจ้งเตือนหัวหน้าเวร</div>
+        <div id="recs"><div class="empty">ยังไม่มีบันทึก<br>ลองกดในแชทฝั่งซ้าย</div></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+// ===== ค่าคงที่จากศูนย์ (แก้ได้ที่เดียว) =====
+const FILTERS = { 'F7':96, 'F60':82, 'F80':110, 'F100':132 };
+const CUTOFF_PCT = 80;      // ต่ำกว่านี้ = เตือนให้เปลี่ยน
+const MAX_REUSE  = 20;      // ใช้ซ้ำสูงสุด
+
+// คนไข้ตัวอย่าง (ของจริงดึงจากฐานข้อมูล)
+const PATIENTS = {
+  'คุณสมชาย (HN 4412)': { filter:'F80', uses:5, schedule:'จ-พ-ศ' },
+  'คุณมาลี (HN 3387)':  { filter:'F60', uses:18, schedule:'อ-พฤ-ส' },
+  'คุณวิรัช (HN 5120)': { filter:'F7',  uses:12, schedule:'จ-พ-ศ' },
+};
+const DAYS = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+
+const chat = document.getElementById('chat');
+const recs = document.getElementById('recs');
+let S = {};
+
+const el = h => { const d=document.createElement('div'); d.innerHTML=h; return d.firstElementChild; };
+const scroll = () => chat.scrollTop = chat.scrollHeight;
+
+function bot(t, cls='bot', delay=520){
+  return new Promise(r=>{
+    const ty = el('<div class="typing">กำลังพิมพ์...</div>'); chat.appendChild(ty); scroll();
+    setTimeout(()=>{ ty.remove(); chat.appendChild(el(`<div class="msg ${cls}">${t}</div>`)); scroll(); r(); }, delay);
+  });
+}
+const me = t => { chat.appendChild(el(`<div class="msg me">${t}</div>`)); scroll(); };
+function ask(opts, fn){
+  const q = el('<div class="quick"></div>');
+  opts.forEach(o=>{
+    const label = typeof o==='string' ? o : o.t;
+    const b=document.createElement('button');
+    b.textContent=label;
+    if(typeof o!=='string' && o.warn) b.className='warn';
+    b.onclick=()=>{ q.remove(); me(label); fn(label); };
+    q.appendChild(b);
+  });
+  chat.appendChild(q); scroll();
+}
+
+// คำนวณวันนัดถัดไปจากรอบฟอก
+function nextVisit(schedule){
+  const map = { 'จ-พ-ศ':[1,3,5], 'อ-พฤ-ส':[2,4,6] };
+  const days = map[schedule] || [1,3,5];
+  const now = new Date();
+  for(let i=1;i<=7;i++){
+    const d = new Date(now); d.setDate(now.getDate()+i);
+    if(days.includes(d.getDay()))
+      return { txt:`${DAYS[d.getDay()]} ${d.getDate()}/${d.getMonth()+1}`, days:i };
+  }
+}
+
+// ===== FLOW =====
+async function start(){
+  S = {};
+  await bot('สวัสดีค่ะ 🏥 ระบบบันทึกรอบฟอกไต\nเลือกได้เลยค่ะ');
+  ask(['👤 คนไข้เดิม', '🆕 คนไข้ใหม่ (ครั้งแรก)'], c =>
+    c.includes('ใหม่') ? newPatient() : pickPatient());
+}
+
+// ---------- คนไข้เดิม ----------
+async function pickPatient(){
+  await bot('เลือกคนไข้ค่ะ');
+  ask(Object.keys(PATIENTS), async name=>{
+    S.name = name;
+    S.p = {...PATIENTS[name]};
+    S.filter = S.p.filter;
+    S.base = FILTERS[S.filter];
+    S.uses = S.p.uses;
+    S.isNew = false;
+
+    const left = MAX_REUSE - S.uses;
+    await bot(
+      `📋 <b>${name}</b>\n` +
+      `🧪 ตัวกรอง: <b>${S.filter}</b> (100% = ${S.base} ml)\n` +
+      `🔁 ใช้มาแล้ว: <b>${S.uses}/${MAX_REUSE}</b> ครั้ง` +
+      (left<=2 ? `\n⚠️ เหลืออีก ${left} ครั้งเท่านั้น` : '') +
+      `\n📅 รอบ: ${S.p.schedule}`
+    );
+    if(S.uses >= MAX_REUSE){
+      await bot(`🔴 ตัวกรองใช้ครบ ${MAX_REUSE} ครั้งแล้วค่ะ\nต้องเปลี่ยนตัวกรองใหม่ก่อนฟอก`, 'alert');
+      return ask([{t:'🧪 เปลี่ยนตัวกรองใหม่'}], ()=> chooseFilter(true));
+    }
+    weightPre();
+  });
+}
+
+// ---------- คนไข้ใหม่ ----------
+async function newPatient(){
+  S.isNew = true;
+  await bot('รับคนไข้ใหม่ค่ะ 🆕\nขอชื่อ + HN ค่ะ\n<i>(เดโมนี้กดปุ่มแทนการพิมพ์)</i>');
+  ask(['คุณอนันต์ (HN 6301)'], async n=>{
+    S.name = n;
+    await bot('รอบฟอกของคนไข้คนนี้คือรอบไหนคะ');
+    ask(['จ-พ-ศ','อ-พฤ-ส'], async sc=>{
+      S.p = { schedule: sc, uses: 0 };
+      S.uses = 0;
+      weightPre();
+    });
+  });
+}
+
+// ---------- น้ำหนัก/ความดัน ----------
+async function weightPre(){
+  await bot('น้ำหนักก่อนฟอกค่ะ (กก.)');
+  ask(['62.5','64.0','65.8','67.2'], async w=>{
+    S.wPre = parseFloat(w);
+    await bot('ความดันก่อนฟอกค่ะ');
+    ask(['128/82','142/90','155/95','118/75'], async bp=>{
+      S.bpPre = bp;
+      const sys = parseInt(bp.split('/')[0]);
+      if(sys >= 150) await bot(`⚠️ ความดันสูง (${bp}) — แจ้งพยาบาลหัวหน้าเวรแล้วค่ะ`, 'alert');
+      S.isNew ? chooseFilter(false) : measureTCV();
+    });
+  });
+}
+
+// ---------- เลือกตัวกรอง (คนไข้ใหม่ / เปลี่ยนใหม่) ----------
+async function chooseFilter(isReplace){
+  await bot(
+    (isReplace ? '🧪 เลือกตัวกรองใหม่ค่ะ' : '🧪 เลือกตัวกรองสำหรับคนไข้ใหม่ค่ะ') +
+    '\n<i>แพทย์/พยาบาลเป็นผู้เลือกตามความเหมาะสมของคนไข้</i>'
+  );
+  ask(Object.keys(FILTERS).map(f=>`${f} (${FILTERS[f]} ml)`), async pick=>{
+    S.filter = pick.split(' ')[0];
+    S.base = FILTERS[S.filter];
+    S.uses = 0;
+    await bot(
+      `✅ บันทึกตัวกรอง <b>${S.filter}</b>\n` +
+      `ค่าเริ่มต้น 100% = <b>${S.base} ml</b>\n` +
+      `ครั้งที่ 1 จาก ${MAX_REUSE}`, 'okmsg'
+    );
+    weightPost();
+  });
+}
+
+// ---------- วัด TCV (คนไข้เดิม) ----------
+async function measureTCV(){
+  await bot(`🧪 วัดค่าตัวกรอง ${S.filter} ค่ะ\nค่าเริ่มต้น 100% = ${S.base} ml\nวัดได้เท่าไหร่คะ`);
+  const opts = [
+    (S.base*0.95).toFixed(0), (S.base*0.88).toFixed(0),
+    (S.base*0.82).toFixed(0), (S.base*0.74).toFixed(0),
+  ];
+  ask(opts.map(v=>`${v} ml`), async v=>{
+    const tcv = parseFloat(v);
+    S.tcv = tcv;
+    S.pct = Math.round(tcv / S.base * 100);
+    S.uses += 1;
+
+    if(S.pct < CUTOFF_PCT){
+      await bot(
+        `🔴 <b>${tcv} ml = ${S.pct}%</b> ของค่าเริ่มต้น\n` +
+        `ต่ำกว่าเกณฑ์ ${CUTOFF_PCT}% — ควรเปลี่ยนตัวกรอง`, 'alert');
+      return ask([{t:'🧪 เปลี่ยนตัวกรองใหม่'}, {t:'ยืนยันใช้ต่อ (บันทึกเหตุผล)', warn:true}],
+        c => c.includes('เปลี่ยน') ? chooseFilter(true) : (S.override=true, weightPost()));
+    }
+    await bot(`✅ <b>${tcv} ml = ${S.pct}%</b> — ผ่านเกณฑ์ ใช้ต่อได้ค่ะ\nครั้งที่ ${S.uses}/${MAX_REUSE}`, 'okmsg');
+    weightPost();
+  });
+}
+
+// ---------- หลังฟอก ----------
+async function weightPost(){
+  await bot('น้ำหนักหลังฟอกค่ะ (กก.)');
+  const base = S.wPre || 65;
+  ask([(base-2.5).toFixed(1),(base-3.0).toFixed(1),(base-3.5).toFixed(1)], async w=>{
+    S.wPost = parseFloat(w);
+    S.uf = (S.wPre - S.wPost).toFixed(1);
+    await bot('ความดันหลังฟอกค่ะ');
+    ask(['118/76','125/80','105/65'], async bp=>{
+      S.bpPost = bp;
+      confirm();
+    });
+  });
+}
+
+// ---------- สรุป + ยืนยัน ----------
+async function confirm(){
+  const nv = nextVisit(S.p.schedule);
+  S.next = nv;
+  await bot(
+    `📋 <b>สรุปรอบฟอก</b>\n` +
+    `━━━━━━━━━━\n` +
+    `👤 ${S.name}\n` +
+    `⚖️ ${S.wPre} → ${S.wPost} กก. (UF ${S.uf} ล.)\n` +
+    `🩺 ${S.bpPre} → ${S.bpPost}\n` +
+    `🧪 ${S.filter} · ` + (S.tcv ? `${S.tcv} ml (${S.pct}%)` : `ใหม่ (${S.base} ml)`) + `\n` +
+    `🔁 ครั้งที่ ${S.uses}/${MAX_REUSE}\n` +
+    `📅 นัดถัดไป: <b>${nv.txt}</b> (อีก ${nv.days} วัน)\n` +
+    `━━━━━━━━━━\n` +
+    `ยืนยันบันทึกไหมคะ`
+  );
+  ask(['✅ ยืนยันบันทึก','❌ แก้ไข'], async c=>{
+    if(c.includes('ยืนยัน')){
+      await bot('บันทึกเรียบร้อยค่ะ 🎉\nส่งแจ้งเตือนนัดถัดไปให้คนไข้ทาง LINE แล้ว', 'okmsg');
+      push();
+      ask(['🏥 บันทึกคนไข้คนต่อไป'], () => start());
+    } else { await bot('ยกเลิกค่ะ เริ่มใหม่นะคะ'); start(); }
+  });
+}
+
+function push(){
+  if(recs.querySelector('.empty')) recs.innerHTML='';
+  const t = new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+  const warn = S.pct && S.pct < CUTOFF_PCT;
+  recs.prepend(el(`<div class="rec">
+    <div class="rt"><span>${S.name.split(' (')[0]}</span>
+      <span class="pill ${warn?'p-bad':'p-ok'}">${warn?'ตัวกรองต่ำ':'ปกติ'}</span></div>
+    <div class="rr">
+      ⚖️ ${S.wPre}→${S.wPost} กก. · UF ${S.uf} ล.<br>
+      🩺 ${S.bpPre} → ${S.bpPost}<br>
+      🧪 ${S.filter} ${S.tcv?`· ${S.tcv}ml (${S.pct}%)`:'· ตัวใหม่'} · ${S.uses}/${MAX_REUSE}<br>
+      📅 นัดถัดไป: <b style="color:#38bdf8">${S.next.txt}</b><br>
+      🕐 บันทึก ${t} น.
+    </div></div>`));
+}
+
+const reset = () => { chat.innerHTML=''; start(); };
+start();
+</script>
+</body>
+</html>
