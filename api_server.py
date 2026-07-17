@@ -397,6 +397,15 @@ def get_stats():
     })
 
 
+@app.route("/beauty")
+def beauty_demo():
+    """Demo ระบบตอบแชท + จองคิว Beauty Salon (สำหรับลูกค้าลองเล่น)"""
+    _track_visit()
+    html_path = os.path.join(os.path.dirname(__file__), "demo_beauty_salon.html")
+    with open(html_path, "r", encoding="utf-8") as f:
+        return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
 @app.route("/")
 def index():
     _track_visit()
