@@ -397,6 +397,17 @@ def get_stats():
     })
 
 
+@app.route("/api/status", methods=["GET"])
+def get_status_card():
+    """การ์ดสถานะงาน (Garuda สร้าง data → SiriAriyaMate render)"""
+    try:
+        p = os.path.join(os.path.dirname(__file__), "status_card_data.json")
+        with open(p, "r", encoding="utf-8") as f:
+            return jsonify({"success": True, **json.load(f)})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 404
+
+
 @app.route("/monitor")
 def monitor():
     """NEXUS Monitor — Dashboard สำหรับแท็บเล็ต/มือถือ (PWA)"""
