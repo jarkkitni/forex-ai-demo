@@ -438,6 +438,14 @@ def get_status_card():
         return jsonify({"success": False, "error": str(e)}), 404
 
 
+@app.route("/hunter")
+def hunter_tracker():
+    """Reverse Hunter — ตัวช่วยหาร้าน + จดร้านที่ทัก + สคริปต์ (เครื่องมือภายใน)"""
+    p = os.path.join(os.path.dirname(__file__), "hunter_tracker.html")
+    with open(p, "r", encoding="utf-8") as f:
+        return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
 @app.route("/monitor")
 def monitor():
     """NEXUS Monitor — Dashboard สำหรับแท็บเล็ต/มือถือ (PWA)"""
@@ -671,6 +679,45 @@ SEO_PAGES = {
             "มีระบบบันทึกข้อมูลคนไข้ให้ด้วย (ออปชั่น)",
         ],
     },
+    "bot-ran-serm-suay": {
+        "h1": "รับทำบอทตอบแชทร้านเสริมสวย",
+        "title": "รับทำบอทร้านเสริมสวย ตอบแชท + จองคิว | ร้านทำผม เล็บ ขนตา",
+        "desc": "บอทตอบแชทสำหรับร้านเสริมสวย ร้านทำผม ร้านเล็บ ต่อขนตา ตอบราคา ส่งรูปผลงาน รับจองคิวอัตโนมัติ 24 ชม. เริ่ม ฿590/เดือน",
+        "kw": "บอทร้านเสริมสวย, บอทร้านทำผม, บอทร้านเล็บ, จองคิวร้านเสริมสวย, ระบบร้านทำผม",
+        "lead": "ลูกค้าทักตอนดึก ตอนคิวเต็มมือ ก็มีคนตอบ — บอทส่งราคา ผลงาน และรับจองคิวให้",
+        "points": [
+            "ส่งเมนูบริการ + ราคา ให้ลูกค้าดูเอง",
+            "ส่งรูปผลงานเป็นแคตตาล็อกเลื่อนดูได้",
+            "รับจองคิว เก็บชื่อ-เบอร์-วัน-เวลา",
+            "แจ้งเตือนเจ้าของร้านทันทีที่มีคนจอง",
+        ],
+    },
+    "bot-ran-ahan": {
+        "h1": "รับทำบอทตอบแชทร้านอาหาร",
+        "title": "รับทำบอทร้านอาหาร จองโต๊ะ + สั่งกลับบ้าน | ตอบแชทอัตโนมัติ",
+        "desc": "บอทตอบแชทร้านอาหาร คาเฟ่ ส่งเมนู รับจองโต๊ะ รับออเดอร์กลับบ้าน ตอบคำถามที่จอด เวลาเปิด-ปิด อัตโนมัติ 24 ชม.",
+        "kw": "บอทร้านอาหาร, จองโต๊ะออนไลน์, ระบบร้านอาหาร, บอทคาเฟ่, รับออเดอร์อัตโนมัติ",
+        "lead": "ช่วงพีคมือไม่ว่าง — ให้บอทส่งเมนู รับจองโต๊ะ ตอบคำถามซ้ำๆ แทน",
+        "points": [
+            "ส่งเมนู + ราคา ให้ลูกค้าดูในแชท",
+            "รับจองโต๊ะ เก็บชื่อ-เบอร์-จำนวนคน-เวลา",
+            "รับออเดอร์กลับบ้าน",
+            "ตอบคำถามซ้ำๆ (ที่จอด เวลาเปิด โปร)",
+        ],
+    },
+    "n8n-automation": {
+        "h1": "รับทำ n8n Automation + AI",
+        "title": "รับทำ n8n Automation + AI Agent | ลดงานซ้ำซาก แจ้งเตือน LINE",
+        "desc": "รับสร้างระบบ automation ด้วย n8n + AI (Claude) เชื่อม Google Sheet, LINE, API ลดงาน manual แจ้งเตือนอัตโนมัติ เริ่ม ฿1,500",
+        "kw": "n8n, automation, รับทำ automation, ระบบอัตโนมัติ, make.com, zapier, ai agent, rpa",
+        "lead": "เปลี่ยนงานซ้ำซากให้เป็นระบบที่ AI คิดและตัดสินใจให้ — ทำงานแทนคุณ 24 ชม.",
+        "points": [
+            "เชื่อม Google Form/Sheet → LINE/Email อัตโนมัติ",
+            "AI (Claude) วิเคราะห์และสรุปข้อมูลให้",
+            "ดักจับข้อมูลจากเว็บ/API → ส่งรายงานเข้า LINE",
+            "แจ้งเตือน error + retry อัตโนมัติ",
+        ],
+    },
 }
 
 
@@ -680,6 +727,11 @@ def _seo_page(slug: str) -> str:
     demos = "".join(
         f'<a class="d" href="/demo/{k}" target="_blank">{v["emoji"]} {v["biz_name"]}</a>'
         for k, v in _load_demo_configs().items()
+    )
+    # ลิงก์ไปหน้าอื่น (internal linking ช่วย SEO)
+    others = "".join(
+        f' · <a href="/{k}">{v["h1"]}</a>'
+        for k, v in SEO_PAGES.items() if k != slug
     )
     return f"""<!DOCTYPE html><html lang="th"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -746,8 +798,7 @@ footer a{{color:#22d3ee}}
 
 <footer>
   BotKit by Jark — LINE Bot &amp; AI Agent Developer<br>
-  <a href="/botkit">ดูแพ็กเกจ</a> · <a href="/line-bot">รับทำ LINE Bot</a> ·
-  <a href="/bot-jongkiw">ระบบจองคิว</a> · <a href="/chatbot-clinic">Chatbot คลินิก</a>
+  <a href="/botkit">ดูแพ็กเกจทั้งหมด</a>{others}
 </footer>
 </div></body></html>"""
 
@@ -785,6 +836,7 @@ def robots():
         "User-agent: *\n"
         "Allow: /\n"
         "Disallow: /monitor\n"          # จอภายใน ไม่ให้ index
+        "Disallow: /hunter\n"           # เครื่องมือภายใน
         "Disallow: /demo/dialysis\n"    # มีข้อมูลคนไข้ ห้าม index เด็ดขาด
         "Disallow: /api/\n"
         f"\nSitemap: {BASE_URL}/sitemap.xml\n"

@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#060a16">
+<title>Reverse Hunter — ตัวช่วยหาร้าน</title>
+<style>
+  :root{--bg:#060a16;--card:#0e1526;--border:#1c2740;--green:#00e47a;--cyan:#22d3ee;
+        --amber:#f59e0b;--pink:#f472b6;--text:#e2e8f0;--dim:#5b6b8c;}
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',system-ui,Tahoma,sans-serif}
+  body{background:var(--bg);color:var(--text);padding:20px 14px 50px;
+       background-image:radial-gradient(circle at 20% 5%,#0b1a3a 0%,transparent 45%)}
+  .w{max-width:900px;margin:0 auto}
+  h1{font-size:20px;font-weight:800;margin-bottom:3px}
+  .sub{color:var(--dim);font-size:13px;margin-bottom:18px}
+
+  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px}
+  .card h3{font-size:14px;color:var(--green);margin-bottom:10px}
+
+  /* progress */
+  .prog{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .big{font-size:40px;font-weight:800;color:var(--cyan);line-height:1}
+  .plabel{font-size:12px;color:var(--dim)}
+  .bar{flex:1;min-width:180px;height:12px;background:#0a101f;border:1px solid var(--border);
+       border-radius:7px;overflow:hidden}
+  .fill{height:100%;background:var(--green);width:0;transition:width .6s}
+  .stat{display:flex;gap:18px;margin-top:12px;flex-wrap:wrap;font-size:12.5px;color:var(--dim)}
+  .stat b{color:var(--text);font-size:15px;display:block}
+
+  /* form */
+  .row{display:grid;grid-template-columns:1.4fr 1fr auto;gap:8px;margin-bottom:8px}
+  @media(max-width:640px){.row{grid-template-columns:1fr}}
+  input,select{background:#0a101f;border:1px solid var(--border);border-radius:9px;
+               color:var(--text);padding:10px 12px;font-size:13.5px;outline:none;font-family:inherit;width:100%}
+  input:focus,select:focus{border-color:var(--green)}
+  .btn{background:var(--green);color:#03130b;border:none;border-radius:9px;padding:10px 18px;
+       font-weight:800;font-size:13.5px;cursor:pointer;white-space:nowrap}
+  .btn.gh{background:transparent;border:1px solid var(--border);color:var(--text);font-weight:600}
+
+  /* list */
+  .shop{display:flex;gap:10px;align-items:flex-start;padding:11px 0;border-bottom:1px solid #131c31}
+  .shop:last-child{border-bottom:none}
+  .sinfo{flex:1;min-width:0}
+  .sname{font-weight:700;font-size:14px}
+  .smeta{font-size:11.5px;color:var(--dim);margin-top:2px;line-height:1.5}
+  .badge{font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px;white-space:nowrap}
+  .b-new{background:rgba(245,158,11,.15);color:var(--amber)}
+  .b-sent{background:rgba(34,211,238,.15);color:var(--cyan)}
+  .b-reply{background:rgba(0,228,122,.15);color:var(--green)}
+  .b-no{background:#182238;color:var(--dim)}
+  .b-won{background:var(--green);color:#03130b}
+  .acts{display:flex;gap:5px;flex-wrap:wrap}
+  .mini{background:#0a101f;border:1px solid var(--border);color:var(--dim);border-radius:7px;
+        padding:4px 8px;font-size:11px;cursor:pointer}
+  .mini:hover{border-color:var(--green);color:var(--green)}
+  .empty{color:var(--dim);font-size:13px;text-align:center;padding:26px 0;
+         border:1.5px dashed var(--border);border-radius:12px}
+
+  /* script box */
+  .scr{background:#0a101f;border:1px solid var(--border);border-radius:11px;padding:12px;
+       font-size:13px;line-height:1.7;white-space:pre-line;color:#c7d3e8;margin-top:8px}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px}
+  .tab{background:#0a101f;border:1px solid var(--border);color:var(--dim);border-radius:8px;
+       padding:7px 12px;font-size:12.5px;cursor:pointer;font-weight:600}
+  .tab.on{background:var(--green);color:#03130b;border-color:var(--green)}
+  .copy{margin-top:8px}
+
+  /* checklist */
+  .chk{font-size:13px;line-height:1.9;color:#c7d3e8}
+  .chk b{color:var(--amber)}
+  .warn{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:10px;
+        padding:10px 12px;font-size:12.5px;color:#fca5a5;line-height:1.6;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="w">
+  <h1>🎯 Reverse Hunter</h1>
+  <div class="sub">หาร้านที่มีอาการ → ทักเสนอ demo · ทำมือเท่านั้น ห้ามใช้บอท</div>
+
+  <!-- progress -->
+  <div class="card">
+    <h3>📊 วันนี้</h3>
+    <div class="prog">
+      <div>
+        <div class="big" id="todayN">0</div>
+        <div class="plabel">ทักไปแล้ววันนี้</div>
+      </div>
+      <div style="flex:1;min-width:180px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--dim);margin-bottom:4px">
+          <span>เป้าวันละ 10 ร้าน</span><span id="pct">0%</span>
+        </div>
+        <div class="bar"><div class="fill" id="fill"></div></div>
+        <div style="font-size:11.5px;color:var(--dim);margin-top:5px" id="tip">เริ่มเลย! ทัก 10 ร้าน ≈ 30 นาที</div>
+      </div>
+    </div>
+    <div class="stat">
+      <div><b id="sAll">0</b>ร้านทั้งหมด</div>
+      <div><b id="sSent">0</b>ทักแล้ว</div>
+      <div><b id="sReply">0</b>ตอบกลับ</div>
+      <div><b id="sWon">0</b>ปิดได้</div>
+      <div><b id="sRate">0%</b>อัตราตอบกลับ</div>
+    </div>
+  </div>
+
+  <!-- add shop -->
+  <div class="card">
+    <h3>➕ เพิ่มร้านที่เจอ</h3>
+    <div class="row">
+      <input id="n" placeholder="ชื่อร้าน" autocomplete="off">
+      <select id="sym">
+        <option value="ตอบใน 1 วัน">ตอบกลับใน 1 วัน 🔥</option>
+        <option value="ตอบไม่กี่ ชม.">ตอบกลับไม่กี่ ชม.</option>
+        <option value="คอมเมนต์ค้าง">คอมเมนต์ถามราคาค้าง</option>
+        <option value="ยิงแอดแต่ตอบช้า">ยิงแอดแต่ตอบช้า 💰</option>
+        <option value="โพสขอโทษตอบช้า">โพสว่าตอบช้า</option>
+      </select>
+      <button class="btn" onclick="add()">เพิ่ม</button>
+    </div>
+    <div class="row" style="grid-template-columns:1fr 1fr">
+      <select id="biz">
+        <option value="beauty">💅 ร้านเสริมสวย</option>
+        <option value="clinic">🏥 คลินิก</option>
+        <option value="restaurant">🍽️ ร้านอาหาร</option>
+        <option value="spa">💆 สปา/นวด</option>
+      </select>
+      <input id="url" placeholder="ลิงก์เพจ (ไม่บังคับ)" autocomplete="off">
+    </div>
+  </div>
+
+  <!-- shops -->
+  <div class="card">
+    <h3>🏪 รายชื่อร้าน</h3>
+    <div id="list"><div class="empty">ยังไม่มีร้าน<br>เพิ่มร้านที่เจอด้านบน</div></div>
+  </div>
+
+  <!-- scripts -->
+  <div class="card">
+    <h3>💬 สคริปต์ทัก — กด copy แล้วปรับตามร้าน</h3>
+    <div class="tabs" id="tabs"></div>
+    <div class="scr" id="scr"></div>
+    <button class="btn gh copy" onclick="copyScr()">📋 คัดลอก</button>
+    <div class="warn">
+      ⚠️ <b>ต้องปรับทุกร้าน</b> — เปิดดูผลงานเขาจริงก่อน แล้วชมให้ตรง
+      · copy เป๊ะทุกร้าน = FB จับสแปม
+    </div>
+  </div>
+
+  <!-- checklist -->
+  <div class="card">
+    <h3>🔍 หาร้านยังไง</h3>
+    <div class="chk">
+      1. FB ค้น <b>"ร้านทำเล็บ [จังหวัด]"</b> → กรอง Pages<br>
+      2. เข้าเพจ → ดูใต้ชื่อ: ขึ้น <b>"ตอบกลับภายในหนึ่งวัน"</b> = มีอาการ 🔥<br>
+      3. เปิดโพสล่าสุด → มีคนถามราคาแล้วไม่มีคนตอบ = ยิ่งชัด<br>
+      4. เป้าทอง: เจอโพส <b>"ได้รับการสนับสนุน"</b> (แอด) แต่ตอบช้า = มีงบ + เจ็บจริง 💰<br>
+      5. <a href="https://www.facebook.com/ads/library" target="_blank" style="color:var(--cyan)">FB Ads Library</a> = เช็คว่าร้านไหนยิงแอดอยู่
+    </div>
+    <div class="warn">
+      🚫 ทัก 5-10 ร้าน/วันพอ · ทักครั้งเดียว ไม่ตอบก็ปล่อย · ห้ามใช้บอท auto DM (แบนถาวร)
+    </div>
+  </div>
+</div>
+
+<script>
+const KEY='rev_hunter_shops';
+const DEMO={beauty:'/demo/beauty',clinic:'/demo/clinic',restaurant:'/demo/restaurant',spa:'/demo/spa'};
+const BIZ={beauty:'💅 เสริมสวย',clinic:'🏥 คลินิก',restaurant:'🍽️ ร้านอาหาร',spa:'💆 สปา'};
+const ST={new:['b-new','ยังไม่ทัก'],sent:['b-sent','ทักแล้ว'],reply:['b-reply','ตอบกลับ'],
+          no:['b-no','เงียบ'],won:['b-won','ปิดได้ 🎉']};
+const BASE=location.origin;
+
+const SCRIPTS={
+ 'ตอบช้า':`สวัสดีครับ 😊
+พอดีเห็นเพจร้านแล้วสนใจครับ (ผลงานสวยมาก)
+
+สังเกตว่าเพจขึ้นว่าตอบกลับภายในหนึ่งวัน
+เลยเดาว่าน่าจะแชทเยอะจนตอบไม่ทันใช่ไหมครับ?
+
+ผมทำระบบตอบแชทอัตโนมัติให้ร้านครับ
+ลูกค้าทักมา → บอทตอบราคา ส่งรูปผลงาน ให้จองคิวได้เอง
+มีคนจอง → เด้งเข้า LINE เจ้าของทันที
+
+ลองเล่นดูก่อนได้เลยครับ ฟรี ไม่ต้องสมัคร:
+${BASE}/demo/beauty
+
+ถ้าไม่สนใจไม่เป็นไรนะครับ ขอโทษที่รบกวนครับ 🙏`,
+
+ 'คอมเมนต์ค้าง':`สวัสดีครับ 😊
+เห็นโพสร้านมีคนถามราคาในคอมเมนต์หลายคนเลยครับ
+
+ผมทำระบบให้บอทตอบแทนได้ครับ
+ลูกค้าถามราคา/ดูผลงาน/จองคิว → บอทจัดการให้หมด 24 ชม.
+แอดมินแค่รอรับคิวที่จองเข้ามา
+
+ลองเล่นฟรีดูก่อนได้เลยครับ:
+${BASE}/demo/beauty
+
+สนใจทักมาคุยได้เลยครับ ไม่สนใจไม่เป็นไรนะครับ 🙏`,
+
+ 'ยิงแอด 💰':`สวัสดีครับ 😊 เห็นแอดร้านแล้วสวยมากครับ
+
+ขอถามตรงๆ นะครับ — ยิงแอดแล้วคนทักเยอะ
+แต่ตอบไม่ทันบ้างไหมครับ?
+
+เพราะเงินแอดที่จ่ายไป ถ้าลูกค้าทักแล้วตอบช้า
+เขาไปร้านอื่นเลย = เสียเงินแอดฟรีๆ ครับ
+
+ผมทำบอทตอบแชทให้ร้าน ตอบทันที 24 ชม.
++ นับได้ด้วยว่าแอดตัวไหนทำให้คนจองจริง (วัดผลได้)
+
+ลองดูก่อนครับ ฟรี:
+${BASE}/demo/beauty`,
+
+ 'ร้านอาหาร':`สวัสดีครับ 😊 เห็นเพจร้านแล้วน่ากินมากครับ
+
+ช่วงพีคๆ ลูกค้าทักถามเมนู ถามที่จอด ถามโปร
+แต่มือเราอยู่ในครัว ตอบไม่ทันใช่ไหมครับ
+
+ผมทำบอทตอบแชทให้ร้านอาหารครับ
+บอทส่งเมนู+ราคา → รับจองโต๊ะ → เด้งเข้า LINE เจ้าของทันที
+
+ลองเล่นฟรีดูได้เลยครับ:
+${BASE}/demo/restaurant
+
+ไม่สนใจไม่เป็นไรนะครับ 🙏`
+};
+
+const $=i=>document.getElementById(i);
+const load=()=>{try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){return[]}};
+const save=d=>localStorage.setItem(KEY,JSON.stringify(d));
+const today=()=>new Date().toISOString().slice(0,10);
+
+function add(){
+  const n=$('n').value.trim(); if(!n) return $('n').focus();
+  const d=load();
+  d.unshift({id:Date.now(),n,sym:$('sym').value,biz:$('biz').value,
+             url:$('url').value.trim(),st:'new',date:today()});
+  save(d); $('n').value=''; $('url').value=''; render(); $('n').focus();
+}
+function setSt(id,st){ const d=load(); const s=d.find(x=>x.id===id);
+  if(s){ s.st=st; if(st==='sent'&&!s.sentDate) s.sentDate=today(); save(d); render(); } }
+function del(id){ save(load().filter(x=>x.id!==id)); render(); }
+
+function render(){
+  const d=load();
+  const sent=d.filter(x=>x.st!=='new');
+  const reply=d.filter(x=>['reply','won'].includes(x.st));
+  const won=d.filter(x=>x.st==='won');
+  const t=d.filter(x=>x.sentDate===today()).length;
+
+  $('todayN').textContent=t;
+  const pct=Math.min(t/10*100,100);
+  $('fill').style.width=pct+'%';
+  $('pct').textContent=Math.round(pct)+'%';
+  $('fill').style.background = pct>=100?'var(--cyan)':(pct>=60?'var(--green)':'var(--amber)');
+  $('tip').textContent = t>=10 ? '🎉 ครบเป้าวันนี้แล้ว! พอแค่นี้ ทักเยอะไป FB จับสแปม'
+    : (t===0?'เริ่มเลย! ทัก 10 ร้าน ≈ 30 นาที':`อีก ${10-t} ร้านครบเป้า`);
+
+  $('sAll').textContent=d.length;
+  $('sSent').textContent=sent.length;
+  $('sReply').textContent=reply.length;
+  $('sWon').textContent=won.length;
+  $('sRate').textContent=sent.length?Math.round(reply.length/sent.length*100)+'%':'0%';
+
+  $('list').innerHTML = d.length ? d.map(s=>{
+    const [c,l]=ST[s.st];
+    return `<div class="shop">
+      <div class="sinfo">
+        <div class="sname">${s.n} <span class="badge ${c}">${l}</span></div>
+        <div class="smeta">${BIZ[s.biz]} · ${s.sym}${s.sentDate?` · ทัก ${s.sentDate}`:''}</div>
+        <div class="acts" style="margin-top:6px">
+          ${s.url?`<button class="mini" onclick="window.open('${s.url}','_blank')">🔗 เปิดเพจ</button>`:''}
+          <button class="mini" onclick="window.open('${DEMO[s.biz]}','_blank')">🎪 demo</button>
+          ${s.st==='new'?`<button class="mini" onclick="setSt(${s.id},'sent')">✓ ทักแล้ว</button>`:''}
+          ${s.st==='sent'?`<button class="mini" onclick="setSt(${s.id},'reply')">💬 ตอบกลับ</button>
+                           <button class="mini" onclick="setSt(${s.id},'no')">💤 เงียบ</button>`:''}
+          ${s.st==='reply'?`<button class="mini" onclick="setSt(${s.id},'won')">🎉 ปิดได้</button>`:''}
+          <button class="mini" onclick="del(${s.id})">✕</button>
+        </div>
+      </div></div>`;
+  }).join('') : '<div class="empty">ยังไม่มีร้าน<br>เพิ่มร้านที่เจอด้านบน</div>';
+}
+
+// scripts tabs
+let cur=Object.keys(SCRIPTS)[0];
+function renderTabs(){
+  $('tabs').innerHTML=Object.keys(SCRIPTS).map(k=>
+    `<button class="tab ${k===cur?'on':''}" onclick="pick('${k}')">${k}</button>`).join('');
+  $('scr').textContent=SCRIPTS[cur];
+}
+function pick(k){ cur=k; renderTabs(); }
+function copyScr(){
+  navigator.clipboard.writeText(SCRIPTS[cur]).then(()=>{
+    const b=document.querySelector('.copy'); const o=b.textContent;
+    b.textContent='✓ คัดลอกแล้ว!'; setTimeout(()=>b.textContent=o,1500);
+  });
+}
+$('n').addEventListener('keydown',e=>{if(e.key==='Enter')add()});
+renderTabs(); render();
+</script>
+</body>
+</html>
