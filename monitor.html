@@ -81,6 +81,17 @@
   .sc-done{color:#9fb0d0;font-size:13px;padding:6px 0;line-height:1.5}
   .sc-done::before{content:"✓ ";color:var(--green);font-weight:800}
 
+  /* demo cards */
+  .demo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .demo{display:block;text-decoration:none;background:#0a101f;border:1px solid var(--border);
+        border-radius:14px;padding:14px;transition:.15s;position:relative;overflow:hidden}
+  .demo:active{transform:scale(.97)}
+  .demo::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--dm-c,var(--green))}
+  .demo-emoji{font-size:26px;line-height:1}
+  .demo-name{color:var(--text);font-weight:700;font-size:14px;margin-top:6px}
+  .demo-tag{color:var(--dim);font-size:11px;margin-top:2px;line-height:1.4}
+  .demo-go{color:var(--dm-c,var(--green));font-size:11px;font-weight:700;margin-top:8px}
+
   .job{display:block;background:#0a101f;border:1px solid var(--border);border-radius:12px;
        padding:10px 12px;margin-bottom:8px;text-decoration:none;color:var(--text);transition:.15s;}
   .job:active{transform:scale(.98);}
@@ -157,6 +168,12 @@
         <input id="newtask" placeholder="เพิ่มงานใหม่..." onkeydown="if(event.key==='Enter')addTask()">
         <button onclick="addTask()">＋</button>
       </div>
+    </div>
+
+    <!-- Demo showroom -->
+    <div class="card" style="grid-column:1/-1">
+      <h3>🎪 Demo ทั้งหมด — กดเปิดใช้งานได้เลย</h3>
+      <div class="demo-grid" id="demos"><div class="empty">กำลังโหลด...</div></div>
     </div>
 
     <!-- Hunter jobs -->
@@ -287,7 +304,30 @@ async function loadStatus(){
   }catch(e){}
 }
 
-initBars(); loadStats(); loadJobs(); renderTasks(); loadStatus();
+// ---------- demo showroom ----------
+const DEMO_COLORS = {beauty:'#f472b6', clinic:'#22d3ee', restaurant:'#f59e0b', spa:'#a78bfa'};
+async function loadDemos(){
+  try{
+    const r = await fetch('/api/demos'); const d = await r.json();
+    if(!d.success || !(d.demos||[]).length){ $('demos').innerHTML='<div class="empty">ไม่มี demo</div>'; return; }
+    $('demos').innerHTML = d.demos.map(x=>{
+      const c = DEMO_COLORS[x.slug] || 'var(--green)';
+      return `<a class="demo" href="${x.url}" target="_blank" style="--dm-c:${c}">
+        <div class="demo-emoji">${x.emoji}</div>
+        <div class="demo-name">${x.name}</div>
+        <div class="demo-tag">${x.tagline}</div>
+        <div class="demo-go">เปิด demo ▸</div>
+      </a>`;
+    }).join('') +
+    `<div class="demo" style="--dm-c:var(--dim);border-style:dashed;cursor:default">
+        <div class="demo-emoji" style="opacity:.4">➕</div>
+        <div class="demo-name" style="color:var(--dim)">เพิ่มธุรกิจใหม่</div>
+        <div class="demo-tag">แก้ demo_configs.json<br>ใช้เวลา 5 นาที</div>
+     </div>`;
+  }catch(e){ $('demos').innerHTML='<div class="empty">โหลดไม่ได้</div>'; }
+}
+
+initBars(); loadStats(); loadJobs(); renderTasks(); loadStatus(); loadDemos();
 setInterval(()=>{ loadStats(); loadJobs(); loadStatus(); }, 60000);
 </script>
 </body>
