@@ -397,6 +397,30 @@ def get_stats():
     })
 
 
+@app.route("/monitor")
+def monitor():
+    """NEXUS Monitor — Dashboard สำหรับแท็บเล็ต/มือถือ (PWA)"""
+    html_path = os.path.join(os.path.dirname(__file__), "monitor.html")
+    with open(html_path, "r", encoding="utf-8") as f:
+        return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
+@app.route("/manifest.json")
+def manifest():
+    return jsonify({
+        "name": "NEXUS Monitor",
+        "short_name": "NEXUS",
+        "start_url": "/monitor",
+        "display": "standalone",
+        "background_color": "#060a16",
+        "theme_color": "#060a16",
+        "icons": [{
+            "src": "https://storage.googleapis.com/fastwork-asset/web/images/logo/fastwork/v2/default.svg",
+            "sizes": "any", "type": "image/svg+xml"
+        }],
+    })
+
+
 @app.route("/beauty")
 def beauty_demo():
     """Demo ระบบตอบแชท + จองคิว Beauty Salon (สำหรับลูกค้าลองเล่น)"""

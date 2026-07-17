@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#060a16">
+<link rel="manifest" href="/manifest.json">
+<title>NEXUS Monitor</title>
+<style>
+  :root{
+    --bg:#060a16; --card:#0e1526; --border:#1c2740;
+    --green:#00e47a; --cyan:#22d3ee; --amber:#f59e0b; --pink:#f472b6;
+    --text:#e2e8f0; --dim:#5b6b8c;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',system-ui,Tahoma,sans-serif;}
+  body{background:var(--bg);color:var(--text);min-height:100vh;padding:20px;
+       background-image:radial-gradient(circle at 20% 10%,#0a1430 0%,transparent 45%),
+                        radial-gradient(circle at 85% 85%,#07182a 0%,transparent 40%);}
+  .container{max-width:900px;margin:0 auto;}
+
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+  .logo{font-size:22px;font-weight:800;color:var(--green);letter-spacing:1px;}
+  .logo span{color:var(--text);}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--dim);display:inline-block;margin-left:8px;}
+  .dot.on{background:var(--green);box-shadow:0 0 10px var(--green);}
+  .clock{color:var(--dim);font-size:13px;font-variant-numeric:tabular-nums;}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:18px;}
+  .card h3{font-size:13px;color:var(--dim);font-weight:600;margin-bottom:12px;
+           text-transform:uppercase;letter-spacing:1px;}
+
+  .bignum{font-size:56px;font-weight:800;color:var(--cyan);line-height:1;
+          text-shadow:0 0 30px rgba(34,211,238,.35);}
+  .bigsub{color:var(--dim);font-size:13px;margin-top:6px;}
+
+  .bar-row{margin-bottom:14px;}
+  .bar-top{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px;}
+  .bar-val{font-weight:700;font-variant-numeric:tabular-nums;}
+  .bar-track{height:9px;background:#0a101f;border-radius:6px;overflow:hidden;border:1px solid var(--border);}
+  .bar-fill{height:100%;border-radius:6px;width:0;transition:width .8s cubic-bezier(.2,.8,.2,1);}
+
+  .task-row{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid #131c31;font-size:14.5px;}
+  .task-row:last-child{border-bottom:none;}
+  .task-check{width:22px;height:22px;border-radius:7px;border:2px solid var(--border);cursor:pointer;
+              display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:.15s;}
+  .task-check.done{background:var(--green);border-color:var(--green);color:#03130b;font-weight:800;}
+  .task-text{flex:1;} .task-text.done{color:var(--dim);text-decoration:line-through;}
+  .task-del{color:#2c3a5c;cursor:pointer;padding:0 6px;font-size:15px;}
+  .task-progress{margin-bottom:12px;}
+  .task-pct{font-size:26px;font-weight:800;color:var(--green);}
+  .task-msg{font-size:12px;color:var(--dim);margin-top:2px;}
+  .addrow{display:flex;gap:8px;margin-top:12px;}
+  .addrow input{flex:1;background:#0a101f;border:1px solid var(--border);border-radius:10px;
+                color:var(--text);padding:10px 14px;font-size:14px;outline:none;}
+  .addrow button{background:var(--green);color:#03130b;border:none;border-radius:10px;
+                 padding:0 18px;font-size:18px;font-weight:800;cursor:pointer;}
+
+  .job{display:block;background:#0a101f;border:1px solid var(--border);border-radius:12px;
+       padding:10px 12px;margin-bottom:8px;text-decoration:none;color:var(--text);transition:.15s;}
+  .job:active{transform:scale(.98);}
+  .job-top{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:3px;}
+  .job-score{font-weight:800;} .job-budget{color:var(--amber);font-weight:700;}
+  .job-title{font-size:13px;color:#b9c5e0;}
+  .empty{color:var(--dim);font-size:13px;text-align:center;padding:24px 0;
+         border:1.5px dashed var(--border);border-radius:12px;}
+  footer{text-align:center;color:#2c3a5c;font-size:11px;margin-top:24px;}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="logo">⚡ NEXUS <span>MONITOR</span><span class="dot" id="dot"></span></div>
+    <div class="clock" id="clock">--:--</div>
+  </header>
+
+  <div class="grid">
+    <!-- Visitors -->
+    <div class="card">
+      <h3>👥 คนเข้า Demo วันนี้</h3>
+      <div class="bignum" id="visits">–</div>
+      <div class="bigsub" id="visitsub">กำลังเชื่อมต่อ...</div>
+    </div>
+
+    <!-- Stats bars -->
+    <div class="card">
+      <h3>📊 สถิติระบบ</h3>
+      <div id="bars"></div>
+    </div>
+
+    <!-- Daily tasks -->
+    <div class="card" style="grid-row:span 2">
+      <h3>🎯 ภารกิจวันนี้</h3>
+      <div class="task-progress">
+        <div class="task-pct" id="taskpct">0%</div>
+        <div class="bar-track"><div class="bar-fill" id="taskbar" style="background:var(--green)"></div></div>
+        <div class="task-msg" id="taskmsg"></div>
+      </div>
+      <div id="tasks"></div>
+      <div class="addrow">
+        <input id="newtask" placeholder="เพิ่มงานใหม่..." onkeydown="if(event.key==='Enter')addTask()">
+        <button onclick="addTask()">＋</button>
+      </div>
+    </div>
+
+    <!-- Hunter jobs -->
+    <div class="card">
+      <h3>🤖 Job Hunter — งานล่าสุด</h3>
+      <div id="jobs"><div class="empty">กำลังโหลด...</div></div>
+    </div>
+  </div>
+
+  <footer>NEXUS Monitor · อัพเดตอัตโนมัติทุก 60 วินาที · สร้างโดย Jark × Claude</footer>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const BARS = [
+  {key:'unique_visitors', label:'Unique Visitors', color:'var(--cyan)',  max:50},
+  {key:'line_users',      label:'LINE Users',      color:'var(--green)', max:20},
+  {key:'signal_count',    label:'AI Signals',      color:'var(--amber)', max:20},
+  {key:'hunter_alerts',   label:'Job Alerts',      color:'var(--pink)',  max:10},
+];
+
+// clock
+setInterval(()=>{ $('clock').textContent = new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}); },1000);
+
+// ---------- stats ----------
+function initBars(){
+  $('bars').innerHTML = BARS.map(b=>`
+    <div class="bar-row">
+      <div class="bar-top"><span>${b.label}</span><span class="bar-val" id="v_${b.key}" style="color:${b.color}">–</span></div>
+      <div class="bar-track"><div class="bar-fill" id="b_${b.key}" style="background:${b.color}"></div></div>
+    </div>`).join('');
+}
+async function loadStats(){
+  try{
+    const r = await fetch('/api/stats'); const d = await r.json();
+    $('dot').classList.add('on');
+    $('visits').textContent = d.visits_today ?? 0;
+    $('visitsub').textContent = `รวม ${d.visits_total} ครั้ง · ล่าสุด ${d.last_visit||'-'}`;
+    BARS.forEach(b=>{
+      const v = d[b.key] ?? 0;
+      $('v_'+b.key).textContent = v;
+      $('b_'+b.key).style.width = Math.min(v/b.max*100,100)+'%';
+    });
+  }catch(e){ $('dot').classList.remove('on'); }
+}
+async function loadJobs(){
+  try{
+    const r = await fetch('/api/hunter/log'); const d = await r.json();
+    const jobs = (d.log||[]).sort((a,b)=>(b.score||0)-(a.score||0)).slice(0,5);
+    if(!jobs.length){ $('jobs').innerHTML = '<div class="empty">ยังไม่มีงานรอบล่าสุด<br>ระบบสแกนทุก 30 นาที</div>'; return; }
+    $('jobs').innerHTML = jobs.map(j=>{
+      const c = j.score>=70?'var(--green)':(j.score>=55?'var(--amber)':'var(--dim)');
+      const icon = j.alerted?'🔥':(j.score>=55?'⭐':'·');
+      return `<a class="job" href="${j.url||'#'}" target="_blank">
+        <div class="job-top"><span class="job-score" style="color:${c}">${icon} ${j.score}/100 ${j.grade?'('+j.grade+')':''}</span>
+        <span class="job-budget">฿${j.budget||'-'}</span></div>
+        <div class="job-title">${(j.title||j.summary||'').slice(0,70)}</div></a>`;
+    }).join('');
+  }catch(e){}
+}
+
+// ---------- tasks (localStorage ต่อเครื่อง) ----------
+function today(){ return new Date().toISOString().slice(0,10); }
+function loadTaskData(){
+  let d;
+  try{ d = JSON.parse(localStorage.getItem('nexus_tasks')||'{}'); }catch(e){ d={}; }
+  if(d.date !== today()){
+    const carry = (d.tasks||[]).filter(t=>!t.done);
+    d = {date:today(), tasks:carry};
+    saveTaskData(d);
+  }
+  return d;
+}
+function saveTaskData(d){ localStorage.setItem('nexus_tasks', JSON.stringify(d)); }
+function renderTasks(){
+  const d = loadTaskData();
+  const total = d.tasks.length, done = d.tasks.filter(t=>t.done).length;
+  const pct = total? Math.round(done/total*100):0;
+  $('taskpct').textContent = pct+'%';
+  $('taskbar').style.width = pct+'%';
+  $('taskbar').style.background = pct>=100?'var(--cyan)':(pct>=60?'var(--green)':'var(--amber)');
+  $('taskmsg').textContent = (pct>=100&&total)?'🎉 ครบแล้ว! พักผ่อนได้เลยเพื่อน':
+                              total? `ทำแล้ว ${done}/${total} งาน`:'ยังไม่มีงานวันนี้ เพิ่มได้เลย';
+  $('tasks').innerHTML = d.tasks.map((t,i)=>`
+    <div class="task-row">
+      <div class="task-check ${t.done?'done':''}" onclick="toggleTask(${i})">${t.done?'✓':''}</div>
+      <div class="task-text ${t.done?'done':''}">${t.text}</div>
+      <div class="task-del" onclick="delTask(${i})">✕</div>
+    </div>`).join('');
+}
+function toggleTask(i){ const d=loadTaskData(); d.tasks[i].done=!d.tasks[i].done; saveTaskData(d); renderTasks(); }
+function delTask(i){ const d=loadTaskData(); d.tasks.splice(i,1); saveTaskData(d); renderTasks(); }
+function addTask(){
+  const inp=$('newtask'); const txt=inp.value.trim(); if(!txt) return;
+  const d=loadTaskData(); d.tasks.push({text:txt,done:false}); saveTaskData(d);
+  inp.value=''; renderTasks();
+}
+
+initBars(); loadStats(); loadJobs(); renderTasks();
+setInterval(()=>{ loadStats(); loadJobs(); }, 60000);
+</script>
+</body>
+</html>
