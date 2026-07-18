@@ -2,7 +2,7 @@
 ForexAI Pro — API Server
 เชื่อม AI วิเคราะห์ + ราคา Forex/Crypto + LINE Notification
 """
-import os, json, requests, traceback, hmac, hashlib, base64
+import os, re, json, requests, traceback, hmac, hashlib, base64
 from datetime import datetime
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -703,6 +703,117 @@ SEO_PAGES = {
             "รับจองคิว เก็บชื่อ-เบอร์-วัน-เวลา",
             "แจ้งเตือนเจ้าของร้านทันทีที่มีคนจอง",
         ],
+        # ---- เนื้อหาลึก (ตอบคำถามจริงของเจ้าของร้าน ไม่ใช่โฆษณา) ----
+        "sections": [
+            {
+                "h2": "😩 ร้านเสริมสวยเสียลูกค้าตอนไหน — 3 ช่วงนี้",
+                "body": """
+<p><strong>1. ตอนมือไม่ว่าง</strong> — กำลังสระผม ทำสี ต่อขนตาอยู่ มือเปียก มือถือวางไกล
+ลูกค้าทักมาถามราคา ตอบไม่ได้ กว่าจะว่างอีก 40 นาที เขาไปร้านอื่นแล้ว</p>
+
+<p><strong>2. ตอนกลางคืน</strong> — คนส่วนใหญ่เลือกร้านเสริมสวยตอน 3-5 ทุ่ม
+ก่อนนอนเลื่อนเจอเพจ ทักถามราคา แต่ร้านปิดไปแล้ว ตอบเช้าอีกที เขาจองร้านอื่นไปแล้ว</p>
+
+<p><strong>3. วันหยุดร้าน</strong> — ร้านหยุดจันทร์ แต่ลูกค้าไม่รู้ ทักมาเงียบไป 1 วัน
+เขาไม่ได้คิดว่า "ร้านหยุด" เขาคิดว่า <em>"ร้านนี้ไม่สนใจลูกค้า"</em></p>
+
+<div class="note">💡 <strong>ลองนับดูเล่นๆ</strong> — เดือนนึงมีลูกค้าทักมาแล้วเราตอบช้ากี่คน?
+สมมติ 10 คน ตัดครึ่งว่าจะจองจริง 5 คน × ค่าบริการเฉลี่ย 800 บาท =
+<strong>เดือนละ 4,000 บาทที่หลุดมือ</strong> ทั้งที่ลูกค้าเดินมาหาถึงหน้าประตูแล้ว</div>
+""",
+            },
+            {
+                "h2": "🤖 บอทเข้ามาช่วยตรงไหน",
+                "body": """
+<p>บอทไม่ได้มาแทนช่างครับ — <strong>มันมาทำงานที่ช่างทำไม่ได้ตอนมือไม่ว่าง</strong> เท่านั้น</p>
+
+<p><strong>ตอบราคาแทน</strong> — ลูกค้าถาม "ทำสีเท่าไหร่คะ" บอทส่งเมนูราคาทั้งหมดให้เลือกดูเอง
+ไม่ต้องพิมพ์ซ้ำวันละ 20 รอบ</p>
+
+<p><strong>ส่งรูปผลงานแทน</strong> — "มีแบบไหนบ้างคะ" บอทส่งแคตตาล็อกรูปเลื่อนดูได้
+ลูกค้าเลือกแบบที่ชอบแล้วกดจองต่อได้เลยในแชทเดียว</p>
+
+<p><strong>รับจองคิวแทน</strong> — เก็บชื่อ เบอร์ บริการ วัน เวลา ครบ
+แล้ว<strong>เด้งเข้า LINE เจ้าของร้านทันที</strong> — เจ้าของแค่รอรับคิวที่จองเข้ามา</p>
+
+<p><strong>ตอบเรื่องจุกจิกแทน</strong> — ร้านอยู่ไหน จอดรถตรงไหน เปิดกี่โมง หยุดวันไหน
+รับบัตรไหม มีที่จอดไหม — คำถามพวกนี้กินเวลาวันละหลายสิบนาที บอทจัดการได้หมด</p>
+
+<div class="note">⚠️ <strong>สิ่งที่บอททำไม่ได้ — บอกตรงๆ</strong><br>
+ลูกค้าที่อยากปรึกษาว่า "หน้าแบบหนูเหมาะกับผมทรงไหน" ต้องให้ช่างตอบเองครับ
+บอทจะส่งต่อให้เจ้าของทันที ไม่พยายามตอบมั่ว — เพราะตอบมั่วเสียลูกค้ายิ่งกว่าไม่ตอบ</div>
+""",
+            },
+            {
+                "h2": "🛠 ติดตั้งยังไง ต้องเตรียมอะไรบ้าง",
+                "body": """
+<p>เจ้าของร้าน<strong>ไม่ต้องมีความรู้เทคนิคเลย</strong> ไม่ต้องลงโปรแกรม ไม่ต้องซื้อเซิร์ฟเวอร์
+ระบบรันอยู่ฝั่งเรา ร้านแค่ใช้ LINE ตามปกติ</p>
+
+<p><strong>สิ่งที่ต้องเตรียม มีแค่ 3 อย่าง:</strong></p>
+<ul>
+<li>LINE OA ของร้าน (ไม่มีก็สมัครฟรีได้ เราสอนให้ 10 นาทีเสร็จ)</li>
+<li>เมนูบริการ + ราคา (ส่งมาเป็นรูป เป็นข้อความ หรือพิมพ์ในแชทก็ได้)</li>
+<li>รูปผลงาน 5-10 รูป (ดึงจากเพจร้านได้เลย)</li>
+</ul>
+
+<p><strong>ขั้นตอน:</strong> ส่งข้อมูลมา → เราตั้งค่าให้ 2-3 วัน →
+ส่งลิงก์ให้ทดลองก่อน → พอใจแล้วค่อยเปิดใช้จริงกับลูกค้า</p>
+
+<p>อยากแก้ราคา เพิ่มบริการ เปลี่ยนรูปทีหลัง — ทักมาบอกได้ตลอด ไม่คิดเพิ่ม</p>
+""",
+            },
+        ],
+        # ตัวอย่างบทสนทนา — ให้เห็นภาพว่าจริงๆ มันทำงานยังไง
+        "chat": [
+            ("n", "22:40 น. — ร้านปิดไปแล้ว 2 ชั่วโมง"),
+            ("u", "สวัสดีค่ะ ทำสีผมราคาเท่าไหร่คะ"),
+            ("b", "สวัสดีค่ะ 😊 ทำสีผมของร้านเรามีดังนี้ค่ะ<br>"
+                  "• ทำสีทั้งหัว 1,200฿<br>• ไฮไลท์ 1,800฿<br>• ย้อมโคน 700฿<br>"
+                  "<br>สนใจแบบไหนคะ กดดูรูปผลงานได้เลยค่ะ 👇"),
+            ("u", "ขอดูไฮไลท์หน่อยค่ะ"),
+            ("b", "ได้เลยค่ะ 💇‍♀️ [ส่งแคตตาล็อกรูป 8 แบบ เลื่อนดูได้]<br>"
+                  "ชอบแบบไหนกดจองคิวได้เลยนะคะ"),
+            ("u", "จองวันเสาร์บ่าย 2 ได้ไหมคะ"),
+            ("b", "ได้ค่ะ ✅ ขอชื่อกับเบอร์ติดต่อหน่อยนะคะ"),
+            ("u", "แนน 08x-xxx-xxxx ค่ะ"),
+            ("b", "จองเรียบร้อยค่ะ 🎉<br>คุณแนน · ไฮไลท์ · เสาร์ 14:00 น.<br>"
+                  "เดี๋ยวร้านทักยืนยันอีกทีนะคะ ขอบคุณค่ะ 🙏"),
+            ("n", "⚡ ขณะเดียวกัน — LINE เจ้าของร้านเด้งทันที"),
+            ("b", "🔔 มีคิวจองใหม่!<br>คุณแนน · ไฮไลท์ 1,800฿<br>เสาร์ 14:00 น. · 08x-xxx-xxxx"),
+            ("n", "เจ้าของร้านนอนหลับอยู่ — แต่คิวเข้ามาแล้ว 💰"),
+        ],
+        "plans": [
+            ("Starter", "฿590", "ร้านเล็ก ตอบราคา + ส่งผลงาน"),
+            ("Pro ⭐", "฿1,290", "ร้านที่ต้องการรับจองคิวด้วย (นิยมสุด)"),
+            ("Business", "฿2,900", "หลายสาขา / หลายช่าง แยกคิวได้"),
+        ],
+        "faq": [
+            ("บอทตอบแทนหมดเลยเหรอ ลูกค้าจะรู้สึกไม่ดีไหม",
+             "บอทตอบเฉพาะคำถามซ้ำๆ อย่างราคา รูปผลงาน เวลาเปิด-ปิด จองคิว ครับ "
+             "ถ้าลูกค้าถามอะไรที่ต้องให้ช่างตอบ บอทจะส่งต่อให้เจ้าของทันที "
+             "จากประสบการณ์ ลูกค้าชอบมากกว่าเดิมด้วยซ้ำ เพราะได้คำตอบทันทีไม่ต้องรอ"),
+            ("ต้องมี LINE OA ก่อนไหม ไม่มีทำยังไง",
+             "ไม่มีก็ได้ครับ สมัครฟรี ใช้เวลา 10 นาที เราสอนให้ทีละขั้น "
+             "หรือถ้ามี LINE OA อยู่แล้วก็เชื่อมของเดิมได้เลย ไม่ต้องสร้างใหม่ ลูกค้าเก่าไม่หาย"),
+            ("ราคาเท่าไหร่ มีค่าติดตั้งไหม",
+             "เริ่ม ฿590/เดือน ไม่มีค่าติดตั้ง ไม่มีค่าแรกเข้า ยกเลิกได้ทุกเมื่อ ไม่มีสัญญาผูกมัด "
+             "แพ็กเกจที่ร้านเสริมสวยเลือกมากสุดคือ Pro ฿1,290 เพราะรับจองคิวได้ด้วย"),
+            ("ใช้เวลากี่วันถึงใช้งานได้",
+             "2-3 วันครับ นับจากวันที่ส่งเมนูราคากับรูปผลงานมาให้ "
+             "เราจะส่งลิงก์ให้ทดลองก่อน พอใจแล้วค่อยเปิดใช้จริง"),
+            ("แก้ราคาหรือเพิ่มบริการทีหลังได้ไหม",
+             "ได้ตลอดครับ ทักมาบอกได้เลย ไม่คิดเงินเพิ่ม ปกติแก้ให้ภายในวันเดียวกัน"),
+            ("มีค่า LINE API เพิ่มไหม",
+             "LINE OA มีโควตาข้อความฟรี 300 ข้อความ/เดือน ซึ่งพอสำหรับร้านทั่วไป "
+             "ถ้าเกินมีค่าใช้จ่ายฝั่ง LINE เอง เราจะแจ้งก่อนเสมอ ไม่มีบวกเพิ่มจากเรา"),
+            ("ร้านผมมีหลายสาขา / หลายช่าง ทำได้ไหม",
+             "ได้ครับ แพ็กเกจ Business ฿2,900 แยกคิวตามสาขาหรือตามช่างได้ "
+             "ลูกค้าเลือกช่างที่ชอบได้เลย และแต่ละคนเห็นเฉพาะคิวตัวเอง"),
+            ("ขอลองก่อนได้ไหม",
+             "ได้เลยครับ กดปุ่ม 💇 Demo ด้านบนได้เลย ทักคุยเหมือนเป็นลูกค้าจริง "
+             "ไม่ต้องสมัคร ไม่ต้องให้เบอร์ ลองเล่นได้เต็มที่ครับ"),
+        ],
     },
     "bot-ran-ahan": {
         "h1": "รับทำบอทตอบแชทร้านอาหาร",
@@ -733,9 +844,60 @@ SEO_PAGES = {
 }
 
 
+def _rich_blocks(p: dict) -> tuple:
+    """
+    เนื้อหาลึกเฉพาะหน้า — มีเฉพาะหน้าที่เขียนจริงจังแล้ว
+    หน้าที่ยังไม่มี key พวกนี้จะ render แบบเดิม (ไม่พัง)
+    """
+    # 1) เนื้อหาบทความ (ตอบคำถามจริงของลูกค้า ไม่ใช่โฆษณา)
+    secs = "".join(
+        f"<h2>{s['h2']}</h2>{s['body']}" for s in p.get("sections", [])
+    )
+
+    # 2) ตัวอย่างบทสนทนาจริง — ให้เห็นภาพว่าบอททำงานยังไง
+    chat = ""
+    if p.get("chat"):
+        bubbles = "".join(
+            f'<div class="msg {who}">{txt}</div>' for who, txt in p["chat"]
+        )
+        chat = (f'<h2>💬 ลูกค้าทักมาตอน 4 ทุ่ม — บอทตอบให้แบบนี้</h2>'
+                f'<div class="chat">{bubbles}</div>')
+
+    # 3) ตารางราคา
+    tbl = ""
+    if p.get("plans"):
+        rows = "".join(
+            f'<tr><td><b>{n}</b></td><td class="pr">{pr}</td><td>{d}</td></tr>'
+            for n, pr, d in p["plans"]
+        )
+        tbl = ('<h2>💰 ราคา</h2><table class="tb">'
+               '<tr><th>แพ็กเกจ</th><th>ราคา/เดือน</th><th>เหมาะกับ</th></tr>'
+               f'{rows}</table>')
+
+    # 4) FAQ + JSON-LD FAQPage (ช่วยให้ Google โชว์คำถามใต้ผลค้นหา)
+    faq_html, faq_ld = "", ""
+    if p.get("faq"):
+        items = "".join(
+            f'<div class="q">{q}</div><div class="a">{a}</div>' for q, a in p["faq"]
+        )
+        faq_html = f'<h2>❓ คำถามที่เจ้าของร้านถามบ่อย</h2><div class="faq">{items}</div>'
+        qa = ",".join(
+            json.dumps({
+                "@type": "Question", "name": q,
+                "acceptedAnswer": {"@type": "Answer", "text": re.sub(r"<[^>]+>", "", a)},
+            }, ensure_ascii=False)
+            for q, a in p["faq"]
+        )
+        faq_ld = ('<script type="application/ld+json">'
+                  f'{{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{qa}]}}'
+                  '</script>')
+    return secs, chat, tbl, faq_html, faq_ld
+
+
 def _seo_page(slug: str) -> str:
     p = SEO_PAGES[slug]
     pts = "".join(f"<li>{x}</li>" for x in p["points"])
+    secs, chat, tbl, faq_html, faq_ld = _rich_blocks(p)
     demos = "".join(
         f'<a class="d" href="/demo/{k}" target="_blank">{v["emoji"]} {v["biz_name"]}</a>'
         for k, v in _load_demo_configs().items()
@@ -763,6 +925,7 @@ def _seo_page(slug: str) -> str:
 "provider":{{"@type":"Person","name":"Jark","jobTitle":"LINE Bot & AI Agent Developer"}},
 "offers":{{"@type":"Offer","price":"590","priceCurrency":"THB"}}}}
 </script>
+{faq_ld}
 <style>
 *{{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',system-ui,Tahoma,sans-serif}}
 body{{background:#060a16;color:#e2e8f0;line-height:1.6}}
@@ -784,6 +947,27 @@ h2{{font-size:20px;margin:32px 0 12px}}
 .price b{{color:#00e47a;font-size:22px}}
 footer{{margin-top:40px;padding-top:22px;border-top:1px solid #1c2740;color:#5b6b8c;font-size:13px}}
 footer a{{color:#22d3ee}}
+p{{color:#c7d3e8;font-size:15.5px;margin:12px 0}}
+h2{{color:#fff}}
+strong{{color:#00e47a}}
+/* ตัวอย่างแชท */
+.chat{{background:#0e1526;border:1px solid #1c2740;border-radius:14px;padding:16px;margin:16px 0}}
+.msg{{max-width:80%;padding:10px 14px;border-radius:14px;margin:8px 0;font-size:14.5px;line-height:1.5}}
+.msg.u{{background:#1c2740;color:#e2e8f0;margin-left:auto;border-bottom-right-radius:4px}}
+.msg.b{{background:#00e47a;color:#03130b;border-bottom-left-radius:4px;font-weight:500}}
+.msg.n{{background:none;color:#5b6b8c;font-size:12.5px;text-align:center;max-width:100%;padding:4px}}
+/* ตารางราคา */
+.tb{{width:100%;border-collapse:collapse;margin:16px 0;font-size:14.5px}}
+.tb th{{text-align:left;padding:11px;border-bottom:2px solid #1c2740;color:#9fb0d0;font-size:13px}}
+.tb td{{padding:12px 11px;border-bottom:1px solid #1c2740;color:#c7d3e8}}
+.tb .pr{{color:#00e47a;font-weight:800;white-space:nowrap}}
+/* FAQ */
+.faq{{margin:16px 0}}
+.q{{font-weight:700;color:#fff;font-size:15.5px;margin-top:18px}}
+.q::before{{content:"Q. ";color:#00e47a}}
+.a{{color:#9fb0d0;font-size:15px;margin-top:6px;padding-left:2px}}
+.note{{background:#0e1526;border-left:3px solid #00e47a;border-radius:0 10px 10px 0;
+      padding:13px 16px;margin:18px 0;font-size:14.5px;color:#c7d3e8}}
 </style></head><body><div class="w">
 <h1>{p['h1']}<br><span>ลองฟรีก่อนตัดสินใจ</span></h1>
 <p class="lead">{p['lead']}</p>
@@ -793,6 +977,10 @@ footer a{{color:#22d3ee}}
 <p style="color:#9fb0d0;font-size:14.5px">กดเข้าไปคุยกับบอทได้เลย เหมือนเป็นลูกค้าจริง ไม่ต้องสมัคร</p>
 <div class="demos">{demos}</div>
 
+{secs}
+{chat}
+{tbl}
+
 <div class="price">
   💰 <b>เริ่มต้น ฿590/เดือน</b><br>
   <span style="color:#9fb0d0;font-size:14px">ไม่มีค่าติดตั้ง · ยกเลิกได้ทุกเมื่อ · ไม่ผูกมัด</span>
@@ -800,13 +988,13 @@ footer a{{color:#22d3ee}}
 
 <a class="cta" href="/botkit">ดูแพ็กเกจทั้งหมด →</a>
 
-<h2>❓ คำถามที่พบบ่อย</h2>
+{faq_html or '''<h2>❓ คำถามที่พบบ่อย</h2>
 <ul>
   <li>ไม่ต้องมีเซิร์ฟเวอร์ ไม่ต้องมีความรู้เทคนิค — เราดูแลให้หมด</li>
   <li>ไม่มีค่า API เพิ่ม — Facebook/Instagram/LINE API ฟรี</li>
   <li>ใช้งานได้ภายใน 2-3 วัน</li>
   <li>ยกเลิกได้ทุกเมื่อ ไม่มีสัญญาผูกมัด</li>
-</ul>
+</ul>'''}
 
 <footer>
   BotKit by Jark — LINE Bot &amp; AI Agent Developer<br>
