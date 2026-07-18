@@ -4,12 +4,11 @@
 
   "deals": [
     {
-      "name": "Beauty Salon — LINE Bot",
-      "amount": 1500,
-      "state": "waiting_payment",
-      "note": "invoice หมดอายุ 18 ก.ค. 16:13 — ยังไม่จ่าย",
-      "deadline": "2026-07-18T16:13:00+07:00",
-      "action": "ส่งข้อความตาม / ถ้าหมดอายุออกใบใหม่ได้ทันที"
+      "name": "🏆 E-commerce Bot / LINE Shop — ลูกค้าคนแรก!",
+      "amount": 1551,
+      "state": "won",
+      "note": "จ่ายแล้ว 18 ก.ค. 09:32 · order #49XOM4U4 · ยังไม่ได้ส่งงาน",
+      "action": "ขอข้อมูล 5 อย่างจากลูกค้า → สร้างบอท → กดส่งงานใน FastWork"
     },
     {
       "name": "Forex Auto-Execution",
@@ -36,7 +35,7 @@
   ],
 
   "pending": [
-    { "t": "ลูกค้า Beauty ฿1,500 ยังไม่จ่าย", "who": "รอลูกค้า", "urgent": true },
+    { "t": "🏆 ลูกค้าคนแรกจ่ายแล้ว ฿1,551 — ต้องส่งงาน! ขอข้อมูล 5 อย่างก่อน", "who": "รอเรา", "urgent": true },
     { "t": "ลูกค้า Forex เงียบ — รอ paper mode มีผล 3-5 วัน", "who": "รอเรา" },
     { "t": "Garuda วิเคราะห์ตลาด Forex 7 ข้อ (เน้นกฎหมาย ก.ล.ต.)", "who": "รอ Garuda" },
     { "t": "Listing #5 Forex AI Bot รออนุมัติ", "who": "รอ FastWork" },
