@@ -232,9 +232,14 @@ function ask(opts, fn, cfg={}){
   chat.appendChild(q); scroll();
 }
 
+const DAY_TOKEN = { 'อา':0, 'จ':1, 'อ':2, 'พ':3, 'พฤ':4, 'ศ':5, 'ส':6 };
+const DAY_ORDER = ['จ','อ','พ','พฤ','ศ','ส','อา'];
+function scheduleToDays(schedule){
+  const days = String(schedule||'').split('-').map(t=>DAY_TOKEN[t.trim()]).filter(x=>x!=null);
+  return days.length ? days : [1,3,5];
+}
 function nextVisit(schedule){
-  const map = { 'จ-พ-ศ':[1,3,5], 'อ-พฤ-ส':[2,4,6] };
-  const days = map[schedule] || [1,3,5];
+  const days = scheduleToDays(schedule);
   const now = new Date();
   for(let i=1;i<=7;i++){
     const d = new Date(now); d.setDate(now.getDate()+i);
@@ -384,10 +389,23 @@ async function newPatient(){
       <input id="np_name" placeholder="เช่น สมชาย ใจดี" autocomplete="off">
       <label>HN *</label>
       <input id="np_hn" inputmode="numeric" placeholder="เช่น 6301" autocomplete="off">
-      <label>รอบฟอก *</label>
-      <div class="mrow" style="margin-bottom:9px">
-        <button type="button" class="sch" data-v="จ-พ-ศ">จ-พ-ศ</button>
-        <button type="button" class="sch" data-v="อ-พฤ-ส">อ-พฤ-ส</button>
+      <label>รอบฟอก (เลือกวันที่ฟอก) *</label>
+      <div class="mrow" style="flex-wrap:wrap;gap:6px;margin-bottom:6px">
+        <button type="button" class="preset" data-v="จ-พ-ศ">จ-พ-ศ</button>
+        <button type="button" class="preset" data-v="อ-พฤ-ส">อ-พฤ-ส</button>
+        <button type="button" class="preset" data-v="จ-พ-ส">จ-พ-ส</button>
+        <button type="button" class="preset" data-v="จ-พฤ-ส">จ-พฤ-ส</button>
+        <button type="button" class="preset" data-v="อ-ส">อ-ส</button>
+      </div>
+      <div style="font-size:11px;color:#94a3b8;margin-bottom:5px">หรือแตะเลือกวันเอง (เลือกได้หลายวัน):</div>
+      <div class="mrow daypick" style="flex-wrap:wrap;gap:6px;margin-bottom:9px">
+        <button type="button" class="day" data-t="จ">จ</button>
+        <button type="button" class="day" data-t="อ">อ</button>
+        <button type="button" class="day" data-t="พ">พ</button>
+        <button type="button" class="day" data-t="พฤ">พฤ</button>
+        <button type="button" class="day" data-t="ศ">ศ</button>
+        <button type="button" class="day" data-t="ส">ส</button>
+        <button type="button" class="day" data-t="อา">อา</button>
       </div>
       <label>หมายเหตุ (ถ้ามี)</label>
       <input id="np_note" placeholder="เช่น โรคประจำตัว / แพ้ยา">
@@ -399,18 +417,27 @@ async function newPatient(){
     </div>`);
   chat.appendChild(f); scroll();
 
-  let sch = '';
-  f.querySelectorAll('.sch').forEach(b=>{
-    b.style.cssText = 'background:#f1f5f9;color:#475569;border:1.5px solid #cbd5e1;border-radius:9px;padding:9px;font-size:13px;font-weight:700;cursor:pointer';
+  let selDays = new Set();
+  const buildSch = () => DAY_ORDER.filter(d=>selDays.has(d)).join('-');
+  const paintDays = () => {
+    f.querySelectorAll('.day').forEach(x=>{
+      const on = selDays.has(x.dataset.t);
+      x.style.background = on ? '#0284c7' : '#f1f5f9';
+      x.style.color = on ? '#fff' : '#475569';
+      x.style.borderColor = on ? '#0284c7' : '#cbd5e1';
+    });
+  };
+  f.querySelectorAll('.day').forEach(b=>{
+    b.style.cssText = 'background:#f1f5f9;color:#475569;border:1.5px solid #cbd5e1;border-radius:9px;padding:9px 13px;font-size:13px;font-weight:700;cursor:pointer;min-width:42px';
     b.onclick = () => {
-      sch = b.dataset.v;
-      f.querySelectorAll('.sch').forEach(x=>{
-        const on = x.dataset.v === sch;
-        x.style.background = on ? '#0284c7' : '#f1f5f9';
-        x.style.color = on ? '#fff' : '#475569';
-        x.style.borderColor = on ? '#0284c7' : '#cbd5e1';
-      });
+      const t = b.dataset.t;
+      selDays.has(t) ? selDays.delete(t) : selDays.add(t);
+      paintDays();
     };
+  });
+  f.querySelectorAll('.preset').forEach(b=>{
+    b.style.cssText = 'background:#e0f2fe;color:#0369a1;border:1.5px solid #7dd3fc;border-radius:9px;padding:7px 11px;font-size:12.5px;font-weight:700;cursor:pointer';
+    b.onclick = () => { selDays = new Set(b.dataset.v.split('-')); paintDays(); };
   });
 
   const err = m => { const e=f.querySelector('#np_err'); e.textContent=m; e.style.display='block'; };
@@ -420,9 +447,10 @@ async function newPatient(){
     const name = f.querySelector('#np_name').value.trim();
     const hn   = f.querySelector('#np_hn').value.trim();
     const note = f.querySelector('#np_note').value.trim();
+    const sch  = buildSch();
     if(!name) return err('กรุณากรอกชื่อคนไข้');
     if(!hn)   return err('กรุณากรอก HN');
-    if(!sch)  return err('กรุณาเลือกรอบฟอก');
+    if(!sch)  return err('กรุณาเลือกวันฟอกอย่างน้อย 1 วัน');
 
     const btn = f.querySelector('.ok');
     btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
