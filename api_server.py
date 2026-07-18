@@ -1459,6 +1459,14 @@ def data_deletion_page():
         return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
 
 
+@app.route("/portfolio")
+def portfolio_page():
+    """หน้า Portfolio รวมผลงาน (ส่งลูกค้า FastWork) — ห้ามลบ"""
+    p = os.path.join(os.path.dirname(__file__), "portfolio.html")
+    with open(p, "r", encoding="utf-8") as f:
+        return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
 @app.route("/posttoday")
 def posttoday_page():
     """Landing สำหรับแอป TikTok Content Posting (Website URL ที่ยื่น App Review) — ห้ามลบ"""

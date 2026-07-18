@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ผลงาน — นักพัฒนา LINE Bot &amp; AI Automation</title>
+<style>
+  :root{--bg:#0d1117;--card:#161b22;--line:#232a34;--text:#e9edf2;--muted:#9aa4b2;--accent:#3ddc97;--accent2:#4ea1ff}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Sarabun',sans-serif;background:var(--bg);color:var(--text);line-height:1.65}
+  .wrap{max-width:900px;margin:0 auto;padding:0 22px}
+  header{padding:70px 0 40px;text-align:center}
+  .kicker{color:var(--accent);font-weight:700;letter-spacing:1px;font-size:14px}
+  h1{font-size:38px;font-weight:800;margin:14px 0 14px;line-height:1.2}
+  .lead{font-size:18px;color:var(--muted);max-width:620px;margin:0 auto}
+  .stack{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:26px 0 0}
+  .chip{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:13px;color:var(--text)}
+  .section-title{font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin:50px 0 18px;text-align:center}
+  .proj{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:30px;margin-bottom:20px}
+  .proj .tag{display:inline-block;background:rgba(61,220,151,.12);color:var(--accent);font-size:12px;font-weight:700;padding:4px 12px;border-radius:999px;margin-bottom:12px}
+  .proj h3{font-size:22px;margin-bottom:10px}
+  .proj p{color:var(--muted);margin-bottom:14px}
+  .match{list-style:none;margin:14px 0}
+  .match li{padding:5px 0 5px 26px;position:relative;color:var(--text);font-size:15px}
+  .match li:before{content:"✓";position:absolute;left:0;color:var(--accent);font-weight:800}
+  .meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+  .meta .t{background:#0d1117;border:1px solid var(--line);border-radius:8px;padding:4px 10px;font-size:12px;color:var(--muted)}
+  .btn{display:inline-block;margin-top:18px;background:var(--accent);color:#062015;font-weight:700;padding:11px 22px;border-radius:10px;text-decoration:none;font-size:15px}
+  .why{background:linear-gradient(135deg,rgba(78,161,255,.10),rgba(61,220,151,.08));border:1px solid var(--line);border-radius:18px;padding:32px;margin:20px 0;text-align:center}
+  .why h2{font-size:24px;margin-bottom:12px}
+  .why p{color:var(--muted);max-width:640px;margin:0 auto}
+  footer{border-top:1px solid var(--line);padding:34px 0 60px;text-align:center;color:var(--muted);font-size:14px;margin-top:30px}
+  footer a{color:var(--accent2);text-decoration:none}
+</style>
+</head>
+<body>
+<header class="wrap">
+  <div class="kicker">LINE BOT &amp; AI AUTOMATION DEVELOPER</div>
+  <h1>ผลงานพัฒนาระบบ LINE OA + AI + Backend Dashboard</h1>
+  <p class="lead">รับพัฒนาระบบตอบลูกค้าอัตโนมัติบน LINE OA เชื่อม AI, ระบบหลังบ้าน (Admin Dashboard), เก็บข้อมูลลูกค้าและวัดผลผ่าน KPI — ส่งมอบพร้อม Source Code และเอกสารครบ</p>
+  <div class="stack">
+    <span class="chip">LINE Messaging API</span>
+    <span class="chip">Python</span>
+    <span class="chip">PostgreSQL / Supabase</span>
+    <span class="chip">Claude AI</span>
+    <span class="chip">Webhook / REST API</span>
+    <span class="chip">Admin Dashboard</span>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="section-title">ผลงานที่เกี่ยวข้องกับงานนี้</div>
+
+  <div class="proj">
+    <span class="tag">✅ ลูกค้าจ่ายจริง · ใช้งานอยู่</span>
+    <h3>บอทตอบลูกค้าอัตโนมัติ + AI (ร้าน Lullabell)</h3>
+    <p>บอทบน LINE OA / Facebook Messenger ที่ตอบลูกค้าอัตโนมัติด้วย AI — ตอบเป็นภาษาธรรมชาติ ดึงราคา/เมนูจริงจากฐานข้อมูลมาตอบ ทำงานครบลูปจริงกับลูกค้าที่จ่ายเงินแล้ว</p>
+    <ul class="match">
+      <li>ตอบกลับลูกค้าอัตโนมัติ + เชื่อมต่อ AI</li>
+      <li>เก็บประวัติการสนทนาลงฐานข้อมูล</li>
+    </ul>
+    <div class="meta">
+      <span class="t">LINE Messaging API</span><span class="t">Meta Send API</span><span class="t">Claude AI</span><span class="t">Python</span><span class="t">Supabase</span>
+    </div>
+    <a class="btn" href="/beauty">ดูตัวอย่างบอท →</a>
+  </div>
+
+  <div class="proj">
+    <span class="tag">📊 Dashboard + KPI เรียลไทม์</span>
+    <h3>ระบบหลังบ้าน — NEXUS Monitor Dashboard</h3>
+    <p>Admin Dashboard แสดงสถิติและตัวชี้วัด (KPI) แบบเรียลไทม์ — จำนวนผู้ใช้ ยอดเข้าชม แหล่งที่มา สถานะระบบ อัปเดตอัตโนมัติ ออกแบบให้จัดการข้อมูลและดูภาพรวมได้ในหน้าเดียว</p>
+    <ul class="match">
+      <li>Admin Dashboard สำหรับจัดการข้อมูลและดูสถิติ</li>
+      <li>เชื่อมโยงข้อมูลกับ KPI แล้วแสดงผลผ่าน Dashboard</li>
+    </ul>
+    <div class="meta">
+      <span class="t">Python</span><span class="t">REST API</span><span class="t">PostgreSQL</span><span class="t">PWA</span><span class="t">Chart / Live stats</span>
+    </div>
+    <a class="btn" href="/monitor">เปิด Dashboard จริง →</a>
+  </div>
+
+  <div class="proj">
+    <span class="tag">🗂️ เก็บข้อมูลเชิงรุก</span>
+    <h3>LINE Bot เก็บข้อมูล + บันทึกประวัติผู้ใช้</h3>
+    <p>ระบบบันทึกข้อมูลผู้ใช้ผ่าน LINE — เก็บข้อมูลที่กรอก/กดเลือกในแต่ละครั้งลงฐานข้อมูล PostgreSQL, จำผู้ใช้เดิม, ดึงประวัติย้อนหลังมาแสดง (ตัวอย่าง: ระบบติดตามผู้ป่วยฟอกไต)</p>
+    <ul class="match">
+      <li>เก็บข้อมูลลูกค้า (กดเมนู / ตอบแบบสอบถาม / พฤติกรรม) ลงฐานข้อมูล</li>
+      <li>รองรับเชื่อม API ระบบอื่นในอนาคต + ส่งมอบ Source Code</li>
+    </ul>
+    <div class="meta">
+      <span class="t">LINE Messaging API</span><span class="t">Supabase</span><span class="t">Edge Functions</span><span class="t">Session state</span>
+    </div>
+    <a class="btn" href="/demo/dialysis">ลองระบบเก็บข้อมูล →</a>
+  </div>
+
+  <div class="why">
+    <h2>ทำไมเลือกผม</h2>
+    <p>ผมพัฒนาระบบ LINE OA + AI + Backend/Dashboard ครบวงจรมาโดยตรง มีผลงานที่ลูกค้าใช้งานจริง ทำงานเป็นระบบ ส่งมอบพร้อม Source Code + เอกสารให้พัฒนาต่อยอดได้เอง และมี demo ให้ทดลองของจริงก่อนตัดสินใจเสมอ</p>
+  </div>
+</main>
+
+<footer class="wrap">
+  <p>ติดต่อ: <a href="mailto:jarkkitni@gmail.com">jarkkitni@gmail.com</a> · พูดคุยรายละเอียดงานได้ผ่าน FastWork</p>
+</footer>
+</body>
+</html>
