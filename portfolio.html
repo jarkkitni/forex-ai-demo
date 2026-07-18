@@ -34,73 +34,36 @@
 </style>
 </head>
 <body>
-<header class="wrap">
-  <div class="kicker">LINE BOT &amp; AI AUTOMATION DEVELOPER</div>
-  <h1>ผลงานพัฒนาระบบ LINE OA + AI + Backend Dashboard</h1>
-  <p class="lead">รับพัฒนาระบบตอบลูกค้าอัตโนมัติบน LINE OA เชื่อม AI, ระบบหลังบ้าน (Admin Dashboard), เก็บข้อมูลลูกค้าและวัดผลผ่าน KPI — ส่งมอบพร้อม Source Code และเอกสารครบ</p>
-  <div class="stack">
-    <span class="chip">LINE Messaging API</span>
-    <span class="chip">Python</span>
-    <span class="chip">PostgreSQL / Supabase</span>
-    <span class="chip">Claude AI</span>
-    <span class="chip">Webhook / REST API</span>
-    <span class="chip">Admin Dashboard</span>
-  </div>
-</header>
-
-<main class="wrap">
-  <div class="section-title">ผลงานที่เกี่ยวข้องกับงานนี้</div>
-
+<div id="app"></div>
+<script>
+const DATA = /*__PORTFOLIO_DATA__*/ {};
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const h = DATA.header || {}, w = DATA.why || {}, c = DATA.contact || {};
+const projects = DATA.projects || [];
+const projHtml = projects.map(p => `
   <div class="proj">
-    <span class="tag">✅ ลูกค้าจ่ายจริง · ใช้งานอยู่</span>
-    <h3>บอทตอบลูกค้าอัตโนมัติ + AI (ร้าน Lullabell)</h3>
-    <p>บอทบน LINE OA / Facebook Messenger ที่ตอบลูกค้าอัตโนมัติด้วย AI — ตอบเป็นภาษาธรรมชาติ ดึงราคา/เมนูจริงจากฐานข้อมูลมาตอบ ทำงานครบลูปจริงกับลูกค้าที่จ่ายเงินแล้ว</p>
-    <ul class="match">
-      <li>ตอบกลับลูกค้าอัตโนมัติ + เชื่อมต่อ AI</li>
-      <li>เก็บประวัติการสนทนาลงฐานข้อมูล</li>
-    </ul>
-    <div class="meta">
-      <span class="t">LINE Messaging API</span><span class="t">Meta Send API</span><span class="t">Claude AI</span><span class="t">Python</span><span class="t">Supabase</span>
-    </div>
-    <a class="btn" href="/beauty">ดูตัวอย่างบอท →</a>
-  </div>
-
-  <div class="proj">
-    <span class="tag">📊 Dashboard + KPI เรียลไทม์</span>
-    <h3>ระบบหลังบ้าน — NEXUS Monitor Dashboard</h3>
-    <p>Admin Dashboard แสดงสถิติและตัวชี้วัด (KPI) แบบเรียลไทม์ — จำนวนผู้ใช้ ยอดเข้าชม แหล่งที่มา สถานะระบบ อัปเดตอัตโนมัติ ออกแบบให้จัดการข้อมูลและดูภาพรวมได้ในหน้าเดียว</p>
-    <ul class="match">
-      <li>Admin Dashboard สำหรับจัดการข้อมูลและดูสถิติ</li>
-      <li>เชื่อมโยงข้อมูลกับ KPI แล้วแสดงผลผ่าน Dashboard</li>
-    </ul>
-    <div class="meta">
-      <span class="t">Python</span><span class="t">REST API</span><span class="t">PostgreSQL</span><span class="t">PWA</span><span class="t">Chart / Live stats</span>
-    </div>
-    <a class="btn" href="/monitor">เปิด Dashboard จริง →</a>
-  </div>
-
-  <div class="proj">
-    <span class="tag">🗂️ เก็บข้อมูลเชิงรุก</span>
-    <h3>LINE Bot เก็บข้อมูล + บันทึกประวัติผู้ใช้</h3>
-    <p>ระบบบันทึกข้อมูลผู้ใช้ผ่าน LINE — เก็บข้อมูลที่กรอก/กดเลือกในแต่ละครั้งลงฐานข้อมูล PostgreSQL, จำผู้ใช้เดิม, ดึงประวัติย้อนหลังมาแสดง (ตัวอย่าง: ระบบติดตามผู้ป่วยฟอกไต)</p>
-    <ul class="match">
-      <li>เก็บข้อมูลลูกค้า (กดเมนู / ตอบแบบสอบถาม / พฤติกรรม) ลงฐานข้อมูล</li>
-      <li>รองรับเชื่อม API ระบบอื่นในอนาคต + ส่งมอบ Source Code</li>
-    </ul>
-    <div class="meta">
-      <span class="t">LINE Messaging API</span><span class="t">Supabase</span><span class="t">Edge Functions</span><span class="t">Session state</span>
-    </div>
-    <a class="btn" href="/demo/dialysis">ลองระบบเก็บข้อมูล →</a>
-  </div>
-
-  <div class="why">
-    <h2>ทำไมเลือกผม</h2>
-    <p>ผมพัฒนาระบบ LINE OA + AI + Backend/Dashboard ครบวงจรมาโดยตรง มีผลงานที่ลูกค้าใช้งานจริง ทำงานเป็นระบบ ส่งมอบพร้อม Source Code + เอกสารให้พัฒนาต่อยอดได้เอง และมี demo ให้ทดลองของจริงก่อนตัดสินใจเสมอ</p>
-  </div>
-</main>
-
-<footer class="wrap">
-  <p>ติดต่อ: <a href="mailto:jarkkitni@gmail.com">jarkkitni@gmail.com</a> · พูดคุยรายละเอียดงานได้ผ่าน FastWork</p>
-</footer>
+    ${p.tag ? `<span class="tag">${esc(p.tag)}</span>` : ''}
+    <h3>${esc(p.title)}</h3>
+    <p>${esc(p.desc)}</p>
+    ${(p.matches||[]).length ? `<ul class="match">${p.matches.map(m=>`<li>${esc(m)}</li>`).join('')}</ul>` : ''}
+    ${(p.tech||[]).length ? `<div class="meta">${p.tech.map(t=>`<span class="t">${esc(t)}</span>`).join('')}</div>` : ''}
+    ${p.link ? `<a class="btn" href="${esc(p.link)}">${esc(p.linkLabel||'ดูผลงาน →')}</a>` : ''}
+  </div>`).join('');
+document.getElementById('app').innerHTML = `
+  <header class="wrap">
+    ${h.kicker ? `<div class="kicker">${esc(h.kicker)}</div>` : ''}
+    <h1>${esc(h.title)}</h1>
+    <p class="lead">${esc(h.lead)}</p>
+    ${(h.stack||[]).length ? `<div class="stack">${h.stack.map(s=>`<span class="chip">${esc(s)}</span>`).join('')}</div>` : ''}
+  </header>
+  <main class="wrap">
+    <div class="section-title">${esc(DATA.sectionTitle||'ผลงาน')}</div>
+    ${projHtml}
+    ${w.title ? `<div class="why"><h2>${esc(w.title)}</h2><p>${esc(w.text)}</p></div>` : ''}
+  </main>
+  <footer class="wrap">
+    <p>ติดต่อ: <a href="mailto:${esc(c.email)}">${esc(c.email)}</a>${c.note ? ' · ' + esc(c.note) : ''}</p>
+  </footer>`;
+</script>
 </body>
 </html>

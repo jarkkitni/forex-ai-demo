@@ -1461,10 +1461,14 @@ def data_deletion_page():
 
 @app.route("/portfolio")
 def portfolio_page():
-    """หน้า Portfolio รวมผลงาน (ส่งลูกค้า FastWork) — ห้ามลบ"""
-    p = os.path.join(os.path.dirname(__file__), "portfolio.html")
-    with open(p, "r", encoding="utf-8") as f:
-        return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+    """หน้า Portfolio รวมผลงาน (ส่งลูกค้า FastWork) — render จาก portfolio.json · เพิ่มผลงาน = แก้ JSON · ห้ามลบ"""
+    base = os.path.dirname(__file__)
+    with open(os.path.join(base, "portfolio.html"), "r", encoding="utf-8") as f:
+        html = f.read()
+    with open(os.path.join(base, "portfolio.json"), "r", encoding="utf-8") as f:
+        data = f.read()
+    html = html.replace("/*__PORTFOLIO_DATA__*/ {}", data)
+    return html, 200, {"Content-Type": "text/html; charset=utf-8"}
 
 
 @app.route("/posttoday")

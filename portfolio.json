@@ -1,0 +1,47 @@
+{
+  "_readme": "แก้ไฟล์นี้แล้ว push = หน้า /portfolio เปลี่ยนตาม. เพิ่มผลงานใหม่ = เพิ่ม object ใน projects. ไม่ต้องแตะโค้ด/HTML.",
+  "header": {
+    "kicker": "LINE BOT & AI AUTOMATION DEVELOPER",
+    "title": "ผลงานพัฒนาระบบ LINE OA + AI + Backend Dashboard",
+    "lead": "รับพัฒนาระบบตอบลูกค้าอัตโนมัติบน LINE OA เชื่อม AI, ระบบหลังบ้าน (Admin Dashboard), เก็บข้อมูลลูกค้าและวัดผลผ่าน KPI — ส่งมอบพร้อม Source Code และเอกสารครบ",
+    "stack": ["LINE Messaging API", "Python", "PostgreSQL / Supabase", "Claude AI", "Webhook / REST API", "Admin Dashboard"]
+  },
+  "sectionTitle": "ผลงานที่เกี่ยวข้อง",
+  "projects": [
+    {
+      "tag": "✅ ลูกค้าจ่ายจริง · ใช้งานอยู่",
+      "title": "บอทตอบลูกค้าอัตโนมัติ + AI (ร้าน Lullabell)",
+      "desc": "บอทบน LINE OA / Facebook Messenger ที่ตอบลูกค้าอัตโนมัติด้วย AI — ตอบเป็นภาษาธรรมชาติ ดึงราคา/เมนูจริงจากฐานข้อมูลมาตอบ ทำงานครบลูปจริงกับลูกค้าที่จ่ายเงินแล้ว",
+      "matches": ["ตอบกลับลูกค้าอัตโนมัติ + เชื่อมต่อ AI", "เก็บประวัติการสนทนาลงฐานข้อมูล"],
+      "tech": ["LINE Messaging API", "Meta Send API", "Claude AI", "Python", "Supabase"],
+      "link": "/beauty",
+      "linkLabel": "ดูตัวอย่างบอท →"
+    },
+    {
+      "tag": "📊 Dashboard + KPI เรียลไทม์",
+      "title": "ระบบหลังบ้าน — NEXUS Monitor Dashboard",
+      "desc": "Admin Dashboard แสดงสถิติและตัวชี้วัด (KPI) แบบเรียลไทม์ — จำนวนผู้ใช้ ยอดเข้าชม แหล่งที่มา สถานะระบบ อัปเดตอัตโนมัติ ออกแบบให้จัดการข้อมูลและดูภาพรวมได้ในหน้าเดียว",
+      "matches": ["Admin Dashboard สำหรับจัดการข้อมูลและดูสถิติ", "เชื่อมโยงข้อมูลกับ KPI แล้วแสดงผลผ่าน Dashboard"],
+      "tech": ["Python", "REST API", "PostgreSQL", "PWA", "Live stats"],
+      "link": "/monitor",
+      "linkLabel": "เปิด Dashboard จริง →"
+    },
+    {
+      "tag": "🗂️ เก็บข้อมูลเชิงรุก",
+      "title": "LINE Bot เก็บข้อมูล + บันทึกประวัติผู้ใช้",
+      "desc": "ระบบบันทึกข้อมูลผู้ใช้ผ่าน LINE — เก็บข้อมูลที่กรอก/กดเลือกในแต่ละครั้งลงฐานข้อมูล PostgreSQL, จำผู้ใช้เดิม, ดึงประวัติย้อนหลังมาแสดง (ตัวอย่าง: ระบบติดตามผู้ป่วยฟอกไต)",
+      "matches": ["เก็บข้อมูลลูกค้า (กดเมนู / ตอบแบบสอบถาม / พฤติกรรม) ลงฐานข้อมูล", "รองรับเชื่อม API ระบบอื่นในอนาคต + ส่งมอบ Source Code"],
+      "tech": ["LINE Messaging API", "Supabase", "Edge Functions", "Session state"],
+      "link": "/demo/dialysis",
+      "linkLabel": "ลองระบบเก็บข้อมูล →"
+    }
+  ],
+  "why": {
+    "title": "ทำไมเลือกผม",
+    "text": "ผมพัฒนาระบบ LINE OA + AI + Backend/Dashboard ครบวงจรมาโดยตรง มีผลงานที่ลูกค้าใช้งานจริง ทำงานเป็นระบบ ส่งมอบพร้อม Source Code + เอกสารให้พัฒนาต่อยอดได้เอง และมี demo ให้ทดลองของจริงก่อนตัดสินใจเสมอ"
+  },
+  "contact": {
+    "email": "jarkkitni@gmail.com",
+    "note": "พูดคุยรายละเอียดงานได้ผ่าน FastWork"
+  }
+}
