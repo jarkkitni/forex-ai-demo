@@ -11,6 +11,7 @@ import anthropic
 import fastwork_hunter
 import rss_hunter
 import dialysis_api
+import seo_tracker
 
 app  = Flask(__name__)
 CORS(app)
@@ -47,6 +48,11 @@ def _track_visit():
     ip = request.headers.get("X-Forwarded-For", request.remote_addr or "?").split(",")[0].strip()
     visit_stats["unique_ips"].add(ip)
     visit_stats["last_visit"] = now.strftime("%H:%M UTC")
+    # บันทึกว่าคนนี้มาจากไหน — ใช้พิสูจน์ว่า SEO ทำงาน
+    try:
+        seo_tracker.log(request)
+    except Exception as e:
+        print(f"[SEO] log fail: {e}", flush=True)
 
 
 # ---------- Price Helpers ----------
@@ -828,6 +834,15 @@ def sitemap():
            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
            f'{items}</urlset>')
     return xml, 200, {"Content-Type": "application/xml; charset=utf-8"}
+
+
+@app.route("/api/seo")
+def api_seo():
+    """สถานะ SEO — คนมาจาก Google กี่คน, Googlebot มาแล้วยัง"""
+    try:
+        return jsonify(seo_tracker.summary())
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)[:200]}), 200
 
 
 @app.route("/robots.txt")

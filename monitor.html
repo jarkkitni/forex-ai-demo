@@ -216,6 +216,15 @@
       <div id="orders"></div>
     </div>
 
+    <!-- SEO status -->
+    <div class="card" style="grid-column:1/-1">
+      <h3>🔍 SEO — งานมาหาเราเอง
+        <a href="https://search.google.com/search-console?resource_id=https%3A%2F%2Fforex-ai-demo.onrender.com%2F"
+           target="_blank" style="color:var(--cyan);font-size:11px;text-decoration:none;font-weight:600">Search Console ▸</a>
+      </h3>
+      <div id="seo"><div class="empty">กำลังโหลด...</div></div>
+    </div>
+
     <!-- Demo showroom -->
     <div class="card" style="grid-column:1/-1">
       <h3>🎪 Demo ทั้งหมด — กดเปิดใช้งานได้เลย</h3>
@@ -422,8 +431,98 @@ async function loadRoadmap(){
   }catch(e){}
 }
 
-initBars(); loadStats(); loadJobs(); renderTasks(); loadStatus(); loadDemos(); loadOrders(); loadRoadmap();
-setInterval(()=>{ loadStats(); loadJobs(); loadStatus(); loadOrders(); loadRoadmap(); }, 60000);
+// ---------- SEO ----------
+const PAGE_TH = {
+  '/line-bot':'รับทำ LINE Bot', '/bot-jongkiw':'ระบบจองคิว',
+  '/chatbot-clinic':'Chatbot คลินิก', '/bot-ran-serm-suay':'บอทร้านเสริมสวย',
+  '/bot-ran-ahan':'บอทร้านอาหาร', '/n8n-automation':'n8n Automation',
+};
+const SRC_TH = {
+  google:['🔍 Google','var(--green)'], bing:['🔎 Bing','var(--green)'],
+  facebook:['📘 Facebook','var(--cyan)'], line:['💬 LINE','var(--cyan)'],
+  x:['✕ X','var(--cyan)'], fastwork:['💼 FastWork','var(--amber)'],
+  direct:['🔗 พิมพ์ตรง','var(--dim)'], other:['🌐 อื่นๆ','var(--dim)'],
+};
+const STAGES = ['ตั้งค่า','ส่ง sitemap','Google เก็บข้อมูล','มีคนค้นเจอ'];
+const ago = ts => {
+  if(!ts) return '';
+  const h = (Date.now()-new Date(ts))/36e5;
+  if(h < 1) return 'เมื่อสักครู่';
+  if(h < 24) return Math.floor(h)+' ชม.ที่แล้ว';
+  return Math.floor(h/24)+' วันที่แล้ว';
+};
+
+async function loadSeo(){
+  try{
+    const d = await (await fetch('/api/seo')).json();
+    if(!d.ok){ $('seo').innerHTML = `<div class="empty">${d.error||'ยังไม่พร้อม'}</div>`; return; }
+
+    const win = d.stage >= 4;
+    // แถบ 4 ขั้น — รู้ทันทีว่าตอนนี้อยู่ตรงไหน
+    const steps = STAGES.map((s,i)=>{
+      const done = i < d.stage, now = i === d.stage-1;
+      const col = done ? (win?'var(--green)':'var(--cyan)') : 'var(--border)';
+      return `<div style="flex:1;text-align:center">
+        <div style="height:6px;border-radius:99px;background:${col};margin-bottom:6px;
+             ${now?'box-shadow:0 0 10px '+col:''}"></div>
+        <div style="font-size:10.5px;color:${done?'var(--txt)':'var(--dim)'};font-weight:${now?'800':'500'}">
+          ${done?'✓ ':''}${s}</div></div>`;
+    }).join('');
+
+    const srcs = Object.entries(d.by_source).sort((a,b)=>b[1]-a[1]);
+    const maxS = Math.max(1, ...srcs.map(s=>s[1]));
+    const srcBars = srcs.length ? srcs.map(([k,v])=>{
+      const [lbl,col] = SRC_TH[k] || ['🌐 '+k,'var(--dim)'];
+      return `<div class="bar-row">
+        <div class="bar-top"><span>${lbl}</span><span class="bar-val" style="color:${col}">${v}</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${v/maxS*100}%;background:${col}"></div></div>
+      </div>`;}).join('') : '<div class="empty">ยังไม่มีคนเข้าใน 7 วันนี้</div>';
+
+    const pages = d.seo_pages.map(p=>{
+      const v = d.by_page[p]||0;
+      return `<a href="${p}" target="_blank" style="display:flex;justify-content:space-between;
+        padding:7px 10px;border-radius:8px;text-decoration:none;
+        background:${v?'rgba(0,255,150,.07)':'transparent'};border:1px solid var(--border);margin-bottom:5px">
+        <span style="font-size:11.5px;color:var(--txt)">${PAGE_TH[p]||p}</span>
+        <span style="font-size:11.5px;font-weight:800;color:${v?'var(--green)':'var(--dim)'}">${v}</span></a>`;
+    }).join('');
+
+    $('seo').innerHTML = `
+      <div style="background:${win?'rgba(0,255,150,.1)':'rgba(0,200,255,.06)'};
+           border:1px solid ${win?'var(--green)':'var(--border)'};border-radius:12px;padding:14px;margin-bottom:14px">
+        <div style="font-size:16px;font-weight:800;color:${win?'var(--green)':'var(--cyan)'}">${d.label}</div>
+        <div style="font-size:11.5px;color:var(--dim);margin-top:4px">
+          ส่ง sitemap ไป ${d.days_since_sitemap} วันแล้ว
+          ${d.last_crawl?` · Googlebot มาล่าสุด ${ago(d.last_crawl)}`:' · Googlebot ยังไม่มา (ปกติรอ 3-7 วัน)'}
+          ${d.first_organic?` · 🎉 คนแรกจาก Google ${ago(d.first_organic)}`:''}
+        </div>
+        <div style="display:flex;gap:8px;margin-top:14px">${steps}</div>
+      </div>
+
+      <div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+        <div style="flex:1;min-width:110px;background:var(--bg);border:1px solid var(--border);
+             border-radius:10px;padding:11px">
+          <div style="font-size:22px;font-weight:800;color:${d.organic_7d?'var(--green)':'var(--dim)'}">${d.organic_7d}</div>
+          <div style="font-size:10.5px;color:var(--dim)">มาจาก Google (7 วัน)</div></div>
+        <div style="flex:1;min-width:110px;background:var(--bg);border:1px solid var(--border);
+             border-radius:10px;padding:11px">
+          <div style="font-size:22px;font-weight:800;color:var(--cyan)">${d.humans_7d}</div>
+          <div style="font-size:10.5px;color:var(--dim)">คนเข้าทั้งหมด (7 วัน)</div></div>
+        <div style="flex:1;min-width:110px;background:var(--bg);border:1px solid var(--border);
+             border-radius:10px;padding:11px">
+          <div style="font-size:22px;font-weight:800;color:var(--amber)">${d.bot_hits_7d}</div>
+          <div style="font-size:10.5px;color:var(--dim)">บอท/crawler มาเก็บ</div></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div><div style="font-size:11px;color:var(--dim);font-weight:700;margin-bottom:9px">คนมาจากไหน (7 วัน)</div>${srcBars}</div>
+        <div><div style="font-size:11px;color:var(--dim);font-weight:700;margin-bottom:9px">หน้า SEO — กดเปิดได้</div>${pages}</div>
+      </div>`;
+  }catch(e){ $('seo').innerHTML = '<div class="empty">โหลดไม่ได้</div>'; }
+}
+
+initBars(); loadStats(); loadJobs(); renderTasks(); loadStatus(); loadDemos(); loadOrders(); loadRoadmap(); loadSeo();
+setInterval(()=>{ loadStats(); loadJobs(); loadStatus(); loadOrders(); loadRoadmap(); loadSeo(); }, 60000);
 </script>
 </body>
 </html>
