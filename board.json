@@ -4,11 +4,11 @@
 
   "deals": [
     {
-      "name": "🏆 E-commerce Bot / LINE Shop — ลูกค้าคนแรก!",
+      "name": "🏆 Lullabell Beauty Salon — ลูกค้าคนแรก!",
       "amount": 1551,
       "state": "won",
-      "note": "จ่ายแล้ว 18 ก.ค. 09:32 · order #49XOM4U4 · ยังไม่ได้ส่งงาน",
-      "action": "ขอข้อมูล 5 อย่างจากลูกค้า → สร้างบอท → กดส่งงานใน FastWork"
+      "note": "จ่ายแล้ว 18 ก.ค. · บอท Meta Messenger ทำงานจริงแล้ว! (dev mode) น้องเบลล์ตอบพร้อมราคา",
+      "action": "ค้าง: token ถาวร + App Review (เปิดลูกค้าทั่วไป) + Instagram"
     },
     {
       "name": "Forex Auto-Execution",
@@ -35,7 +35,7 @@
   ],
 
   "pending": [
-    { "t": "🏆 ลูกค้าคนแรกจ่ายแล้ว ฿1,551 — ต้องส่งงาน! ขอข้อมูล 5 อย่างก่อน", "who": "รอเรา", "urgent": true },
+    { "t": "🏆 Lullabell: บอท Meta ทำงานแล้ว! ค้าง token ถาวร (ตัวนี้หมด ~1ชม.) + App Review + IG", "who": "รอเรา", "urgent": true },
     { "t": "ลูกค้า Forex เงียบ — รอ paper mode มีผล 3-5 วัน", "who": "รอเรา" },
     { "t": "Garuda วิเคราะห์ตลาด Forex 7 ข้อ (เน้นกฎหมาย ก.ล.ต.)", "who": "รอ Garuda" },
     { "t": "Listing #5 Forex AI Bot รออนุมัติ", "who": "รอ FastWork" },
