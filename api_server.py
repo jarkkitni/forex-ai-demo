@@ -28,6 +28,8 @@ META_VERIFY_TOKEN   = os.environ.get("META_VERIFY_TOKEN", "")
 META_PAGE_TOKEN     = os.environ.get("META_PAGE_TOKEN", "")
 META_APP_SECRET     = os.environ.get("META_APP_SECRET", "")
 META_SLUG           = os.environ.get("META_SLUG", "lullabell")
+# ---- E-commerce admin proxy (แทน anon key ที่เคยฝังใน dashboard) ----
+EC_ADMIN_PIN        = os.environ.get("EC_ADMIN_PIN", "")
 # ========================
 
 signal_history   = []  # in-memory สัญญาณ (เก็บ 20 ล่าสุด)
@@ -396,10 +398,49 @@ def hunter_check():
     try:
         client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
         result = fastwork_hunter.run_hunter(client, _push_line, LINE_USER_ID)
+        _save_hunter_status(result)   # เก็บสถานะล่าสุดลง Supabase (โชว์บน Monitor)
         return jsonify({"success": True, **result})
     except Exception as e:
         traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+def _save_hunter_status(result: dict) -> None:
+    """บันทึกสรุปการสแกนล่าสุดลง Supabase (persist ข้าม redeploy)"""
+    if not (seo_tracker.SUPABASE_URL and seo_tracker.SUPABASE_KEY):
+        return
+    from datetime import timezone
+    try:
+        requests.patch(
+            f"{seo_tracker.SUPABASE_URL}/rest/v1/hunter_status?id=eq.1",
+            headers={"apikey": seo_tracker.SUPABASE_KEY,
+                     "Authorization": f"Bearer {seo_tracker.SUPABASE_KEY}",
+                     "Content-Type": "application/json", "Prefer": "return=minimal"},
+            json={"last_check": datetime.now(timezone.utc).isoformat(),
+                  "checked":      result.get("checked", 0),
+                  "new_matching": result.get("new_matching", 0),
+                  "triaged_out":  result.get("triaged_out", 0),
+                  "analyzed":     result.get("analyzed", 0),
+                  "alerts_sent":  result.get("alerts_sent", 0)},
+            timeout=10)
+    except Exception:
+        pass  # เก็บสถานะพลาดไม่ควรทำให้ Hunter ล้ม
+
+
+@app.route("/api/hunter/status", methods=["GET"])
+def hunter_status():
+    """สถานะ Hunter ล่าสุด (สำหรับการ์ดบน Monitor) — อ่านจาก Supabase"""
+    try:
+        r = requests.get(
+            f"{seo_tracker.SUPABASE_URL}/rest/v1/hunter_status?id=eq.1&select=*",
+            headers={"apikey": seo_tracker.SUPABASE_KEY,
+                     "Authorization": f"Bearer {seo_tracker.SUPABASE_KEY}"},
+            timeout=10)
+        rows = r.json() if r.ok else []
+        st = rows[0] if rows else {}
+    except Exception:
+        st = {}
+    return jsonify({"success": True, **st})
 
 
 @app.route("/api/hunter/log", methods=["GET"])
@@ -1278,6 +1319,38 @@ def google_verify():
             {"Content-Type": "text/html; charset=utf-8"})
 
 
+@app.route("/api/meta-health")
+def meta_health():
+    """เช็คสุขภาพ token บอท Meta (Lullabell) — ใช้บนการ์ด Monitor
+    ถ้าตั้ง META_APP_SECRET จะบอกวันหมดอายุ token ด้วย"""
+    if not META_PAGE_TOKEN:
+        return jsonify({"ok": False, "error": "no META_PAGE_TOKEN"})
+    out = {"ok": False}
+    try:
+        r = requests.get(f"{meta_bot.GRAPH}/me",
+                         params={"access_token": META_PAGE_TOKEN, "fields": "name,id"},
+                         timeout=10)
+        d = r.json()
+        if r.ok:
+            out["ok"] = True
+            out["page"] = d.get("name")
+        else:
+            out["error"] = ((d.get("error") or {}).get("message") or "")[:200]
+        # ถ้ามี app secret → ถาม Meta ตรงๆ ว่า token หมดอายุเมื่อไหร่ (0 = ไม่มีกำหนด)
+        if META_APP_SECRET:
+            app_id = os.environ.get("META_APP_ID", "1558681259271673")
+            rd = requests.get(f"{meta_bot.GRAPH}/debug_token",
+                              params={"input_token": META_PAGE_TOKEN,
+                                      "access_token": f"{app_id}|{META_APP_SECRET}"},
+                              timeout=10)
+            dd = (rd.json().get("data") or {}) if rd.ok else {}
+            out["expires_at"] = dd.get("expires_at")                    # 0 = never
+            out["data_access_expires_at"] = dd.get("data_access_expires_at")
+    except Exception as e:
+        out["error"] = str(e)[:200]
+    return jsonify(out)
+
+
 @app.route("/webhook/meta", methods=["GET", "POST"])
 def meta_webhook():
     """Facebook Messenger + Instagram DM webhook สำหรับบอทร้านลูกค้า (Lullabell)"""
@@ -1311,6 +1384,63 @@ def meta_webhook():
             # ตอบ 200 เสมอ ไม่งั้น Meta จะ retry รัวๆ
             print("[meta_webhook] error:", str(e)[:200])
     return "EVENT_RECEIVED", 200
+
+
+# ===== E-commerce admin proxy (ปลอดภัย: service role + PIN แทน anon key) =====
+def _ec_pin_ok() -> bool:
+    pin = request.args.get("pin", "") or (request.get_json(silent=True) or {}).get("pin", "")
+    return bool(EC_ADMIN_PIN) and pin == EC_ADMIN_PIN
+
+
+def _ec_sb_headers() -> dict:
+    return {"apikey": seo_tracker.SUPABASE_KEY,
+            "Authorization": f"Bearer {seo_tracker.SUPABASE_KEY}",
+            "Content-Type": "application/json"}
+
+
+@app.route("/api/ec/orders")
+def ec_orders():
+    if not _ec_pin_ok():
+        return jsonify({"error": "unauthorized"}), 403
+    r = requests.get(f"{seo_tracker.SUPABASE_URL}/rest/v1/ec_orders?select=*&order=created_at.desc",
+                     headers=_ec_sb_headers(), timeout=15)
+    return (r.text, r.status_code, {"Content-Type": "application/json"})
+
+
+@app.route("/api/ec/order-items")
+def ec_order_items():
+    if not _ec_pin_ok():
+        return jsonify({"error": "unauthorized"}), 403
+    oid = re.sub(r"[^0-9]", "", request.args.get("order_id", ""))
+    if not oid:
+        return jsonify({"error": "bad order_id"}), 400
+    r = requests.get(f"{seo_tracker.SUPABASE_URL}/rest/v1/ec_order_items?order_id=eq.{oid}&select=*",
+                     headers=_ec_sb_headers(), timeout=15)
+    return (r.text, r.status_code, {"Content-Type": "application/json"})
+
+
+@app.route("/api/ec/products")
+def ec_products_proxy():
+    if not _ec_pin_ok():
+        return jsonify({"error": "unauthorized"}), 403
+    r = requests.get(f"{seo_tracker.SUPABASE_URL}/rest/v1/ec_products?select=*&order=id.asc",
+                     headers=_ec_sb_headers(), timeout=15)
+    return (r.text, r.status_code, {"Content-Type": "application/json"})
+
+
+@app.route("/api/ec/order-status", methods=["POST"])
+def ec_order_status():
+    if not _ec_pin_ok():
+        return jsonify({"error": "unauthorized"}), 403
+    d = request.get_json(force=True) or {}
+    oid = re.sub(r"[^0-9]", "", str(d.get("id", "")))
+    status = d.get("status", "")
+    if not oid or status not in ("pending", "confirmed", "shipping", "delivered", "cancelled"):
+        return jsonify({"error": "bad id/status"}), 400
+    r = requests.patch(f"{seo_tracker.SUPABASE_URL}/rest/v1/ec_orders?id=eq.{oid}",
+                       headers={**_ec_sb_headers(), "Prefer": "return=minimal"},
+                       json={"status": status}, timeout=15)
+    return (r.text or "{}", r.status_code, {"Content-Type": "application/json"})
 
 
 @app.route("/privacy")

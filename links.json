@@ -161,6 +161,19 @@
           "why": "ขอ Advanced Access: pages_messaging, instagram_business_manage_messages",
           "url": "https://developers.facebook.com/apps/1558681259271673/app-review/permissions/",
           "tag": "ยื่นหลังทดสอบ dev ผ่าน"
+        },
+        {
+          "name": "🔑 Graph Explorer (ดึง Token)",
+          "why": "เลือกแอป NexUs → Generate Token → เลือกเพจ Lullabell → ก็อป Page Token ไปใส่ Render META_PAGE_TOKEN",
+          "url": "https://developers.facebook.com/tools/explorer/",
+          "tag": "temp token 1ชม. · ทำถาวรทีหลัง",
+          "warn": "token อย่าแคป/อย่าวางในแชท"
+        },
+        {
+          "name": "⚙️ Messenger API Settings",
+          "why": "เชื่อมเพจ + สร้าง token + toggle field 'messages' ในช่อง Webhooks",
+          "url": "https://developers.facebook.com/apps/1558681259271673/use_cases/customize/messenger_api_settings/?use_case_enum=FACEBOOK_MESSAGING",
+          "tag": "ห้ามลืมเปิด messages toggle!"
         }
       ]
     }

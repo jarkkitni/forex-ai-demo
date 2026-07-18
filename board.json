@@ -43,7 +43,7 @@
     { "t": "Listing #7 Dialysis/Clinic รออนุมัติ", "who": "รอ FastWork" },
     { "t": "ลิสติ้ง SEO — รอ dashboard มีตัวเลขจริง 1-2 สัปดาห์ค่อยโพสต์", "who": "รอเวลา" },
     { "t": "หน้า SEO ยังบาง 4 หน้า (ร้านอาหาร/คลินิก/จองคิว/n8n)", "who": "รอเรา" },
-    { "t": "ec_products, ec_carts, ec_orders, ec_order_items ยังไม่ปิด RLS", "who": "รอเรา", "urgent": true },
+    { "t": "⚠️ patients/visits มี RLS policy authenticated=true (แก้/ลบ/เพิ่มได้หมด) — ข้อมูลคนไข้ ควรรัดกุมขึ้น", "who": "รอเรา", "urgent": true },
     { "t": "พี่หมอ/พยาบาลรีวิว /demo/dialysis (PIN 371134)", "who": "รอลูกค้า" }
   ]
 }
