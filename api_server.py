@@ -1117,6 +1117,43 @@ def demo_autotrade():
         return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
 
 
+# ---------- Demo ลูกค้าจริง (config แยกร้าน) ----------
+
+@app.route("/static/<path:sub>")
+def client_static(sub):
+    """รูปผลงานของลูกค้า"""
+    from flask import send_from_directory
+    return send_from_directory(os.path.join(os.path.dirname(__file__), "static"), sub)
+
+
+@app.route("/demo/client/<slug>")
+def demo_client(slug):
+    """
+    Demo ของลูกค้าจริง — อ่าน configs/<slug>.json แล้วยัดเข้า demo_salon.html
+    เพิ่มร้านใหม่ = เพิ่มไฟล์ config ไฟล์เดียว ไม่ต้องแตะโค้ด
+    """
+    from flask import abort
+    base = os.path.dirname(__file__)
+    cpath = os.path.join(base, "configs", f"{slug}.json")
+    if not os.path.exists(cpath) or "/" in slug or ".." in slug:
+        abort(404)
+    _track_visit()
+    with open(cpath, "r", encoding="utf-8") as f:
+        cfg = json.load(f)
+    with open(os.path.join(base, "demo_salon.html"), "r", encoding="utf-8") as f:
+        html = f.read()
+    for k, v in {
+        "__BIZ_NAME__": cfg.get("biz_name", ""),
+        "__TAGLINE__": cfg.get("tagline", ""),
+        "__EMOJI__": cfg.get("emoji", "✨"),
+        "__ACCENT__": cfg.get("accent", "#c08268"),
+        "__ACCENT_SOFT__": cfg.get("accent_soft", "#f6ece6"),
+        "__CONFIG__": json.dumps(cfg, ensure_ascii=False),
+    }.items():
+        html = html.replace(k, v)
+    return html, 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
 @app.route("/api/links")
 def api_links():
     """ประตูทุกบานที่ต้องเข้าไปทำงาน (แก้ที่ links.json)"""

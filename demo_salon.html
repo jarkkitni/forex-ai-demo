@@ -1,0 +1,267 @@
+<!DOCTYPE html><html lang="th"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>__BIZ_NAME__ — ลองคุยกับบอท</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;
+  font-family:'Segoe UI',-apple-system,system-ui,'Sukhumvit Set','Noto Sans Thai',sans-serif}
+:root{--ac:__ACCENT__; --soft:__ACCENT_SOFT__; --bg:#f7f4f2; --line:#e8ded8;
+      --txt:#3d3330; --dim:#9b8b84; --me:#eef2f7}
+body{background:var(--bg);display:flex;justify-content:center;min-height:100vh;min-height:100dvh}
+.phone{width:100%;max-width:440px;background:#fff;display:flex;flex-direction:column;
+  height:100vh;height:100dvh;box-shadow:0 0 50px rgba(0,0,0,.07)}
+
+header{background:var(--ac);color:#fff;padding:13px 16px;display:flex;align-items:center;gap:11px;flex:none}
+.ava{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.22);
+  display:grid;place-items:center;font-size:19px;flex:none}
+header b{font-size:15.5px;display:block;line-height:1.3}
+header small{font-size:11px;opacity:.9}
+.demo-tag{margin-left:auto;background:rgba(255,255,255,.2);font-size:9.5px;font-weight:800;
+  padding:4px 9px;border-radius:99px;letter-spacing:.4px}
+
+#chat{flex:1;overflow-y:auto;padding:16px 13px 8px;background:var(--bg);
+  display:flex;flex-direction:column;gap:9px;scroll-behavior:smooth}
+
+.row{display:flex;gap:7px;align-items:flex-end;animation:up .25s ease}
+@keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.row .pic{width:27px;height:27px;border-radius:50%;background:var(--ac);color:#fff;
+  display:grid;place-items:center;font-size:13px;flex:none}
+.msg{max-width:80%;padding:10px 13px;border-radius:16px;font-size:14.5px;line-height:1.6;
+  white-space:pre-wrap;word-break:break-word}
+.bot .msg{background:#fff;border:1px solid var(--line);border-bottom-left-radius:5px}
+.me{justify-content:flex-end}
+.me .msg{background:var(--me);border-bottom-right-radius:5px}
+.info{align-self:center;background:transparent;color:var(--dim);font-size:11.5px;text-align:center;
+  max-width:92%;padding:3px}
+
+.btns{display:flex;flex-wrap:wrap;gap:7px;margin:3px 0 3px 34px}
+.btn{background:#fff;border:1.5px solid var(--ac);color:var(--ac);border-radius:99px;
+  padding:8px 15px;font-size:13.5px;font-weight:700;cursor:pointer;transition:.12s}
+.btn:active{transform:scale(.96)}
+.btn.solid{background:var(--ac);color:#fff}
+.btn.ghost{border-color:var(--line);color:var(--dim);font-weight:500}
+
+.card{background:#fff;border:1px solid var(--line);border-radius:15px;padding:13px;
+  margin-left:34px;max-width:86%;font-size:13.5px}
+.card h4{font-size:13px;color:var(--ac);margin-bottom:9px;font-weight:800}
+.it{display:flex;justify-content:space-between;gap:9px;padding:7px 0;border-bottom:1px dashed var(--line)}
+.it:last-child{border:0}
+.it .l{flex:1}
+.it .n{font-weight:600;line-height:1.4}
+.it .d{font-size:11.5px;color:var(--dim);margin-top:2px;line-height:1.45}
+.it .p{color:var(--ac);font-weight:800;white-space:nowrap;font-size:13.5px}
+.hot{background:var(--soft);border-color:var(--ac)}
+
+.gal{display:flex;gap:7px;overflow-x:auto;padding:3px 0 8px 34px;scroll-snap-type:x mandatory}
+.gal img{width:132px;height:176px;object-fit:cover;border-radius:12px;flex:none;
+  scroll-snap-align:start;border:1px solid var(--line)}
+
+#bar{padding:9px 11px;background:#fff;border-top:1px solid var(--line);display:flex;gap:8px;flex:none}
+#inp{flex:1;border:1px solid var(--line);border-radius:99px;padding:11px 16px;font-size:15px;outline:none}
+#inp:focus{border-color:var(--ac)}
+#snd{background:var(--ac);color:#fff;border:0;border-radius:50%;width:42px;height:42px;
+  font-size:17px;cursor:pointer;flex:none}
+#snd:active{transform:scale(.93)}
+
+.typing{display:flex;gap:3px;padding:13px}
+.typing i{width:6px;height:6px;border-radius:50%;background:var(--dim);animation:bl 1.3s infinite}
+.typing i:nth-child(2){animation-delay:.2s} .typing i:nth-child(3){animation-delay:.4s}
+@keyframes bl{0%,60%,100%{opacity:.25}30%{opacity:1}}
+
+.banner{background:var(--soft);border-bottom:1px solid var(--line);padding:7px 14px;
+  font-size:11px;color:#8a6f60;text-align:center;flex:none;line-height:1.5}
+</style></head><body>
+<div class="phone">
+  <div class="banner">🧪 <b>นี่คือตัวอย่างระบบ</b> — ลองกดเล่นได้เหมือนเป็นลูกค้าจริง · ยังไม่ได้เชื่อม LINE ของร้าน</div>
+  <header>
+    <div class="ava">__EMOJI__</div>
+    <div><b>__BIZ_NAME__</b><small>__TAGLINE__</small></div>
+    <span class="demo-tag">DEMO</span>
+  </header>
+  <div id="chat"></div>
+  <div id="bar">
+    <input id="inp" placeholder="พิมพ์ข้อความ..." autocomplete="off"
+           onkeydown="if(event.key==='Enter')send()">
+    <button id="snd" onclick="send()">➤</button>
+  </div>
+</div>
+
+<script>
+const CFG = __CONFIG__;
+const chat = document.getElementById('chat');
+let S = {};   // เก็บข้อมูลการจอง
+
+const el = h => { const d=document.createElement('div'); d.innerHTML=h.trim(); return d.firstChild; };
+const esc = t => String(t).replace(/[<>&]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+const down = () => chat.scrollTop = chat.scrollHeight;
+const wait = ms => new Promise(r=>setTimeout(r,ms));
+
+function me(t){ chat.appendChild(el(`<div class="row me"><div class="msg">${esc(t)}</div></div>`)); down(); }
+function info(t){ chat.appendChild(el(`<div class="info">${t}</div>`)); down(); }
+
+async function bot(t, delay=520){
+  const ty = el(`<div class="row bot"><div class="pic">${CFG.emoji}</div>
+    <div class="msg typing"><i></i><i></i><i></i></div></div>`);
+  chat.appendChild(ty); down();
+  await wait(delay);
+  ty.remove();
+  chat.appendChild(el(`<div class="row bot"><div class="pic">${CFG.emoji}</div>
+    <div class="msg">${esc(t)}</div></div>`)); down();
+}
+function card(h){ chat.appendChild(el(`<div class="card">${h}</div>`)); down(); }
+function btns(list){
+  const b = el('<div class="btns"></div>');
+  list.forEach(([label, fn, cls])=>{
+    const x = el(`<button class="btn ${cls||''}">${label}</button>`);
+    x.onclick = ()=>{ b.remove(); me(label); fn(); };
+    b.appendChild(x);
+  });
+  chat.appendChild(b); down();
+}
+const pick = a => a[Math.floor(Math.random()*a.length)];
+
+// ---------- เริ่ม ----------
+async function start(){
+  await bot(CFG.greeting, 400);
+  menu();
+}
+function menu(){
+  btns([
+    ...CFG.categories.map(c=>[`${c.emoji} ${c.name}`, ()=>showCat(c)]),
+    ['💭 ขอคำแนะนำ', advisor],
+    ['🎪 ดูผลงาน', works],
+    ['📍 พิกัดร้าน', where],
+    [`🤍 ${CFG.book_word}เลย`, ()=>book()],
+  ]);
+}
+
+// ---------- หมวดบริการ ----------
+async function showCat(c){
+  await bot(`${c.emoji} ${c.name} — ${c.desc}\nเลือกดูรายการที่สนใจได้เลยค่ะ`, 420);
+  btns([
+    ...c.groups.map(g=>[g.hot?`🔥 ${g.name.replace('🔥 ','')}`:g.name, ()=>showGroup(c,g), g.hot?'solid':'']),
+    ['↩︎ กลับเมนูหลัก', menu, 'ghost'],
+  ]);
+}
+async function showGroup(c, g){
+  await wait(280);
+  card(`<h4>${g.name}</h4>` + g.items.map(i=>`
+    <div class="it"><div class="l"><div class="n">${i.n}</div>
+      ${i.d?`<div class="d">${i.d}</div>`:''}</div>
+      <div class="p">${i.p}</div></div>`).join(''));
+  if(c.note) info(c.note);
+  await bot(pick(CFG.close_lines), 620);
+  btns([
+    ['📅 เช็กคิวว่างให้หน่อยค่ะ', ()=>book(g.items[0]?.n), 'solid'],
+    ['👀 ดูรายการอื่น', ()=>showCat(c)],
+    ['💭 ขอคำแนะนำ', advisor],
+    ['↩︎ เมนูหลัก', menu, 'ghost'],
+  ]);
+}
+
+// ---------- ที่ปรึกษา (จุดต่างของร้านนี้) ----------
+async function advisor(){
+  await bot(CFG.advisor.intro, 450);
+  S.advising = true;
+  info('พิมพ์บอกได้เลยค่ะ เช่น "ผมเสียจากการฟอก" หรือ "เล็บบางขาดง่าย"');
+}
+async function advise(text){
+  const t = text.toLowerCase();
+  const hit = CFG.advisor.rules.find(r => r.if.some(k => t.includes(k)));
+  S.advising = false;
+  if(!hit){
+    await bot('ขอบคุณที่บอกนะคะ 🤍 เคสนี้น้องเบลล์อยากให้แอดมินดูให้ละเอียดอีกทีค่ะ\nระหว่างนี้ดูเมนูบริการก่อนได้นะคะ', 700);
+    return menu();
+  }
+  await bot(hit.say, 700);
+  await wait(200);
+  card(`<h4>🤍 น้องเบลล์แนะนำ</h4>` + hit.rec.map(r=>`
+    <div class="it"><div class="l"><div class="n">${r}</div></div></div>`).join(''));
+  if(hit.handoff){
+    await bot(CFG.advisor.handoff_msg, 650);
+    return btns([['📅 ฝากเบอร์ให้แอดมินติดต่อกลับ', ()=>book(), 'solid'], ['↩︎ เมนูหลัก', menu, 'ghost']]);
+  }
+  await bot(pick(CFG.close_lines), 620);
+  btns([
+    ['📅 เช็กคิวว่างให้หน่อยค่ะ', ()=>book(hit.rec[0]), 'solid'],
+    ['💬 ถามอย่างอื่น', advisor],
+    ['↩︎ เมนูหลัก', menu, 'ghost'],
+  ]);
+}
+
+// ---------- ผลงาน ----------
+async function works(){
+  await bot('ผลงานบางส่วนของร้านค่ะ เลื่อนดูได้เลยนะคะ 🤍', 420);
+  const g = el('<div class="gal"></div>');
+  CFG.works.forEach(u=>{ const i=new Image(); i.src=u; i.loading='lazy'; g.appendChild(i); });
+  chat.appendChild(g); down();
+  await bot(pick(CFG.close_lines), 750);
+  btns([['📅 เช็กคิวว่างให้หน่อยค่ะ', ()=>book(), 'solid'], ['↩︎ เมนูหลัก', menu, 'ghost']]);
+}
+
+// ---------- พิกัด ----------
+async function where(){
+  const c = CFG.contact;
+  await bot(`📍 ${c.address}\n\n🚗 ${c.parking}\n\nจุดสังเกตค่ะ:\n${c.landmarks.map(l=>'• '+l).join('\n')}`, 520);
+  await bot(`📞 ${c.phone}\n💬 LINE: ${c.line}`, 420);
+  info(CFG.gift);
+  btns([['📅 ' + CFG.book_word, ()=>book(), 'solid'], ['↩︎ เมนูหลัก', menu, 'ghost']]);
+}
+
+// ---------- จองคิว ----------
+async function book(service){
+  S.svc = service || null;
+  if(S.svc) await bot(`ได้เลยค่ะ 🤍 สนใจ "${S.svc}" ใช่ไหมคะ\nขอชื่อที่ให้เรียกหน่อยค่ะ`, 480);
+  else await bot('ยินดีค่ะ 🤍 ขอชื่อที่ให้เรียกหน่อยค่ะ', 450);
+  S.step = 'name';
+}
+async function flow(text){
+  if(S.step === 'name'){
+    S.name = text; S.step = 'svc';
+    if(S.svc){ S.step='day'; return askDay(); }
+    await bot(`สวัสดีค่ะคุณ${S.name} 🤍\nสนใจบริการด้านไหนคะ?`, 480);
+    return btns([...CFG.categories.map(c=>[`${c.emoji} ${c.name}`, ()=>{ S.svc=c.name; S.step='day'; askDay(); }]),
+                 ['ยังไม่แน่ใจค่ะ', ()=>{ S.svc='ปรึกษาแอดมิน'; S.step='day'; askDay(); }, 'ghost']]);
+  }
+  if(S.step === 'day'){ S.day = text; S.step='phone';
+    return bot('รับทราบค่ะ 🤍 ขอเบอร์ติดต่อกลับหน่อยค่ะ', 450); }
+  if(S.step === 'phone'){ S.phone = text; S.step=null; return done(); }
+}
+async function askDay(){
+  await bot('สะดวกวันไหน ช่วงเวลาไหนคะ?\n(เช่น "เสาร์ บ่าย 2" หรือ "พรุ่งนี้เย็น")', 500);
+  S.step = 'day';
+}
+async function done(){
+  await bot('รับข้อมูลครบแล้วค่ะ 🤍', 500);
+  await wait(200);
+  card(`<h4>📋 สรุปการ${CFG.book_word}</h4>
+    <div class="it"><div class="l"><div class="n">ชื่อ</div></div><div class="p">${esc(S.name)}</div></div>
+    <div class="it"><div class="l"><div class="n">บริการ</div></div><div class="p">${esc(S.svc||'-')}</div></div>
+    <div class="it"><div class="l"><div class="n">วัน/เวลา</div></div><div class="p">${esc(S.day)}</div></div>
+    <div class="it"><div class="l"><div class="n">เบอร์</div></div><div class="p">${esc(S.phone)}</div></div>`);
+  await bot(`ขอบคุณมากค่ะคุณ${S.name} 🤍\nแอดมินจะติดต่อกลับเพื่อยืนยันคิวโดยเร็วที่สุดค่ะ`, 650);
+  info('⚡ ในระบบจริง — ข้อมูลนี้จะเด้งเข้า LINE ของร้านทันที<br>แอดมินแค่รอรับคิวที่จองเข้ามา');
+  info(CFG.gift);
+  await wait(400);
+  btns([['🔄 ลองใหม่อีกรอบ', ()=>{ S={}; chat.innerHTML=''; start(); }, 'ghost']]);
+}
+
+// ---------- รับข้อความพิมพ์ ----------
+async function send(){
+  const i = document.getElementById('inp');
+  const t = i.value.trim(); if(!t) return;
+  i.value=''; me(t);
+  if(S.step) return flow(t);
+  if(S.advising) return advise(t);
+  // พิมพ์มาลอยๆ → เดาเจตนา
+  const x = t.toLowerCase();
+  if(/ราคา|เท่าไหร่|กี่บาท|เมนู/.test(x)){ await bot('ได้เลยค่ะ 🤍 สนใจดูราคาด้านไหนคะ?',480); return menu(); }
+  if(/จอง|คิว|ว่าง|นัด/.test(x)) return book();
+  if(/ที่ไหน|พิกัด|แผนที่|จอดรถ|ไปยังไง/.test(x)) return where();
+  if(/ผลงาน|รูป|ตัวอย่าง/.test(x)) return works();
+  await bot('น้องเบลล์ขอแนะนำเป็นเมนูให้เลือกนะคะ 🤍', 480);
+  menu();
+}
+start();
+</script>
+</body></html>
