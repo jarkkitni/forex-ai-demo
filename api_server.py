@@ -1048,6 +1048,62 @@ def _stamp_source(resp):
     return resp
 
 
+# ---------- Auto-Execution (PAPER MODE เท่านั้น) ----------
+
+_PAIR_FETCH = {
+    "BTC/USD": fetch_btc,
+    "ETH/USD": fetch_eth,
+    "EUR/USD": lambda: fetch_forex("EUR", "USD"),
+    "GBP/USD": lambda: fetch_forex("GBP", "USD"),
+    "USD/JPY": lambda: fetch_forex("USD", "JPY"),
+}
+
+
+def _autotrade_price(pair: str) -> dict:
+    fn = _PAIR_FETCH.get(pair.upper())
+    if not fn:
+        raise ValueError(f"ยังไม่รองรับคู่ {pair}")
+    return fn()
+
+
+@app.route("/api/autotrade/tick", methods=["GET", "POST"])
+def autotrade_tick():
+    """
+    cron ยิงมาทุก 15-30 นาที → เดิน 1 รอบ
+    ⚠️ PAPER เท่านั้น — Executor ตกกลับเป็น PaperBroker เองถ้าไม่ปลดล็อกครบ 3 ชั้น
+    """
+    from auto_execution import runner
+    try:
+        return jsonify({"success": True, **runner.tick(
+            fetch_price_fn=_autotrade_price,
+            analyze_fn=analyze_with_ai,
+            notify_fn=_push_line,
+            line_user_id=LINE_USER_ID,
+        )})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)[:300]}), 200
+
+
+@app.route("/api/autotrade/state")
+def autotrade_state():
+    """ผลเทรดกระดาษทั้งหมด — ใช้โดยหน้า /demo/autotrade"""
+    from auto_execution import runner
+    try:
+        return jsonify(runner.state())
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)[:200]}), 200
+
+
+@app.route("/demo/autotrade")
+def demo_autotrade():
+    """หน้าให้ลูกค้าเปิดดูผลเทรดกระดาษแบบสด"""
+    _track_visit()
+    p = os.path.join(os.path.dirname(__file__), "demo_autotrade.html")
+    with open(p, "r", encoding="utf-8") as f:
+        return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
 @app.route("/api/seo")
 def api_seo():
     """สถานะ SEO — คนมาจาก Google กี่คน, Googlebot มาแล้วยัง"""
