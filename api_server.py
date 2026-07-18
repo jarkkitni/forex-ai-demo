@@ -48,9 +48,9 @@ def _track_visit():
     ip = request.headers.get("X-Forwarded-For", request.remote_addr or "?").split(",")[0].strip()
     visit_stats["unique_ips"].add(ip)
     visit_stats["last_visit"] = now.strftime("%H:%M UTC")
-    # บันทึกว่าคนนี้มาจากไหน — ใช้พิสูจน์ว่า SEO ทำงาน
+    # บันทึกว่าคนนี้มาจากไหน — ใช้พิสูจน์ว่า SEO ทำงาน + ยิง LINE ตอนคนแรกมาจาก Google
     try:
-        seo_tracker.log(request)
+        seo_tracker.log(request, push_fn=_push_line, line_user_id=LINE_USER_ID)
     except Exception as e:
         print(f"[SEO] log fail: {e}", flush=True)
 
@@ -641,6 +641,12 @@ BIZ_LABEL = {
     "spa": "สปา/นวด", "restaurant": "ร้านอาหาร", "other": "อื่นๆ",
 }
 
+SRC_LABEL = {
+    "google": "🔍 Google (SEO ทำงาน!)", "bing": "🔎 Bing (SEO ทำงาน!)",
+    "facebook": "📘 Facebook", "line": "💬 LINE", "x": "✕ X",
+    "fastwork": "💼 FastWork", "direct": "🔗 พิมพ์ลิงก์ตรง", "other": "🌐 อื่นๆ",
+}
+
 
 BASE_URL = "https://forex-ai-demo.onrender.com"
 
@@ -836,6 +842,24 @@ def sitemap():
     return xml, 200, {"Content-Type": "application/xml; charset=utf-8"}
 
 
+@app.after_request
+def _stamp_source(resp):
+    """
+    ปั๊ม cookie จำ 'แหล่งแรกที่รู้จักเรา' ไว้ 30 วัน
+    ทำไมต้องมี: ตอนลูกค้ากดสั่งซื้อ referrer จะเป็นเว็บเราเอง → ไม่รู้ว่าเขามาจาก Google
+    cookie นี้เก็บแค่ชื่อแหล่ง (google/facebook/...) ไม่มีข้อมูลส่วนตัวใดๆ
+    """
+    try:
+        if not request.cookies.get(seo_tracker.SRC_COOKIE) and not request.path.startswith("/api"):
+            src = seo_tracker.classify(request.headers.get("Referer", "") or "")
+            if "forex-ai-demo.onrender.com" not in (request.headers.get("Referer") or ""):
+                resp.set_cookie(seo_tracker.SRC_COOKIE, src, max_age=86400 * seo_tracker.COOKIE_DAYS,
+                                samesite="Lax", secure=True)
+    except Exception:
+        pass
+    return resp
+
+
 @app.route("/api/seo")
 def api_seo():
     """สถานะ SEO — คนมาจาก Google กี่คน, Googlebot มาแล้วยัง"""
@@ -887,8 +911,12 @@ def botkit_order():
         if not d.get("shop_name") or not d.get("contact"):
             return jsonify({"success": False, "error": "ข้อมูลไม่ครบ"}), 400
 
+        # แหล่งที่พาลูกค้าคนนี้มา (จาก cookie ที่ปั๊มไว้ตอนเข้าเว็บครั้งแรก)
+        src = request.cookies.get(seo_tracker.SRC_COOKIE, "direct")
+
         order = {
             "time":        datetime.now(timezone.utc).isoformat(),
+            "source":      src,
             "shop_name":   str(d.get("shop_name", ""))[:100],
             "biz_type":    str(d.get("biz_type", ""))[:30],
             "contact_name": str(d.get("contact_name", ""))[:60],
@@ -900,6 +928,7 @@ def botkit_order():
         }
         botkit_orders.insert(0, order)
         del botkit_orders[50:]
+        seo_tracker.log_order(src, order["plan"])   # นับ conversion
 
         biz = BIZ_LABEL.get(order["biz_type"], order["biz_type"] or "-")
         demo_url = (f"https://forex-ai-demo.onrender.com/demo/{order['biz_type']}"
@@ -915,6 +944,7 @@ def botkit_order():
             f"👤 {order['contact_name']} | {order['contact']}\n"
             + (f"📱 เพจ: {order['page']}\n" if order["page"] else "")
             + (f"💬 ต้องการ: {order['need']}\n" if order["need"] else "")
+            + f"📡 มาจาก: {SRC_LABEL.get(src, src)}\n"
             + f"━━━━━━━━━━━━\n"
             f"🎪 demo สายนี้: {demo_url}\n"
             f"⏰ ทักกลับภายใน 24 ชม.!"
