@@ -1117,6 +1117,70 @@ def demo_autotrade():
         return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
 
 
+@app.route("/api/board")
+def api_board():
+    """เงินเข้า-ออก + งานค้าง (แก้ที่ board.json)"""
+    try:
+        p = os.path.join(os.path.dirname(__file__), "board.json")
+        with open(p, "r", encoding="utf-8") as f:
+            d = json.load(f)
+        d["orders_new"] = len([o for o in botkit_orders if o.get("status") == "new"])
+        return jsonify({"ok": True, **d})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)[:200]}), 200
+
+
+@app.route("/api/pulse")
+def api_pulse():
+    """
+    ไฟสถานะระบบทั้งหมดในที่เดียว — เขียว/แดง รู้ทันทีว่ามีอะไรตายไหม
+    เกิดจากบทเรียน 18 ก.ค.: Job Hunter ตายเงียบ 1 วันเต็มโดยไม่มีใครรู้
+    """
+    from datetime import timezone
+    h = ai_guard.health()
+    out = {"ok": True, "checks": []}
+
+    # 1) AI ยังหายใจไหม — ตัวนี้ตาย = ทุกอย่างตายตาม
+    out["checks"].append({
+        "name": "AI (Claude)", "ok": bool(ANTHROPIC_API_KEY) and h["ok"],
+        "detail": ("ปกติ" if h["ok"] else f"ล้มเหลว: {(h.get('last_error') or '')[:60]}")
+                  if ANTHROPIC_API_KEY else "ไม่ได้ตั้ง key",
+        "fix": "https://platform.claude.com/settings/billing",
+    })
+
+    # 2) Auto-Execution เดินอยู่ไหม
+    try:
+        from auto_execution import runner
+        s = runner.state()
+        out["checks"].append({
+            "name": "Auto-Execution", "ok": bool(s.get("ok")),
+            "detail": f"PAPER · เปิด {s.get('open_count',0)} ไม้ · ปิดแล้ว {s.get('total_closed',0)}",
+        })
+    except Exception as e:
+        out["checks"].append({"name": "Auto-Execution", "ok": False, "detail": str(e)[:60]})
+
+    # 3) SEO ถึงขั้นไหน
+    try:
+        s = seo_tracker.summary()
+        out["checks"].append({
+            "name": "SEO", "ok": bool(s.get("ok")),
+            "detail": s.get("label", "-") if s.get("ok") else "ยังไม่พร้อม",
+        })
+    except Exception:
+        out["checks"].append({"name": "SEO", "ok": False, "detail": "-"})
+
+    # 4) Supabase ต่อติดไหม
+    out["checks"].append({
+        "name": "ฐานข้อมูล", "ok": seo_tracker.is_configured(),
+        "detail": "Supabase เชื่อมแล้ว" if seo_tracker.is_configured() else "ไม่ได้ตั้งค่า",
+    })
+
+    out["all_ok"] = all(c["ok"] for c in out["checks"])
+    out["ai_calls"] = h.get("calls", 0)
+    out["ai_fails"] = h.get("fails", 0)
+    return jsonify(out)
+
+
 @app.route("/api/ai-health")
 def api_ai_health():
     """AI ยังหายใจอยู่ไหม — ใช้ดูบน Monitor + ให้ cron เช็คได้"""

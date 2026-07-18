@@ -1,0 +1,50 @@
+{
+  "_readme": "แก้ไฟล์นี้แล้ว push = การ์ด 💰 เงินเข้า-ออก + ✅ งานค้าง บน /monitor เปลี่ยนตาม",
+  "updated": "2026-07-18",
+
+  "deals": [
+    {
+      "name": "Beauty Salon — LINE Bot",
+      "amount": 1500,
+      "state": "waiting_payment",
+      "note": "invoice หมดอายุ 18 ก.ค. 16:13 — ยังไม่จ่าย",
+      "deadline": "2026-07-18T16:13:00+07:00",
+      "action": "ส่งข้อความตาม / ถ้าหมดอายุออกใบใหม่ได้ทันที"
+    },
+    {
+      "name": "Forex Auto-Execution",
+      "amount": 35000,
+      "recurring": 4000,
+      "state": "silent",
+      "note": "เงียบหลังโดนถาม 3 ข้อ — รอ paper mode สะสมผล 3-5 วันค่อยส่งลิงก์",
+      "action": "รอไม้ปิด 5-10 ไม้ → ส่ง /demo/autotrade + ข้อความใหม่ (1 คำถาม)"
+    },
+    {
+      "name": "ลูกค้า LINE Bot listing",
+      "amount": 0,
+      "state": "waiting_reply",
+      "note": "ส่งคำถาม 3 ข้อ + demo แล้ว",
+      "action": "รอตอบ"
+    }
+  ],
+
+  "costs": [
+    { "name": "Anthropic API", "amount": 700, "unit": "เดือน", "note": "เพดาน $20/เดือน · Haiku คัดก่อน Sonnet" },
+    { "name": "Render", "amount": 0, "unit": "เดือน", "note": "free tier" },
+    { "name": "Supabase", "amount": 0, "unit": "เดือน", "note": "free tier" },
+    { "name": "cron-job.org", "amount": 0, "unit": "เดือน", "note": "free" }
+  ],
+
+  "pending": [
+    { "t": "ลูกค้า Beauty ฿1,500 ยังไม่จ่าย", "who": "รอลูกค้า", "urgent": true },
+    { "t": "ลูกค้า Forex เงียบ — รอ paper mode มีผล 3-5 วัน", "who": "รอเรา" },
+    { "t": "Garuda วิเคราะห์ตลาด Forex 7 ข้อ (เน้นกฎหมาย ก.ล.ต.)", "who": "รอ Garuda" },
+    { "t": "Listing #5 Forex AI Bot รออนุมัติ", "who": "รอ FastWork" },
+    { "t": "Listing #6 n8n Automation รออนุมัติ", "who": "รอ FastWork" },
+    { "t": "Listing #7 Dialysis/Clinic รออนุมัติ", "who": "รอ FastWork" },
+    { "t": "ลิสติ้ง SEO — รอ dashboard มีตัวเลขจริง 1-2 สัปดาห์ค่อยโพสต์", "who": "รอเวลา" },
+    { "t": "หน้า SEO ยังบาง 4 หน้า (ร้านอาหาร/คลินิก/จองคิว/n8n)", "who": "รอเรา" },
+    { "t": "ec_products, ec_carts, ec_orders, ec_order_items ยังไม่ปิด RLS", "who": "รอเรา", "urgent": true },
+    { "t": "พี่หมอ/พยาบาลรีวิว /demo/dialysis (PIN 371134)", "who": "รอลูกค้า" }
+  ]
+}

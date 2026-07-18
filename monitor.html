@@ -172,6 +172,24 @@
       </div>
     </div>
 
+    <!-- ไฟสถานะระบบ — บนสุด เห็นก่อนใคร -->
+    <div class="card" id="pulseCard" style="grid-column:1/-1">
+      <h3>💚 สถานะระบบ
+        <a href="https://platform.claude.com/settings/billing" target="_blank"
+           style="color:var(--cyan);font-size:11px;text-decoration:none;font-weight:600">ดูเครดิต ▸</a>
+      </h3>
+      <div id="pulse"><div class="empty">กำลังเช็ค...</div></div>
+    </div>
+
+    <!-- Auto-Execution -->
+    <div class="card" id="atCard" style="grid-column:1/-1">
+      <h3>🤖 Auto-Execution — บอทเทรด (PAPER)
+        <a href="/demo/autotrade" target="_blank"
+           style="color:var(--cyan);font-size:11px;text-decoration:none;font-weight:600">เปิดกระดาน ▸</a>
+      </h3>
+      <div id="at"><div class="empty">กำลังโหลด...</div></div>
+    </div>
+
     <!-- Visitors -->
     <div class="card">
       <h3>👥 คนเข้า Demo วันนี้</h3>
@@ -214,6 +232,18 @@
     <div class="card" id="botkitCard" style="grid-column:1/-1;display:none">
       <h3>🔥 BotKit — ลูกค้าใหม่ <a href="/botkit" target="_blank" style="color:var(--cyan);font-size:11px;text-decoration:none;font-weight:600">เปิดหน้าขาย ▸</a></h3>
       <div id="orders"></div>
+    </div>
+
+    <!-- เงินเข้า-ออก -->
+    <div class="card" style="grid-column:1/-1">
+      <h3>💰 เงินเข้า-เงินออก</h3>
+      <div id="money"><div class="empty">กำลังโหลด...</div></div>
+    </div>
+
+    <!-- งานค้าง -->
+    <div class="card" style="grid-column:1/-1">
+      <h3>✅ งานค้าง — รอใครอยู่</h3>
+      <div id="pending"><div class="empty">กำลังโหลด...</div></div>
     </div>
 
     <!-- SEO status -->
@@ -544,8 +574,153 @@ async function loadSeo(){
   }catch(e){ $('seo').innerHTML = '<div class="empty">โหลดไม่ได้</div>'; }
 }
 
+// ---------- 💚 ไฟสถานะระบบ ----------
+async function loadPulse(){
+  try{
+    const d = await (await fetch('/api/pulse')).json();
+    const all = d.all_ok;
+    $('pulse').innerHTML = `
+      <div style="background:${all?'rgba(0,228,122,.08)':'rgba(255,77,109,.1)'};
+           border:1px solid ${all?'var(--green)':'#ff4d6d'};border-radius:12px;
+           padding:12px 14px;margin-bottom:12px;font-size:15px;font-weight:800;
+           color:${all?'var(--green)':'#ff4d6d'}">
+        ${all?'✅ ทุกระบบทำงานปกติ':'🚨 มีระบบผิดปกติ — ดูข้างล่าง'}
+        <span style="font-size:11.5px;color:var(--dim);font-weight:500">
+          · AI เรียกไป ${d.ai_calls} ครั้ง${d.ai_fails?` · ล้มเหลว ${d.ai_fails}`:''}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:9px">
+        ${d.checks.map(c=>`
+          <div style="background:var(--bg);border:1px solid ${c.ok?'var(--border)':'#ff4d6d'};
+               border-left:3px solid ${c.ok?'var(--green)':'#ff4d6d'};
+               border-radius:10px;padding:10px 12px">
+            <div style="font-size:13px;font-weight:700">${c.ok?'🟢':'🔴'} ${c.name}</div>
+            <div style="font-size:11.5px;color:var(--dim);margin-top:3px">${c.detail}</div>
+            ${!c.ok&&c.fix?`<a href="${c.fix}" target="_blank"
+               style="font-size:11px;color:var(--cyan);text-decoration:none;font-weight:700">แก้ที่นี่ ▸</a>`:''}
+          </div>`).join('')}
+      </div>`;
+  }catch(e){ $('pulse').innerHTML='<div class="empty">เช็คไม่ได้</div>'; }
+}
+
+// ---------- 🤖 Auto-Execution ----------
+async function loadAuto(){
+  try{
+    const d = await (await fetch('/api/autotrade/state')).json();
+    if(!d.ok){ $('at').innerHTML=`<div class="empty">${d.error||'ยังไม่พร้อม'}</div>`; return; }
+    const up = d.pnl >= 0, col = up?'var(--green)':'#ff4d6d';
+    const box = (v,l,c)=>`<div style="flex:1;min-width:105px;background:var(--bg);
+      border:1px solid var(--border);border-radius:10px;padding:11px">
+      <div style="font-size:21px;font-weight:800;color:${c||'var(--text)'}">${v}</div>
+      <div style="font-size:10.5px;color:var(--dim)">${l}</div></div>`;
+
+    $('at').innerHTML = `
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+        ${box((d.pnl>=0?'+':'')+d.pnl.toFixed(2), 'กำไร/ขาดทุน (USD)', col)}
+        ${box(d.win_rate+'%', `ชนะ ${d.wins} · แพ้ ${d.losses}`)}
+        ${box(d.total_closed, 'ไม้ที่ปิดแล้ว')}
+        ${box(d.open_count, 'เปิดอยู่', 'var(--cyan)')}
+      </div>
+      ${(d.open_trades||[]).length ? d.open_trades.map(t=>`
+        <div style="background:var(--bg);border:1px solid var(--border);border-left:3px solid var(--cyan);
+             border-radius:10px;padding:10px 12px;margin-bottom:6px;font-size:12.5px">
+          <b style="font-size:13.5px">${t.pair}</b>
+          <span style="color:${t.side==='BUY'?'var(--green)':'#ff4d6d'};font-weight:800"> ${t.side}</span>
+          <span style="color:var(--dim)"> · เข้า ${t.entry} · SL ${t.sl} · TP ${t.tp} · มั่นใจ ${t.confidence}%</span>
+        </div>`).join('')
+        : `<div class="empty" style="padding:14px">ยังไม่มีไม้เปิด — ระบบรอจังหวะที่มั่นใจพอ<br>
+           <span style="font-size:11.5px">cron ตรวจตลาดทุก 30 นาที</span></div>`}`;
+  }catch(e){ $('at').innerHTML='<div class="empty">โหลดไม่ได้</div>'; }
+}
+
+// ---------- 💰 เงิน + ✅ งานค้าง ----------
+const ST = {
+  waiting_payment:['⏰ รอจ่ายเงิน','var(--amber)'], silent:['😶 ลูกค้าเงียบ','var(--dim)'],
+  waiting_reply:['💬 รอตอบ','var(--cyan)'], won:['🎉 ปิดได้','var(--green)'], lost:['❌ ไม่ได้','var(--dim)'],
+};
+async function loadBoard(){
+  try{
+    const d = await (await fetch('/api/board')).json();
+    if(!d.ok){ $('money').innerHTML=`<div class="empty">${d.error}</div>`; return; }
+
+    const pipe = (d.deals||[]).reduce((s,x)=>s+(x.amount||0),0);
+    const rec  = (d.deals||[]).reduce((s,x)=>s+(x.recurring||0),0);
+    const cost = (d.costs||[]).reduce((s,x)=>s+(x.amount||0),0);
+
+    $('money').innerHTML = `
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+        <div style="flex:1;min-width:130px;background:rgba(0,228,122,.07);border:1px solid var(--green);
+             border-radius:10px;padding:12px">
+          <div style="font-size:21px;font-weight:800;color:var(--green)">฿${pipe.toLocaleString()}</div>
+          <div style="font-size:10.5px;color:var(--dim)">ดีลที่รออยู่ (ยังไม่ได้เงิน)</div></div>
+        <div style="flex:1;min-width:130px;background:var(--bg);border:1px solid var(--border);
+             border-radius:10px;padding:12px">
+          <div style="font-size:21px;font-weight:800;color:var(--cyan)">฿${rec.toLocaleString()}</div>
+          <div style="font-size:10.5px;color:var(--dim)">รายเดือน (ถ้าปิดได้)</div></div>
+        <div style="flex:1;min-width:130px;background:var(--bg);border:1px solid var(--border);
+             border-radius:10px;padding:12px">
+          <div style="font-size:21px;font-weight:800;color:var(--amber)">฿${cost.toLocaleString()}</div>
+          <div style="font-size:10.5px;color:var(--dim)">ต้นทุน/เดือน</div></div>
+        <div style="flex:1;min-width:130px;background:var(--bg);border:1px solid var(--border);
+             border-radius:10px;padding:12px">
+          <div style="font-size:21px;font-weight:800;color:var(--pink)">${d.orders_new||0}</div>
+          <div style="font-size:10.5px;color:var(--dim)">BotKit order ใหม่</div></div>
+      </div>
+
+      <div style="font-size:11px;color:var(--dim);font-weight:700;margin-bottom:8px">ดีลที่กำลังคุย</div>
+      ${(d.deals||[]).map(x=>{
+        const [lbl,c] = ST[x.state]||['?','var(--dim)'];
+        let left='';
+        if(x.deadline){
+          const h=(new Date(x.deadline)-Date.now())/36e5;
+          left = h>0 ? `<span style="color:var(--amber);font-weight:800"> · เหลือ ${Math.floor(h)} ชม. ${Math.floor((h%1)*60)} น.</span>`
+                     : `<span style="color:#ff4d6d;font-weight:800"> · หมดอายุแล้ว</span>`;
+        }
+        return `<div style="background:var(--bg);border:1px solid var(--border);border-left:3px solid ${c};
+             border-radius:10px;padding:11px 13px;margin-bottom:7px">
+          <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
+            <b style="font-size:13.5px">${x.name}</b>
+            <span style="font-size:13px;font-weight:800;color:var(--green)">
+              ${x.amount?'฿'+x.amount.toLocaleString():''}${x.recurring?` + ฿${x.recurring.toLocaleString()}/ด.`:''}</span>
+          </div>
+          <div style="font-size:11.5px;color:${c};font-weight:700;margin-top:4px">${lbl}${left}</div>
+          <div style="font-size:11.5px;color:var(--dim);margin-top:3px">${x.note||''}</div>
+          ${x.action?`<div style="font-size:11.5px;color:#9fb0d0;margin-top:5px;padding-top:5px;
+             border-top:1px dashed var(--border)">👉 ${x.action}</div>`:''}
+        </div>`;}).join('')}
+
+      <div style="font-size:11px;color:var(--dim);font-weight:700;margin:14px 0 8px">ต้นทุนรายเดือน</div>
+      <div style="display:flex;flex-wrap:wrap;gap:7px">
+        ${(d.costs||[]).map(c=>`<span style="background:var(--bg);border:1px solid var(--border);
+          border-radius:99px;padding:6px 12px;font-size:11.5px">
+          ${c.name} <b style="color:${c.amount?'var(--amber)':'var(--green)'}">
+          ${c.amount?'฿'+c.amount.toLocaleString():'ฟรี'}</b></span>`).join('')}
+      </div>`;
+
+    // งานค้าง — จัดกลุ่มตาม "รอใคร"
+    const g = {};
+    (d.pending||[]).forEach(p=>{ (g[p.who] = g[p.who]||[]).push(p); });
+    $('pending').innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px">
+        ${Object.entries(g).map(([who,items])=>`
+          <div><div style="font-size:11.5px;color:var(--dim);font-weight:700;margin-bottom:8px">
+            ${who} <span style="opacity:.6">(${items.length})</span></div>
+            ${items.map(p=>`<div style="background:var(--bg);border:1px solid ${p.urgent?'var(--amber)':'var(--border)'};
+              border-radius:9px;padding:9px 11px;margin-bottom:6px;font-size:12px;
+              color:${p.urgent?'var(--text)':'#9fb0d0'}">
+              ${p.urgent?'🔥 ':'○ '}${p.t}</div>`).join('')}
+          </div>`).join('')}
+      </div>
+      <div style="font-size:11px;color:var(--dim);margin-top:12px;padding-top:10px;
+           border-top:1px solid var(--border)">
+        แก้รายการได้ที่ <code style="color:var(--cyan)">board.json</code> → push → อัปเดตเอง
+        · ข้อมูล ${d.updated||''}</div>`;
+  }catch(e){ $('money').innerHTML='<div class="empty">โหลดไม่ได้</div>'; }
+}
+
 initBars(); loadStats(); loadJobs(); renderTasks(); loadStatus(); loadDemos(); loadOrders(); loadRoadmap(); loadSeo();
-setInterval(()=>{ loadStats(); loadJobs(); loadStatus(); loadOrders(); loadRoadmap(); loadSeo(); }, 60000);
+loadPulse(); loadAuto(); loadBoard();
+setInterval(()=>{ loadStats(); loadJobs(); loadStatus(); loadOrders(); loadRoadmap(); loadSeo();
+                  loadPulse(); loadAuto(); loadBoard(); }, 60000);
 </script>
 </body>
 </html>
