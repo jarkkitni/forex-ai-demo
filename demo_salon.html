@@ -72,7 +72,7 @@ header small{font-size:11px;opacity:.9}
   font-size:11px;color:#8a6f60;text-align:center;flex:none;line-height:1.5}
 </style></head><body>
 <div class="phone">
-  <div class="banner">🧪 <b>นี่คือตัวอย่างระบบ</b> — ลองกดเล่นได้เหมือนเป็นลูกค้าจริง · ยังไม่ได้เชื่อม LINE ของร้าน</div>
+  <div class="banner">🧪 <b>นี่คือตัวอย่างระบบ</b> — ลองกดเล่นได้เหมือนเป็นลูกค้าจริง · ยังไม่ได้เชื่อมเพจของร้าน</div>
   <header>
     <div class="ava">__EMOJI__</div>
     <div><b>__BIZ_NAME__</b><small>__TAGLINE__</small></div>
@@ -240,7 +240,7 @@ async function done(){
     <div class="it"><div class="l"><div class="n">วัน/เวลา</div></div><div class="p">${esc(S.day)}</div></div>
     <div class="it"><div class="l"><div class="n">เบอร์</div></div><div class="p">${esc(S.phone)}</div></div>`);
   await bot(`ขอบคุณมากค่ะคุณ${S.name} 🤍\nแอดมินจะติดต่อกลับเพื่อยืนยันคิวโดยเร็วที่สุดค่ะ`, 650);
-  info('⚡ ในระบบจริง — ข้อมูลนี้จะเด้งเข้า LINE ของร้านทันที<br>แอดมินแค่รอรับคิวที่จองเข้ามา');
+  info('⚡ ในระบบจริง — ข้อมูลนี้จะเด้งเข้าแชทเพจของร้านทันที (Facebook / Instagram)<br>แอดมินแค่รอรับคิวที่จองเข้ามา');
   info(CFG.gift);
   await wait(400);
   btns([['🔄 ลองใหม่อีกรอบ', ()=>{ S={}; chat.innerHTML=''; start(); }, 'ghost']]);
