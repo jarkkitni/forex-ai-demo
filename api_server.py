@@ -13,6 +13,7 @@ import rss_hunter
 import dialysis_api
 import seo_tracker
 import ai_guard
+import meta_bot
 
 app  = Flask(__name__)
 CORS(app)
@@ -22,6 +23,11 @@ ANTHROPIC_API_KEY   = os.environ.get("ANTHROPIC_API_KEY", "")
 LINE_TOKEN          = os.environ.get("LINE_TOKEN", "")
 LINE_USER_ID        = os.environ.get("LINE_USER_ID", "")
 LINE_CHANNEL_SECRET = os.environ.get("LINE_CHANNEL_SECRET", "")
+# ---- Meta (Facebook Messenger + Instagram) ----
+META_VERIFY_TOKEN   = os.environ.get("META_VERIFY_TOKEN", "")
+META_PAGE_TOKEN     = os.environ.get("META_PAGE_TOKEN", "")
+META_APP_SECRET     = os.environ.get("META_APP_SECRET", "")
+META_SLUG           = os.environ.get("META_SLUG", "lullabell")
 # ========================
 
 signal_history   = []  # in-memory สัญญาณ (เก็บ 20 ล่าสุด)
@@ -1270,6 +1276,41 @@ GSC_TOKEN = "google4f947fb5ceb78f37"
 def google_verify():
     return (f"google-site-verification: {GSC_TOKEN}.html", 200,
             {"Content-Type": "text/html; charset=utf-8"})
+
+
+@app.route("/webhook/meta", methods=["GET", "POST"])
+def meta_webhook():
+    """Facebook Messenger + Instagram DM webhook สำหรับบอทร้านลูกค้า (Lullabell)"""
+    # --- GET: ยืนยัน webhook (hub challenge) ---
+    if request.method == "GET":
+        if (request.args.get("hub.mode") == "subscribe"
+                and request.args.get("hub.verify_token") == META_VERIFY_TOKEN
+                and META_VERIFY_TOKEN):
+            return request.args.get("hub.challenge", ""), 200
+        return "forbidden", 403
+
+    # --- POST: รับ event ข้อความ ---
+    body = request.get_data()
+    sig = request.headers.get("X-Hub-Signature-256", "")
+    if not meta_bot.verify_signature(META_APP_SECRET, body, sig):
+        return "bad signature", 403
+    try:
+        data = json.loads(body or b"{}")
+    except Exception:
+        return "bad json", 400
+
+    # ตอบเฉพาะ object ที่เกี่ยวกับข้อความ (page = Messenger, instagram = IG DM)
+    if data.get("object") in ("page", "instagram"):
+        try:
+            client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+            meta_bot.handle(data, client, page_token=META_PAGE_TOKEN,
+                            slug=META_SLUG, notify_fn=_push_line,
+                            line_user_id=LINE_USER_ID)
+        except Exception as e:
+            traceback.print_exc()
+            # ตอบ 200 เสมอ ไม่งั้น Meta จะ retry รัวๆ
+            print("[meta_webhook] error:", str(e)[:200])
+    return "EVENT_RECEIVED", 200
 
 
 @app.route("/privacy")

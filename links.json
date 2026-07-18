@@ -138,6 +138,31 @@
           "tag": "Channel 2010571737"
         }
       ]
+    },
+    {
+      "title": "📱 Meta (FB+IG) — Lullabell",
+      "hint": "เข้าตอน: ตั้ง webhook · ขอ App Review · เชื่อมเพจ · ดู App Secret",
+      "items": [
+        {
+          "name": "Meta App Dashboard",
+          "why": "หน้าหลักแอป NexUs-SiriAriyaMate Chat · เข้า Messenger/IG settings",
+          "url": "https://developers.facebook.com/apps/1558681259271673/dashboard/",
+          "tag": "App ID 1558681259271673"
+        },
+        {
+          "name": "การตั้งค่าพื้นฐาน",
+          "why": "Privacy URL · Data Deletion · App icon · App Secret",
+          "url": "https://developers.facebook.com/apps/1558681259271673/settings/basic/",
+          "tag": "Settings → Basic",
+          "warn": "กด 'แสดง' App Secret แล้วอย่าแคปหน้าจอ!"
+        },
+        {
+          "name": "App Review",
+          "why": "ขอ Advanced Access: pages_messaging, instagram_business_manage_messages",
+          "url": "https://developers.facebook.com/apps/1558681259271673/app-review/permissions/",
+          "tag": "ยื่นหลังทดสอบ dev ผ่าน"
+        }
+      ]
     }
   ]
 }
