@@ -69,8 +69,33 @@ def _match_skills(job: dict) -> tuple:
     return (None, [])
 
 
+def _triage(client, job: dict, matched: list, notify_fn=None, uid: str = "") -> bool:
+    """
+    ด่านคัดด้วย Haiku (ถูกกว่า Sonnet หลายเท่า) — ตอบแค่ YES/NO
+
+    ทำไมคุ้ม: keyword match หยาบมาก ของที่ผ่านมาส่วนใหญ่ไม่ใช่งานเรา
+    ให้ Haiku คัดขยะทิ้งก่อน แล้วจ่ายค่า Sonnet เฉพาะงานที่มีลุ้นจริง
+    ถ้า Haiku พัง → ปล่อยผ่าน (fail-open) ดีกว่าพลาดงานเพราะด่านคัดล่ม
+    """
+    import ai_guard
+    desc = (job.get("description") or "")[:900]
+    prompt = f"""งานฟรีแลนซ์นี้ตรงกับสกิลนี้ไหม: LINE Bot, Chatbot, AI Agent,
+ระบบจองคิว, n8n automation, Web Dashboard, Python, Supabase, Forex bot
+
+งาน: {desc}
+
+ตอบคำเดียว: YES ถ้าพอทำได้ / NO ถ้าคนละสายเลย (เช่น กราฟิก ยิงแอด เขียนบทความ แปลภาษา)"""
+    try:
+        ans = ai_guard.call(client, prompt, max_tokens=5, smart=False,
+                            notify_fn=notify_fn, line_user_id=uid)
+        return "YES" in ans.upper()
+    except Exception as e:
+        print(f"[Hunter] triage ล้มเหลว ปล่อยผ่าน: {e}", flush=True)
+        return True
+
+
 def _analyze_job(client, job: dict, matched: list) -> dict:
-    """ให้ Claude วิเคราะห์งาน + ร่างข้อเสนอ"""
+    """ให้ Claude (Sonnet) วิเคราะห์งาน + ร่างข้อเสนอ — เรียกเฉพาะงานที่ผ่านด่าน Haiku"""
     desc = (job.get("description") or "")[:2000]
     budget = job.get("budget") or "ไม่ระบุ"
 
@@ -179,9 +204,18 @@ def run_hunter(anthropic_client, push_line_fn, line_user_id: str,
     alerts_sent = 0
     results = []
 
+    triaged_out = 0
     for job, grade, matched in new_matched[:max_alerts * 2]:
         if alerts_sent >= max_alerts:
             break
+
+        # ด่าน 1: Haiku คัดขยะทิ้งก่อน (ถูก) — ผ่านแล้วค่อยจ่ายค่า Sonnet
+        if not _triage(anthropic_client, job, matched, push_line_fn, line_user_id):
+            triaged_out += 1
+            print(f"[Hunter] Haiku คัดออก: {(job.get('title') or '')[:50]}", flush=True)
+            continue
+
+        # ด่าน 2: Sonnet วิเคราะห์เต็ม + ร่างข้อเสนอ (แพง แต่คุ้มเพราะกรองมาแล้ว)
         try:
             analysis = _analyze_job(anthropic_client, job, matched)
         except Exception as e:
@@ -219,6 +253,7 @@ def run_hunter(anthropic_client, push_line_fn, line_user_id: str,
     return {
         "checked": len(jobs),
         "new_matching": len(new_matched),
+        "triaged_out": triaged_out,      # Haiku คัดออกกี่งาน = ประหยัดค่า Sonnet ไปเท่านั้น
         "analyzed": len(results),
         "alerts_sent": alerts_sent,
         "results": results,

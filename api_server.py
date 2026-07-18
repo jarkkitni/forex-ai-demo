@@ -12,6 +12,7 @@ import fastwork_hunter
 import rss_hunter
 import dialysis_api
 import seo_tracker
+import ai_guard
 
 app  = Flask(__name__)
 CORS(app)
@@ -125,12 +126,9 @@ def analyze_with_ai(pair: str, price_data: dict) -> dict:
   "market_sentiment": "BULLISH" หรือ "BEARISH" หรือ "NEUTRAL"
 }}"""
 
-    msg  = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=600,
-        messages=[{"role": "user", "content": prompt}],
-    )
-    text = msg.content[0].text.strip()
+    # ผ่าน ai_guard → AI ตายเมื่อไหร่ เด้ง LINE ทันที ไม่ตายเงียบอีก
+    text = ai_guard.call(client, prompt, max_tokens=600, smart=True,
+                         notify_fn=_push_line, line_user_id=LINE_USER_ID)
     s, e = text.find("{"), text.rfind("}") + 1
     return json.loads(text[s:e])
 
@@ -217,7 +215,11 @@ def get_all_prices():
 
 @app.route("/api/analyze", methods=["POST"])
 def analyze():
-    """วิเคราะห์ด้วย AI"""
+    """
+    วิเคราะห์ด้วย AI
+    ⚠️ endpoint นี้เปิดสาธารณะ = ทุกครั้งที่ถูกเรียก เราจ่ายเงิน
+       ต้องมี rate limit เสมอ ไม่งั้นคนเดียวยิงรัวคืนเดียวเงินหมด
+    """
     body       = request.get_json()
     pair       = body.get("pair", "EURUSD")
     price_data = body.get("price_data", {})
@@ -225,8 +227,19 @@ def analyze():
     if not ANTHROPIC_API_KEY:
         return jsonify({"success": False, "error": "ไม่ได้ตั้ง ANTHROPIC_API_KEY"}), 400
 
+    ok, left = ai_guard.rate_limit(ai_guard.client_ip(request),
+                                   limit=int(os.environ.get("ANALYZE_LIMIT", "5")))
+    if not ok:
+        return jsonify({
+            "success": False,
+            "error": "วันนี้วิเคราะห์ครบโควตาแล้วครับ (5 ครั้ง/วัน) — พรุ่งนี้มาใหม่ได้เลย 😊 "
+                     "อยากใช้แบบไม่จำกัด ทักมาคุยได้ครับ",
+            "rate_limited": True,
+        }), 429
+
     try:
         result              = analyze_with_ai(pair, price_data)
+        result["quota_left"] = left
         result["pair"]      = pair
         result["timestamp"] = datetime.now().strftime("%H:%M:%S")
 
@@ -1102,6 +1115,16 @@ def demo_autotrade():
     p = os.path.join(os.path.dirname(__file__), "demo_autotrade.html")
     with open(p, "r", encoding="utf-8") as f:
         return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
+@app.route("/api/ai-health")
+def api_ai_health():
+    """AI ยังหายใจอยู่ไหม — ใช้ดูบน Monitor + ให้ cron เช็คได้"""
+    h = ai_guard.health()
+    h["has_key"] = bool(ANTHROPIC_API_KEY)
+    h["model_smart"] = ai_guard.MODEL_SMART
+    h["model_cheap"] = ai_guard.MODEL_CHEAP
+    return jsonify(h)
 
 
 @app.route("/api/seo")
