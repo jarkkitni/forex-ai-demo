@@ -1,0 +1,143 @@
+{
+  "_readme": "ประตูทุกบานที่ต้องเข้าไปทำงาน — Claude จะอ้างชื่อปุ่มพวกนี้เวลาสั่งงาน เช่น 'กดปุ่ม 💰 เพดานเงิน AI บน Monitor'",
+  "updated": "2026-07-18",
+
+  "groups": [
+    {
+      "title": "💰 AI & เงิน",
+      "hint": "เข้าตอน: key หมดอายุ · AI ตาย · เช็คว่าใช้เงินไปเท่าไหร่",
+      "items": [
+        {
+          "name": "เพดานเงิน AI",
+          "why": "ตั้ง spend limit $20 · เช็คเครดิตเหลือ · เปิด/ปิด auto reload",
+          "url": "https://platform.claude.com/settings/billing",
+          "tag": "Anthropic → Billing",
+          "warn": "อย่าเปิด auto reload ก่อนตั้งเพดาน!"
+        },
+        {
+          "name": "สร้าง API Key",
+          "why": "key ตาย/หมดอายุ → สร้างใหม่ที่นี่",
+          "url": "https://platform.claude.com/settings/workspaces/default/keys",
+          "tag": "Anthropic → API keys",
+          "warn": "ตั้ง Expires: Never เสมอ!"
+        },
+        {
+          "name": "ดูค่าใช้จ่าย",
+          "why": "ใช้เงินไปเท่าไหร่แล้ว แยกตามวัน/รุ่น",
+          "url": "https://platform.claude.com/cost",
+          "tag": "Anthropic → Cost"
+        }
+      ]
+    },
+    {
+      "title": "⚙️ เซิร์ฟเวอร์",
+      "hint": "เข้าตอน: ใส่ env ใหม่ · เว็บล่ม · ดู log หาสาเหตุ",
+      "items": [
+        {
+          "name": "Render Dashboard",
+          "why": "ใส่/แก้ Environment variables (ANTHROPIC_API_KEY ฯลฯ)",
+          "url": "https://dashboard.render.com",
+          "tag": "forex-ai-demo → Environment",
+          "warn": "กด 👁️ ซ่อนค่าก่อนแคปหน้าจอเสมอ"
+        },
+        {
+          "name": "GitHub — โค้ดเว็บ",
+          "why": "ดูโค้ด · เช็คว่า push ขึ้นแล้วยัง",
+          "url": "https://github.com/jarkkitni/forex-ai-demo",
+          "tag": "jarkkitni/forex-ai-demo"
+        },
+        {
+          "name": "GitHub — สมองกลาง",
+          "why": "CLAUDE.md + ไฟล์งาน (ใช้ตอนสลับ PC ↔ แท็บเล็ต)",
+          "url": "https://github.com/jarkkitni/ai-agen-workspace",
+          "tag": "jarkkitni/ai-agen-workspace"
+        }
+      ]
+    },
+    {
+      "title": "⏰ ตัวตั้งเวลา (cron)",
+      "hint": "เข้าตอน: เพิ่มงานอัตโนมัติ · เช็คว่า cron ยังวิ่งอยู่ไหม",
+      "items": [
+        {
+          "name": "cron-job.org",
+          "why": "ตั้งเวลายิง endpoint · ดู History ว่าสำเร็จไหม",
+          "url": "https://console.cron-job.org/jobs",
+          "tag": "Job Hunter + Auto-Execution Tick",
+          "warn": "ไม่ใช่ Groq! (เคยหลงมาแล้ว 😅)"
+        }
+      ]
+    },
+    {
+      "title": "🗄️ ฐานข้อมูล",
+      "hint": "เข้าตอน: ดูข้อมูลคนไข้ · ผลเทรด · สถิติ SEO · แก้ RLS",
+      "items": [
+        {
+          "name": "Supabase",
+          "why": "ตาราง patients, visits, paper_trades, seo_hits · Edge Functions",
+          "url": "https://supabase.com/dashboard/project/tghgpnveusfulczxcnbo",
+          "tag": "renaltrack (ap-southeast-1)"
+        }
+      ]
+    },
+    {
+      "title": "🔍 SEO",
+      "hint": "เข้าตอน: เช็คว่า Google เก็บหน้าเราแล้วยัง · ดูคำค้นจริง",
+      "items": [
+        {
+          "name": "Search Console",
+          "why": "ดูคำค้นที่พาคนมา · ส่ง sitemap · ตรวจ URL ทีละหน้า",
+          "url": "https://search.google.com/search-console?resource_id=https%3A%2F%2Fforex-ai-demo.onrender.com%2F",
+          "tag": "forex-ai-demo.onrender.com"
+        },
+        {
+          "name": "ตรวจ URL ทีละหน้า",
+          "why": "เช็คว่าหน้านี้ติดขั้นไหน (Crawl / Index / Rank)",
+          "url": "https://search.google.com/search-console/inspect?resource_id=https%3A%2F%2Fforex-ai-demo.onrender.com%2F",
+          "tag": "URL Inspection"
+        },
+        {
+          "name": "Google Alerts",
+          "why": "ตั้งดักคำค้น → RSS → Job Hunter",
+          "url": "https://www.google.com/alerts",
+          "tag": "ยังไม่ได้ตั้ง RSS_FEEDS"
+        }
+      ]
+    },
+    {
+      "title": "💼 หางาน / ลูกค้า",
+      "hint": "เข้าตอน: ตอบลูกค้า · โพสต์ listing · ดูงานใหม่",
+      "items": [
+        {
+          "name": "FastWork แชท",
+          "why": "ตอบลูกค้าที่ทักมา",
+          "url": "https://chat.fastwork.co/room",
+          "tag": "งานเข้าที่นี่"
+        },
+        {
+          "name": "FastWork Seller",
+          "why": "โพสต์/แก้ listing · ดูสถานะอนุมัติ",
+          "url": "https://fastwork.co/user/seller",
+          "tag": "Listing #5,6,7 รออนุมัติ"
+        },
+        {
+          "name": "FastWork Jobboard",
+          "why": "ดูงานใหม่เอง (Job Hunter ดักให้อยู่แล้ว)",
+          "url": "https://jobboard.fastwork.co",
+          "tag": "AI ดักทุก 30 นาที"
+        }
+      ]
+    },
+    {
+      "title": "💬 LINE",
+      "hint": "เข้าตอน: แก้ Rich Menu · เปลี่ยน webhook · ดู token",
+      "items": [
+        {
+          "name": "LINE Developers",
+          "why": "Channel settings · Webhook URL · Messaging API",
+          "url": "https://developers.line.biz/console/",
+          "tag": "Channel 2010571737"
+        }
+      ]
+    }
+  ]
+}

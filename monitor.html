@@ -172,7 +172,16 @@
       </div>
     </div>
 
-    <!-- ไฟสถานะระบบ — บนสุด เห็นก่อนใคร -->
+    <!-- ประตูทุกบาน — ปุ่มพาไปเว็บที่ต้องเข้าไปทำงาน -->
+    <div class="card" style="grid-column:1/-1">
+      <h3>🚪 ประตู — กดแล้วไปถึงเลย ไม่ต้องหา
+        <span style="color:var(--dim);font-size:11px;font-weight:500">
+          · Claude จะเรียกชื่อปุ่มพวกนี้เวลาสั่งงาน</span>
+      </h3>
+      <div id="links"><div class="empty">กำลังโหลด...</div></div>
+    </div>
+
+    <!-- ไฟสถานะระบบ -->
     <div class="card" id="pulseCard" style="grid-column:1/-1">
       <h3>💚 สถานะระบบ
         <a href="https://platform.claude.com/settings/billing" target="_blank"
@@ -574,6 +583,32 @@ async function loadSeo(){
   }catch(e){ $('seo').innerHTML = '<div class="empty">โหลดไม่ได้</div>'; }
 }
 
+// ---------- 🚪 ประตู ----------
+async function loadLinks(){
+  try{
+    const d = await (await fetch('/api/links')).json();
+    if(!d.ok){ $('links').innerHTML=`<div class="empty">${d.error}</div>`; return; }
+    $('links').innerHTML = (d.groups||[]).map(g=>`
+      <div style="margin-bottom:16px">
+        <div style="font-size:12.5px;font-weight:800;margin-bottom:2px">${g.title}</div>
+        <div style="font-size:11px;color:var(--dim);margin-bottom:8px">${g.hint||''}</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:8px">
+          ${g.items.map(i=>`
+            <a href="${i.url}" target="_blank" style="display:block;text-decoration:none;
+               background:var(--bg);border:1px solid var(--border);border-radius:11px;
+               padding:11px 13px;transition:.15s"
+               onmouseover="this.style.borderColor='var(--cyan)'"
+               onmouseout="this.style.borderColor='var(--border)'">
+              <div style="font-size:13.5px;font-weight:800;color:var(--text)">${i.name} <span style="color:var(--cyan)">▸</span></div>
+              <div style="font-size:11px;color:#9fb0d0;margin-top:4px;line-height:1.5">${i.why}</div>
+              ${i.tag?`<div style="font-size:10px;color:var(--dim);margin-top:5px">📍 ${i.tag}</div>`:''}
+              ${i.warn?`<div style="font-size:10.5px;color:var(--amber);margin-top:5px;font-weight:700">⚠️ ${i.warn}</div>`:''}
+            </a>`).join('')}
+        </div>
+      </div>`).join('');
+  }catch(e){ $('links').innerHTML='<div class="empty">โหลดไม่ได้</div>'; }
+}
+
 // ---------- 💚 ไฟสถานะระบบ ----------
 async function loadPulse(){
   try{
@@ -718,7 +753,7 @@ async function loadBoard(){
 }
 
 initBars(); loadStats(); loadJobs(); renderTasks(); loadStatus(); loadDemos(); loadOrders(); loadRoadmap(); loadSeo();
-loadPulse(); loadAuto(); loadBoard();
+loadLinks(); loadPulse(); loadAuto(); loadBoard();
 setInterval(()=>{ loadStats(); loadJobs(); loadStatus(); loadOrders(); loadRoadmap(); loadSeo();
                   loadPulse(); loadAuto(); loadBoard(); }, 60000);
 </script>

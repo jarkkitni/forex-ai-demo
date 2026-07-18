@@ -1117,6 +1117,17 @@ def demo_autotrade():
         return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
 
 
+@app.route("/api/links")
+def api_links():
+    """ประตูทุกบานที่ต้องเข้าไปทำงาน (แก้ที่ links.json)"""
+    try:
+        p = os.path.join(os.path.dirname(__file__), "links.json")
+        with open(p, "r", encoding="utf-8") as f:
+            return jsonify({"ok": True, **json.load(f)})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)[:200]}), 200
+
+
 @app.route("/api/board")
 def api_board():
     """เงินเข้า-ออก + งานค้าง (แก้ที่ board.json)"""
