@@ -1459,6 +1459,30 @@ def data_deletion_page():
         return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
 
 
+@app.route("/posttoday")
+def posttoday_page():
+    """Landing สำหรับแอป TikTok Content Posting (Website URL ที่ยื่น App Review) — ห้ามลบ"""
+    p = os.path.join(os.path.dirname(__file__), "posttoday.html")
+    with open(p, "r", encoding="utf-8") as f:
+        return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
+@app.route("/posttoday/privacy")
+def posttoday_privacy_page():
+    """Privacy Policy สำหรับ TikTok App Review — ห้ามลบ"""
+    p = os.path.join(os.path.dirname(__file__), "posttoday_privacy.html")
+    with open(p, "r", encoding="utf-8") as f:
+        return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
+@app.route("/posttoday/terms")
+def posttoday_terms_page():
+    """Terms of Service สำหรับ TikTok App Review — ห้ามลบ"""
+    p = os.path.join(os.path.dirname(__file__), "posttoday_terms.html")
+    with open(p, "r", encoding="utf-8") as f:
+        return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
 @app.route("/botkit")
 def botkit_page():
     """หน้าขาย BotKit (self-serve เฟส 1)"""
