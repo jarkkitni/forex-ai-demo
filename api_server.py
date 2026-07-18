@@ -1272,6 +1272,22 @@ def google_verify():
             {"Content-Type": "text/html; charset=utf-8"})
 
 
+@app.route("/privacy")
+def privacy_page():
+    """Privacy Policy — จำเป็นสำหรับ Meta App Review (ห้ามลบ)"""
+    p = os.path.join(os.path.dirname(__file__), "privacy.html")
+    with open(p, "r", encoding="utf-8") as f:
+        return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
+@app.route("/data-deletion")
+def data_deletion_page():
+    """Data Deletion Instructions — จำเป็นสำหรับ Meta App Review (ห้ามลบ)"""
+    p = os.path.join(os.path.dirname(__file__), "data_deletion.html")
+    with open(p, "r", encoding="utf-8") as f:
+        return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
 @app.route("/botkit")
 def botkit_page():
     """หน้าขาย BotKit (self-serve เฟส 1)"""
