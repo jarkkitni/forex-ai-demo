@@ -146,6 +146,81 @@ def send_message(page_token: str, recipient_id: str, text: str) -> tuple:
         return 0, str(e)[:200]
 
 
+LINE_API = "https://api.line.me/v2/bot/message"
+
+
+def verify_line_signature(channel_secret: str, body_bytes: bytes, header: str) -> bool:
+    """ตรวจ X-Line-Signature — ถ้าไม่ได้ตั้ง secret ก็ผ่าน (dev)"""
+    if not channel_secret:
+        return True
+    if not header:
+        return False
+    import base64
+    digest = hmac.new(channel_secret.encode("utf-8"), body_bytes, hashlib.sha256).digest()
+    expected = base64.b64encode(digest).decode()
+    return hmac.compare_digest(expected, header)
+
+
+def send_line_reply(channel_token: str, reply_token: str, text: str) -> tuple:
+    """ตอบกลับผ่าน LINE reply API (ฟรี ไม่กินโควต้า push)"""
+    if not channel_token or not reply_token:
+        return 0, "no token/reply_token"
+    try:
+        r = requests.post(
+            f"{LINE_API}/reply",
+            headers={
+                "Authorization": f"Bearer {channel_token}",
+                "Content-Type": "application/json",
+            },
+            json={"replyToken": reply_token, "messages": [{"type": "text", "text": text[:4900]}]},
+            timeout=15,
+        )
+        return r.status_code, r.text[:300]
+    except Exception as e:
+        return 0, str(e)[:200]
+
+
+def handle_line(data: dict, client, channel_token: str, slug: str = "lullabell",
+                 notify_fn=None, line_user_id: str = "") -> dict:
+    """
+    รับ payload จาก LINE Messaging API webhook ของร้านลูกค้า (เช่น @lullabell)
+    ใช้ AI advisor logic เดียวกับ handle() (FB/IG) — ต่างกันแค่ช่องทางรับ-ส่ง
+    หมายเหตุ: ใช้ channel_token/channel_secret ของ "ร้านลูกค้า" ไม่ใช่ของ ForexAI Pro เอง (คนละ LINE OA)
+    """
+    result = {"replied": 0, "skipped": 0}
+    try:
+        cfg = load_cfg(slug)
+    except Exception as e:
+        return {"error": f"config: {e}"}
+
+    for ev in data.get("events", []):
+        if ev.get("type") != "message" or ev.get("message", {}).get("type") != "text":
+            result["skipped"] += 1
+            continue
+        sender = ev.get("source", {}).get("userId", "")
+        reply_token = ev.get("replyToken", "")
+        user_text = (ev.get("message", {}).get("text") or "").strip()
+        if not sender or not user_text:
+            result["skipped"] += 1
+            continue
+        # namespace แยกจาก FB sender id กัน history ปนกันถ้า id ชนกัน (ไม่น่าเกิดแต่กันไว้)
+        history_key = f"line:{sender}"
+        if not _rate_ok(history_key):
+            result["skipped"] += 1
+            continue
+        try:
+            reply = generate_reply(client, cfg, history_key, user_text,
+                                    notify_fn=notify_fn, line_user_id=line_user_id)
+            send_line_reply(channel_token, reply_token, reply)
+            result["replied"] += 1
+        except Exception:
+            fb = cfg.get("advisor", {}).get("handoff_msg",
+                 "ขออภัยค่ะ ระบบขัดข้องชั่วคราว เดี๋ยวแอดมินติดต่อกลับนะคะ 🤍")
+            send_line_reply(channel_token, reply_token, fb)
+            result["skipped"] += 1
+    return result
+
+
 def handle(data: dict, client, page_token: str, slug: str = "lullabell",
            notify_fn=None, line_user_id: str = "") -> dict:
     """

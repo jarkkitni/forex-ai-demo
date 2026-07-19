@@ -34,6 +34,9 @@ META_VERIFY_TOKEN   = os.environ.get("META_VERIFY_TOKEN", "")
 META_PAGE_TOKEN     = os.environ.get("META_PAGE_TOKEN", "")
 META_APP_SECRET     = os.environ.get("META_APP_SECRET", "")
 META_SLUG           = os.environ.get("META_SLUG", "lullabell")
+# ---- LINE OA ของ "ร้านลูกค้า" (เช่น @lullabell) — คนละตัวกับ LINE_TOKEN/LINE_CHANNEL_SECRET ด้านบนซึ่งเป็นของ ForexAI Pro เอง ----
+LULLABELL_LINE_CHANNEL_SECRET = os.environ.get("LULLABELL_LINE_CHANNEL_SECRET", "")
+LULLABELL_LINE_CHANNEL_TOKEN  = os.environ.get("LULLABELL_LINE_CHANNEL_TOKEN", "")
 # ---- E-commerce admin proxy (แทน anon key ที่เคยฝังใน dashboard) ----
 EC_ADMIN_PIN        = os.environ.get("EC_ADMIN_PIN", "")
 # ========================
@@ -387,6 +390,7 @@ def health():
         "line_token":          bool(LINE_TOKEN),
         "line_user_id":        bool(LINE_USER_ID),
         "line_channel_secret": bool(LINE_CHANNEL_SECRET),
+        "lullabell_line_ready": bool(LULLABELL_LINE_CHANNEL_SECRET and LULLABELL_LINE_CHANNEL_TOKEN),
         "registered_users":    len(registered_users),
         "signal_count":        len(signal_history),
         "hunter_log_count":    len(fastwork_hunter.get_hunter_log()),
@@ -1417,6 +1421,30 @@ def meta_webhook():
             # ตอบ 200 เสมอ ไม่งั้น Meta จะ retry รัวๆ
             print("[meta_webhook] error:", str(e)[:200])
     return "EVENT_RECEIVED", 200
+
+
+@app.route("/webhook/line/lullabell", methods=["POST"])
+def lullabell_line_webhook():
+    """LINE OA webhook ของร้านลูกค้า (@lullabell) — ใช้ AI advisor ตัวเดียวกับ /webhook/meta
+    คนละ endpoint กับ /webhook เดิม (นั่นคือ LINE OA ของ ForexAI Pro เอง — คนละ Channel Secret/Token)"""
+    body = request.get_data()
+    sig = request.headers.get("X-Line-Signature", "")
+    if not meta_bot.verify_line_signature(LULLABELL_LINE_CHANNEL_SECRET, body, sig):
+        return jsonify({"message": "invalid signature"}), 403
+    try:
+        data = json.loads(body or b"{}")
+    except Exception:
+        return jsonify({"message": "bad json"}), 400
+
+    try:
+        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        meta_bot.handle_line(data, client, channel_token=LULLABELL_LINE_CHANNEL_TOKEN,
+                              slug=META_SLUG, notify_fn=_push_line,
+                              line_user_id=LINE_USER_ID)
+    except Exception as e:
+        traceback.print_exc()
+        print("[lullabell_line_webhook] error:", str(e)[:200])
+    return jsonify({"message": "ok"}), 200
 
 
 # ===== E-commerce admin proxy (ปลอดภัย: service role + PIN แทน anon key) =====
