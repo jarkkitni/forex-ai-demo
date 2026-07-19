@@ -7,8 +7,15 @@
       "name": "🏆 Lullabell Beauty Salon — ลูกค้าคนแรก!",
       "amount": 1551,
       "state": "won",
-      "note": "จ่ายแล้ว 18 ก.ค. · บอทเผยแพร่แล้ว 19 ก.ค. + token ถาวรตั้งเสร็จ — เหลือทดสอบด้วยแอคนอก role",
+      "note": "จ่ายแล้ว 18 ก.ค. · บอทเผยแพร่แล้ว 19 ก.ค. + token ถาวรตั้งเสร็จ + เพิ่ม Quick Replies 4 ปุ่มติดทุกข้อความแล้ว 19 ก.ค. — เหลือทดสอบด้วยแอคนอก role",
       "action": "ค้าง: ทดสอบทักจริง (แอคนอก role) + เปิด Instagram"
+    },
+    {
+      "name": "🎉 ร้านเสริมสวยงานแรก (FastWork)",
+      "amount": 1500,
+      "state": "won",
+      "note": "ปิดงาน 19 ก.ค. — กำลังกดส่งงานบน FastWork",
+      "action": "รอลูกค้ากดรับงาน/รีวิวหลังส่งงาน"
     },
     {
       "name": "Forex Auto-Execution",
@@ -35,7 +42,9 @@
   ],
 
   "pending": [
-    { "t": "🏆 Lullabell: publish + token ถาวรเสร็จ 19 ก.ค. — เหลือทดสอบทักจริง + เปิด Instagram", "who": "รอเรา" },
+    { "t": "🏆 Lullabell: publish + token ถาวร + Quick Replies 4 ปุ่มเสร็จ 19 ก.ค. — เหลือทดสอบทักจริง + เปิด Instagram", "who": "รอเรา" },
+    { "t": "🎉 ร้านเสริมสวยงานแรก ฿1,500 — กดส่งงาน FastWork", "who": "รอเรา" },
+    { "t": "🍳 Chef & Restaurant: เตรียม Blueprint + คู่มือรีโมทพร้อมแล้ว — รอนัดวันรีโมทเข้าติดตั้ง", "who": "รอลูกค้า" },
     { "t": "ลูกค้า Forex เงียบ — รอ paper mode มีผล 3-5 วัน", "who": "รอเรา" },
     { "t": "Garuda วิเคราะห์ตลาด Forex 7 ข้อ (เน้นกฎหมาย ก.ล.ต.)", "who": "รอ Garuda" },
     { "t": "Listing #5 Forex AI Bot รออนุมัติ", "who": "รอ FastWork" },
