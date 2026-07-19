@@ -1319,6 +1319,17 @@ def google_verify():
             {"Content-Type": "text/html; charset=utf-8"})
 
 
+# ไฟล์ยืนยันความเป็นเจ้าของเว็บ ของ TikTok Developer Portal (แอป Claude) — ห้ามลบ!
+TIKTOK_VERIFY_FILE = "tiktokBmkFqhvxApalltojJvDf2rJpKZwVGl7O.txt"
+TIKTOK_VERIFY_TOKEN = "BmkFqhvxApalltojJvDf2rJpKZwVGl7O"
+
+
+@app.route(f"/{TIKTOK_VERIFY_FILE}")
+def tiktok_verify():
+    return (f"tiktok-developers-site-verification={TIKTOK_VERIFY_TOKEN}", 200,
+            {"Content-Type": "text/plain; charset=utf-8"})
+
+
 @app.route("/api/meta-health")
 def meta_health():
     """เช็คสุขภาพ token บอท Meta (Lullabell) — ใช้บนการ์ด Monitor
