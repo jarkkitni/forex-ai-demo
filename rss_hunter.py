@@ -114,8 +114,9 @@ def _classify(item: dict) -> tuple:
     return (None, [])
 
 
-def _analyze(client, item: dict, matched: list) -> dict:
+def _analyze(client, item: dict, matched: list, notify_fn=None, uid: str = "") -> dict:
     import json as _json
+    import ai_guard
     prompt = f"""คุณคือผู้ช่วยฟรีแลนซ์ของนักพัฒนา LINE Bot & AI Agent ชาวไทย
 
 เจอโพสต์นี้จากอินเทอร์เน็ต (ผ่าน Google Alerts):
@@ -138,11 +139,8 @@ n8n automation, Forex AI Signal Bot, Web Dashboard, Python, Supabase
   "how_to_contact": "<ติดต่อยังไง จากข้อมูลที่มี>",
   "proposal": "<ร่างข้อความเสนอตัว ~100 คำ สุภาพ ตรงประเด็น>"
 }}"""
-    msg = client.messages.create(
-        model="claude-sonnet-4-5", max_tokens=900,
-        messages=[{"role": "user", "content": prompt}],
-    )
-    raw = msg.content[0].text.strip()
+    raw = ai_guard.call(client, prompt, max_tokens=900, smart=True,
+                        notify_fn=notify_fn, line_user_id=uid)
     if raw.startswith("```"):
         raw = raw.split("```")[1].lstrip("json").strip()
     return _json.loads(raw)
@@ -195,7 +193,7 @@ def run(anthropic_client, push_line_fn, line_user_id: str,
         if sent >= max_alerts:
             break
         try:
-            a = _analyze(anthropic_client, it, matched)
+            a = _analyze(anthropic_client, it, matched, push_line_fn, line_user_id)
         except Exception as e:
             print(f"[RSS] analyze fail: {e}", flush=True)
             continue
