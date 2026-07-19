@@ -10,7 +10,7 @@ ENV ที่ใช้:
 
 PAPER-SAFE: ไม่มีการเงิน ไม่มีลบข้อมูล — แค่รับ/ตอบข้อความ
 """
-import os, json, hmac, hashlib, time
+import os, json, hmac, hashlib, time, re
 import requests
 
 GRAPH = "https://graph.facebook.com/v21.0"
@@ -19,6 +19,29 @@ GRAPH = "https://graph.facebook.com/v21.0"
 _history: dict = {}      # sender_id -> [(role, text), ...]  เก็บ 8 เทิร์นล่าสุด
 _hits: dict = {}         # sender_id -> [timestamps]  กัน spam
 _MAX_TURNS = 8
+
+# ---- แท็กจับคิว — AI แปะท้ายข้อความเวลาลูกค้าบอกวัน-เวลาที่ต้องการจอง ----
+_BOOKING_RE = re.compile(r'\n?\[\[BOOKING:\s*(.*?)\s*\]\]', re.S)
+_BOOKING_FIELDS = ("บริการ", "วันที่", "เวลา", "ชื่อ", "เบอร์")
+
+
+def _parse_booking_tag(text: str) -> tuple:
+    """แยกแท็ก [[BOOKING: ...]] ออกจากข้อความที่จะส่งลูกค้า คืน (ข้อความสะอาด, dict หรือ None)"""
+    m = _BOOKING_RE.search(text or "")
+    if not m:
+        return (text or "").strip(), None
+    clean = _BOOKING_RE.sub("", text).strip()
+    fields = {}
+    for pair in m.group(1).split("|"):
+        if "=" in pair:
+            k, v = pair.split("=", 1)
+            k, v = k.strip(), v.strip()
+            if k in _BOOKING_FIELDS and v and v != "-":
+                fields[k] = v
+    # ต้องมีอย่างน้อย "วันที่" หรือ "เวลา" ถึงจะถือว่าเป็นคิวจริง กันเคส AI แปะแท็กมาลอยๆ
+    if not (fields.get("วันที่") or fields.get("เวลา")):
+        return clean, None
+    return clean, fields
 
 
 def load_cfg(slug: str = "lullabell") -> dict:
@@ -96,6 +119,12 @@ def _system_prompt(cfg: dict) -> str:
 - ถ้าลูกค้าขอคุยคน/เรื่องซับซ้อนเกินเมนู → {adv.get('handoff_msg','ขอส่งต่อให้แอดมินนะคะ')} ({contact_txt})
 - ห้ามสัญญาสิ่งที่ไม่มีในเมนู ห้ามให้คำแนะนำทางการแพทย์
 
+กติกาบันทึกคิว (สำคัญมาก — วันและเวลาที่ลูกค้าต้องการคือข้อมูลสำคัญที่สุด):
+- ทันทีที่ลูกค้าบอก "วันและเวลา" ที่ต้องการจองชัดเจน (เช่น "พรุ่งนี้บ่าย 2" "เสาร์นี้เช้า" "วันที่ 25 ตอนเย็น") ให้ตอบยืนยันลูกค้าตามปกติก่อน
+- จากนั้นขึ้นบรรทัดใหม่ ต่อท้ายด้วยแท็กนี้เป๊ะๆ (ห้ามมีข้อความอื่นแทรกในบรรทัดนี้ ห้ามอธิบายเพิ่ม):
+  [[BOOKING: บริการ=<ชื่อบริการที่สนใจ หรือ -> | วันที่=<วันที่ลูกค้าบอก> | เวลา=<เวลาที่ลูกค้าบอก> | ชื่อ=<ชื่อลูกค้าถ้ารู้ หรือ -> | เบอร์=<เบอร์โทรถ้ารู้ หรือ ->]]
+- แท็กนี้ระบบจะตัดออกก่อนส่งข้อความให้ลูกค้าเห็น (ใช้แจ้งเตือนแอดมินเบื้องหลังเท่านั้น) — ใส่ทุกครั้งที่ลูกค้าให้วัน-เวลามา แม้จะยังไม่มีชื่อ/เบอร์ก็ตาม
+
 ประโยคชวนปิดการขาย (ใช้ปรับได้):
 {close_txt}
 
@@ -117,11 +146,25 @@ def generate_reply(client, cfg: dict, sender_id: str, user_text: str,
         + f"\n\nลูกค้าเพิ่งพิมพ์ว่า: \"{user_text}\"\n"
         + "ตอบกลับในฐานะน้องเบลล์ (ข้อความเดียว สั้น กระชับ):"
     )
-    reply = ai_guard.call(client, prompt, max_tokens=400, smart=True,
-                          notify_fn=notify_fn, line_user_id=line_user_id)
-    # อัปเดตความจำ
+    raw_reply = ai_guard.call(client, prompt, max_tokens=400, smart=True,
+                              notify_fn=notify_fn, line_user_id=line_user_id)
+    reply, booking = _parse_booking_tag(raw_reply)
+    # อัปเดตความจำ (เก็บข้อความสะอาด ไม่มีแท็ก กันแท็กเก่าหลุดเข้าประวัติแล้ว AI เลียนแบบซ้ำ)
     hist = hist + [("user", user_text), ("bot", reply)]
     _history[sender_id] = hist[-_MAX_TURNS * 2:]
+
+    if booking and notify_fn and line_user_id:
+        try:
+            biz = cfg.get("biz_name", cfg.get("biz_full", ""))
+            lines = [f"📅 มีคนสนใจจองคิว — {biz}"]
+            for k in _BOOKING_FIELDS:
+                if booking.get(k):
+                    lines.append(f"{k}: {booking[k]}")
+            lines.append(f"ช่องทาง/ผู้ติดต่อ: {sender_id}")
+            notify_fn(line_user_id, "\n".join(lines))
+        except Exception:
+            pass  # แจ้งเตือนพลาดไม่ควรทำให้ตอบลูกค้าไม่ได้
+
     return reply
 
 
