@@ -1245,6 +1245,74 @@ def demo_client(slug):
     return html, 200, {"Content-Type": "text/html; charset=utf-8"}
 
 
+@app.route("/demo/chat/<slug>")
+def demo_chat_page(slug):
+    """
+    Demo แชทจำลองหน้าจอ LINE — ใช้ AI จริงตัวเดียวกับที่ตอบลูกค้าจริง (ผ่าน meta_bot)
+    ต่างจาก /demo/client/<slug> (demo_salon.html) ตรงที่นี่เป็น AI จริง ไม่ใช่สคริปต์ปุ่มกด
+    """
+    from flask import abort
+    base = os.path.dirname(__file__)
+    cpath = os.path.join(base, "configs", f"{slug}.json")
+    if not os.path.exists(cpath) or "/" in slug or ".." in slug:
+        abort(404)
+    _track_visit()
+    with open(cpath, "r", encoding="utf-8") as f:
+        cfg = json.load(f)
+    with open(os.path.join(base, "demo_chat_template.html"), "r", encoding="utf-8") as f:
+        html = f.read()
+    for k, v in {
+        "{{BIZ_NAME}}": cfg.get("biz_name", ""),
+        "{{TAGLINE}}": cfg.get("tagline", ""),
+        "{{EMOJI}}": cfg.get("emoji", "✨"),
+        "{{ACCENT}}": cfg.get("accent", "#06C755"),
+        "{{ACCENT_SOFT}}": cfg.get("accent_soft", "#e3f2e1"),
+        "{{SLUG}}": slug,
+        "{{GREETING_JSON}}": json.dumps(cfg.get("greeting", "สวัสดีค่ะ"), ensure_ascii=False),
+    }.items():
+        html = html.replace(k, v)
+    return html, 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
+@app.route("/api/demo/chat/<slug>", methods=["POST"])
+def demo_chat_api(slug):
+    """
+    รับข้อความจากหน้า demo แชท → ตอบด้วย AI จริง (ใช้ advisor logic เดียวกับ meta_bot)
+    ⚠️ endpoint นี้เปิดสาธารณะ = ทุกครั้งที่ถูกเรียก เราจ่ายเงิน — ต้องมี rate limit เสมอ
+    """
+    base = os.path.dirname(__file__)
+    cpath = os.path.join(base, "configs", f"{slug}.json")
+    if not os.path.exists(cpath) or "/" in slug or ".." in slug:
+        return jsonify({"success": False, "error": "ไม่พบร้านนี้"}), 404
+    if not ANTHROPIC_API_KEY:
+        return jsonify({"success": False, "error": "ไม่ได้ตั้ง ANTHROPIC_API_KEY"}), 400
+
+    ok, left = ai_guard.rate_limit(ai_guard.client_ip(request) + f":demo:{slug}",
+                                   limit=int(os.environ.get("DEMO_CHAT_LIMIT", "20")))
+    if not ok:
+        return jsonify({
+            "success": False,
+            "error": "ลองพิมพ์ไปเยอะแล้ววันนี้ครับ 😊 พรุ่งนี้ลองใหม่ได้ หรือทักเราคุยต่อได้เลย",
+            "rate_limited": True,
+        }), 429
+
+    d = request.get_json(force=True) or {}
+    user_text = (d.get("message") or "").strip()[:500]
+    session_id = (d.get("session_id") or "anon").strip()[:80]
+    if not user_text:
+        return jsonify({"success": False, "error": "ไม่มีข้อความ"}), 400
+
+    try:
+        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        cfg = meta_bot.load_cfg(slug)
+        reply = meta_bot.generate_reply(client, cfg, f"demo:{slug}:{session_id}", user_text,
+                                        notify_fn=_push_line, line_user_id=LINE_USER_ID)
+        return jsonify({"success": True, "reply": reply})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"success": False, "error": "ขออภัยค่ะ ระบบขัดข้องชั่วคราว"}), 500
+
+
 @app.route("/api/links")
 def api_links():
     """ประตูทุกบานที่ต้องเข้าไปทำงาน (แก้ที่ links.json)"""
