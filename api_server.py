@@ -42,7 +42,52 @@ EC_ADMIN_PIN        = os.environ.get("EC_ADMIN_PIN", "")
 # ========================
 
 signal_history   = []  # in-memory สัญญาณ (เก็บ 20 ล่าสุด)
-registered_users = []  # userId ที่ลงทะเบียนผ่าน /webhook
+registered_users = []  # userId ที่ลงทะเบียนผ่าน /webhook — cache ในแรม + sync กับ Supabase (กันหายเวลา restart)
+
+
+def _sb_ready() -> bool:
+    return bool(seo_tracker.SUPABASE_URL and seo_tracker.SUPABASE_KEY)
+
+
+def _sb_headers(extra: dict = None) -> dict:
+    h = {"apikey": seo_tracker.SUPABASE_KEY,
+         "Authorization": f"Bearer {seo_tracker.SUPABASE_KEY}",
+         "Content-Type": "application/json"}
+    if extra:
+        h.update(extra)
+    return h
+
+
+def _load_registered_users() -> None:
+    """โหลด registered_users จาก Supabase ตอน boot — กัน list ว่างเปล่าหลัง Render restart"""
+    if not _sb_ready():
+        return
+    try:
+        r = requests.get(f"{seo_tracker.SUPABASE_URL}/rest/v1/registered_line_users?select=user_id",
+                          headers=_sb_headers(), timeout=10)
+        if r.ok:
+            for row in r.json():
+                uid = row.get("user_id")
+                if uid and uid not in registered_users:
+                    registered_users.append(uid)
+            print(f"[api_server] โหลด registered_users จาก Supabase: {len(registered_users)} คน", flush=True)
+    except Exception as e:
+        print(f"[api_server] โหลด registered_users ล้มเหลว (ใช้ list ว่างไปก่อน): {e}", flush=True)
+
+
+def _save_registered_user(user_id: str) -> None:
+    """เขียนลง Supabase ทันทีที่มีคนลงทะเบียนใหม่ — best-effort ไม่บล็อกการตอบ LINE"""
+    if not _sb_ready():
+        return
+    try:
+        requests.post(f"{seo_tracker.SUPABASE_URL}/rest/v1/registered_line_users",
+                      headers=_sb_headers({"Prefer": "resolution=ignore-duplicates,return=minimal"}),
+                      json={"user_id": user_id}, timeout=8)
+    except Exception as e:
+        print(f"[api_server] บันทึก registered_user ลง Supabase ล้มเหลว: {e}", flush=True)
+
+
+_load_registered_users()  # เรียกตอน import module — กู้ registered_users คืนหลัง restart
 
 # ---- Visitor tracking (in-memory, รีเซ็ตเมื่อ restart) ----
 visit_stats = {
@@ -338,6 +383,7 @@ def line_webhook():
             # ผู้ใช้ Add OA → register อัตโนมัติ
             if user_id and not already_reg:
                 registered_users.append(user_id)
+                _save_registered_user(user_id)
             _reply_line(
                 reply_token,
                 "⚡ ยินดีต้อนรับสู่ ForexAI Pro!\n\n"
@@ -352,6 +398,7 @@ def line_webhook():
             if msg_text in ["/start", "start", "/register", "register", "เริ่ม", "สมัคร"]:
                 if user_id and not already_reg:
                     registered_users.append(user_id)
+                    _save_registered_user(user_id)
                     _reply_line(
                         reply_token,
                         "✅ ลงทะเบียนสำเร็จ!\n\n"
@@ -738,7 +785,50 @@ def demo_by_biz(biz):
         return f"error: {e}", 500
 
 
-botkit_orders = []  # เก็บ order ในหน่วยความจำ (เฟส 1 — ยังไม่ต่อ DB)
+botkit_orders = []  # cache ในแรม — source of truth จริงคือ Supabase table botkit_orders (กันหายเวลา restart)
+
+
+def _save_botkit_order(order: dict) -> None:
+    """เขียน order ลง Supabase ทันที — best-effort ไม่บล็อกการแจ้ง LINE"""
+    if not _sb_ready():
+        return
+    try:
+        requests.post(f"{seo_tracker.SUPABASE_URL}/rest/v1/botkit_orders",
+                      headers=_sb_headers({"Prefer": "return=minimal"}),
+                      json={k: order.get(k) for k in
+                            ("source", "shop_name", "biz_type", "contact_name",
+                             "contact", "plan", "page", "need", "status")},
+                      timeout=8)
+    except Exception as e:
+        print(f"[api_server] บันทึก botkit_order ลง Supabase ล้มเหลว: {e}", flush=True)
+
+
+def _load_botkit_orders(limit: int = 10) -> list:
+    """อ่าน order ล่าสุดจาก Supabase (source of truth) — ถ้า Supabase ใช้ไม่ได้ fallback ไป list ในแรม"""
+    if _sb_ready():
+        try:
+            r = requests.get(
+                f"{seo_tracker.SUPABASE_URL}/rest/v1/botkit_orders"
+                f"?select=*&order=created_at.desc&limit={limit}",
+                headers=_sb_headers(), timeout=10)
+            if r.ok:
+                return r.json()
+        except Exception as e:
+            print(f"[api_server] อ่าน botkit_orders จาก Supabase ล้มเหลว, ใช้ cache ในแรมแทน: {e}", flush=True)
+    return botkit_orders[:limit]
+
+
+def _count_botkit_orders_new() -> int:
+    if _sb_ready():
+        try:
+            r = requests.get(
+                f"{seo_tracker.SUPABASE_URL}/rest/v1/botkit_orders?select=id&status=eq.new",
+                headers=_sb_headers({"Prefer": "count=exact"}), timeout=10)
+            if r.ok:
+                return int(r.headers.get("Content-Range", "0").split("/")[-1] or 0)
+        except Exception as e:
+            print(f"[api_server] นับ botkit_orders ใหม่จาก Supabase ล้มเหลว, ใช้ cache ในแรมแทน: {e}", flush=True)
+    return len([o for o in botkit_orders if o.get("status") == "new"])
 
 BIZ_LABEL = {
     "beauty": "ร้านเสริมสวย", "clinic": "คลินิกความงาม",
@@ -1331,7 +1421,7 @@ def api_board():
         p = os.path.join(os.path.dirname(__file__), "board.json")
         with open(p, "r", encoding="utf-8") as f:
             d = json.load(f)
-        d["orders_new"] = len([o for o in botkit_orders if o.get("status") == "new"])
+        d["orders_new"] = _count_botkit_orders_new()
         return jsonify({"ok": True, **d})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)[:200]}), 200
@@ -1834,6 +1924,7 @@ def botkit_order():
         }
         botkit_orders.insert(0, order)
         del botkit_orders[50:]
+        _save_botkit_order(order)                   # persist ลง Supabase กันหายเวลา restart
         seo_tracker.log_order(src, order["plan"])   # นับ conversion
 
         biz = BIZ_LABEL.get(order["biz_type"], order["biz_type"] or "-")
@@ -1864,8 +1955,9 @@ def botkit_order():
 
 @app.route("/api/botkit/orders", methods=["GET"])
 def botkit_order_list():
-    """รายการ order ล่าสุด (โชว์ใน NEXUS Monitor)"""
-    return jsonify({"success": True, "count": len(botkit_orders), "orders": botkit_orders[:10]})
+    """รายการ order ล่าสุด (โชว์ใน NEXUS Monitor) — อ่านจาก Supabase ก่อน fallback cache ในแรม"""
+    orders = _load_botkit_orders(10)
+    return jsonify({"success": True, "count": len(orders), "orders": orders})
 
 
 @app.route("/api/demos", methods=["GET"])
