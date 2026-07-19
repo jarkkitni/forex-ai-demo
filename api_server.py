@@ -4,9 +4,10 @@ ForexAI Pro — API Server
 """
 import os, re, json, requests, traceback, hmac, hashlib, base64
 from datetime import datetime
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, session, redirect
 from flask_cors import CORS
 import anthropic
+import secrets as _secrets
 
 import fastwork_hunter
 import rss_hunter
@@ -23,6 +24,11 @@ ANTHROPIC_API_KEY   = os.environ.get("ANTHROPIC_API_KEY", "")
 LINE_TOKEN          = os.environ.get("LINE_TOKEN", "")
 LINE_USER_ID        = os.environ.get("LINE_USER_ID", "")
 LINE_CHANNEL_SECRET = os.environ.get("LINE_CHANNEL_SECRET", "")
+# ---- session secret (สำหรับ TikTok OAuth state/PKCE) — ตั้ง FLASK_SECRET_KEY บน Render ถ้ามี ไม่งั้น derive จาก ANTHROPIC_API_KEY ชั่วคราว ----
+app.secret_key = os.environ.get("FLASK_SECRET_KEY") or hashlib.sha256((ANTHROPIC_API_KEY or "forex-ai-demo-fallback").encode()).hexdigest()
+# ---- TikTok Content Posting API (แอป Claude ใน TikTok Developer Portal) ----
+TIKTOK_CLIENT_KEY    = os.environ.get("TIKTOK_CLIENT_KEY", "")
+TIKTOK_CLIENT_SECRET = os.environ.get("TIKTOK_CLIENT_SECRET", "")
 # ---- Meta (Facebook Messenger + Instagram) ----
 META_VERIFY_TOKEN   = os.environ.get("META_VERIFY_TOKEN", "")
 META_PAGE_TOKEN     = os.environ.get("META_PAGE_TOKEN", "")
@@ -1504,6 +1510,98 @@ def posttoday_terms_page():
     p = os.path.join(os.path.dirname(__file__), "posttoday_terms.html")
     with open(p, "r", encoding="utf-8") as f:
         return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
+# ===== TikTok OAuth (PKCE) — Redirect URI ที่ยื่นใน TikTok Developer Portal (แอป Claude) — ห้ามลบ =====
+# ต้องตั้ง env vars บน Render: TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET (ค่าเดียวกับใน Developer Portal > Credentials)
+
+@app.route("/posttoday/login")
+def posttoday_login():
+    """เริ่ม OAuth2 PKCE flow — ปุ่ม 'Connect TikTok' บนเว็บกดมาที่นี่"""
+    if not (TIKTOK_CLIENT_KEY):
+        return "TikTok ยังไม่ได้ตั้งค่า (ขาด TIKTOK_CLIENT_KEY ใน env)", 500
+
+    state = _secrets.token_urlsafe(16)
+    code_verifier = _secrets.token_urlsafe(64)
+    code_challenge = hashlib.sha256(code_verifier.encode()).hexdigest()
+
+    session["tiktok_state"] = state
+    session["tiktok_code_verifier"] = code_verifier
+
+    redirect_uri = f"{BASE_URL}/posttoday/callback"
+    auth_url = "https://www.tiktok.com/v2/auth/authorize/?" + "&".join(
+        f"{k}={requests.utils.quote(str(v), safe='')}" for k, v in {
+            "client_key": TIKTOK_CLIENT_KEY,
+            "scope": "video.publish,video.upload,user.info.basic",
+            "response_type": "code",
+            "redirect_uri": redirect_uri,
+            "state": state,
+            "code_challenge": code_challenge,
+            "code_challenge_method": "S256",
+        }.items()
+    )
+    return redirect(auth_url)
+
+
+@app.route("/posttoday/callback")
+def posttoday_callback():
+    """รับ OAuth callback จาก TikTok → แลก code เป็น token → แสดงผลสำเร็จ — ห้ามลบ (คือ Redirect URI ที่ยื่นไว้)"""
+    error = request.args.get("error")
+    if error:
+        return f"<h2>❌ TikTok ปฏิเสธการเชื่อมต่อ: {error}</h2><a href='/posttoday'>กลับ</a>", 400
+
+    code = request.args.get("code")
+    state = request.args.get("state")
+    if not code or not state or state != session.get("tiktok_state"):
+        return "<h2>❌ state ไม่ตรงกัน หรือไม่มี code (session อาจหมดอายุ ลองเชื่อมต่อใหม่)</h2><a href='/posttoday'>กลับ</a>", 400
+
+    code_verifier = session.get("tiktok_code_verifier", "")
+    redirect_uri = f"{BASE_URL}/posttoday/callback"
+
+    try:
+        resp = requests.post(
+            "https://open.tiktokapis.com/v2/oauth/token/",
+            data={
+                "client_key": TIKTOK_CLIENT_KEY,
+                "client_secret": TIKTOK_CLIENT_SECRET,
+                "code": code,
+                "grant_type": "authorization_code",
+                "redirect_uri": redirect_uri,
+                "code_verifier": code_verifier,
+            },
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            timeout=30,
+        )
+        data = resp.json()
+    except Exception as e:
+        return f"<h2>❌ แลก token ไม่สำเร็จ: {e}</h2><a href='/posttoday'>กลับ</a>", 500
+
+    if resp.status_code != 200 or "access_token" not in data:
+        return f"<h2>❌ แลก token ไม่สำเร็จ</h2><pre>{json.dumps(data, indent=2, ensure_ascii=False)}</pre><a href='/posttoday'>กลับ</a>", 400
+
+    # เคลียร์ state/verifier หลังใช้เสร็จ
+    session.pop("tiktok_state", None)
+    session.pop("tiktok_code_verifier", None)
+
+    display_name = ""
+    try:
+        u = requests.get(
+            "https://open.tiktokapis.com/v2/user/info/",
+            params={"fields": "display_name,username"},
+            headers={"Authorization": f"Bearer {data['access_token']}"},
+            timeout=15,
+        ).json().get("data", {}).get("user", {})
+        display_name = u.get("display_name", "")
+    except Exception:
+        pass
+
+    return f"""<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">
+    <title>เชื่อมต่อ TikTok สำเร็จ</title>
+    <style>body{{font-family:sans-serif;background:#0d1117;color:#e9edf2;display:flex;height:100vh;align-items:center;justify-content:center;text-align:center}}
+    a{{color:#4ea1ff}}</style></head><body>
+    <div><h2>✓ เชื่อมต่อ TikTok สำเร็จ{f' — สวัสดีคุณ {display_name}' if display_name else ''}</h2>
+    <p><a href="/posttoday">กลับหน้าแรก</a></p></div>
+    </body></html>""", 200, {"Content-Type": "text/html; charset=utf-8"}
 
 
 @app.route("/botkit")
