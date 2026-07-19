@@ -41,6 +41,13 @@ _ICE_BREAKER_TEXT = {
     "IB_SERVICES": "มีบริการอะไรบ้างคะ",
 }
 
+# ---- Quick Replies — ปุ่มลัด 4 ตัวเลือกเดิม แนบไปกับทุกข้อความที่บอทตอบ ----
+# ต่างจาก Ice Breakers (โผล่แค่ตอนเปิดแชทครั้งแรก) ตัวนี้ติดมากับทุกคำตอบ กดแทนพิมพ์ได้ตลอดบทสนทนา
+QUICK_REPLIES = [
+    {"content_type": "text", "title": qb["question"], "payload": qb["payload"]}
+    for qb in ICE_BREAKERS
+]
+
 
 def _parse_booking_tag(text: str) -> tuple:
     """แยกแท็ก [[BOOKING: ...]] ออกจากข้อความที่จะส่งลูกค้า คืน (ข้อความสะอาด, dict หรือ None)"""
@@ -204,11 +211,15 @@ def generate_reply(client, cfg: dict, sender_id: str, user_text: str,
     return reply
 
 
-def send_message(page_token: str, recipient_id: str, text: str) -> tuple:
-    """ส่งข้อความกลับผ่าน Meta Send API (ใช้ได้ทั้ง FB + IG ที่ผูกเพจ)"""
+def send_message(page_token: str, recipient_id: str, text: str, quick_replies: list = None) -> tuple:
+    """ส่งข้อความกลับผ่าน Meta Send API (ใช้ได้ทั้ง FB + IG ที่ผูกเพจ)
+    quick_replies (ถ้าใส่) = ปุ่มลัดแนบท้ายข้อความ กดแทนพิมพ์ได้ (สูงสุด 13 ปุ่มตามสเปก Meta)"""
     if not page_token:
         return 0, "no page token"
     url = f"{GRAPH}/me/messages"
+    message = {"text": text[:1900]}
+    if quick_replies:
+        message["quick_replies"] = quick_replies
     try:
         r = requests.post(
             url,
@@ -216,7 +227,7 @@ def send_message(page_token: str, recipient_id: str, text: str) -> tuple:
             json={
                 "recipient": {"id": recipient_id},
                 "messaging_type": "RESPONSE",
-                "message": {"text": text[:1900]},
+                "message": message,
             },
             timeout=15,
         )
@@ -318,10 +329,12 @@ def handle(data: dict, client, page_token: str, slug: str = "lullabell",
             sender = ev.get("sender", {}).get("id", "")
             msg = ev.get("message", {})
             postback = ev.get("postback", {})
-            postback_payload = postback.get("payload", "")
+            # payload มาได้ 2 ทาง: กดปุ่ม postback (Ice Breaker ตอนเปิดแชท) หรือกดปุ่ม Quick Reply
+            # (แนบมากับข้อความปกติทุกครั้งที่บอทตอบ — มาในรูป msg.quick_reply.payload)
+            postback_payload = postback.get("payload", "") or msg.get("quick_reply", {}).get("payload", "")
 
             if postback_payload and sender:
-                # ลูกค้ากดปุ่ม Ice Breaker (หรือปุ่ม postback อื่นในอนาคต) — map payload -> ข้อความ
+                # ลูกค้ากดปุ่ม Ice Breaker หรือ Quick Reply — map payload -> ข้อความ เหมือนพิมพ์เอง
                 user_text = _ICE_BREAKER_TEXT.get(postback_payload, "")
                 if not user_text:
                     result["skipped"] += 1
@@ -341,12 +354,12 @@ def handle(data: dict, client, page_token: str, slug: str = "lullabell",
             try:
                 reply = generate_reply(client, cfg, sender, user_text,
                                        notify_fn=notify_fn, line_user_id=line_user_id)
-                send_message(page_token, sender, reply)
+                send_message(page_token, sender, reply, quick_replies=QUICK_REPLIES)
                 result["replied"] += 1
             except Exception:
                 # AI ตาย ai_guard เด้ง LINE ให้แล้ว — ส่งข้อความ fallback ให้ลูกค้าไม่เงียบ
                 fb = cfg.get("advisor", {}).get("handoff_msg",
                      "ขออภัยค่ะ ระบบขัดข้องชั่วคราว เดี๋ยวแอดมินติดต่อกลับนะคะ 🤍")
-                send_message(page_token, sender, fb)
+                send_message(page_token, sender, fb, quick_replies=QUICK_REPLIES)
                 result["skipped"] += 1
     return result
