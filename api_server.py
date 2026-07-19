@@ -1388,6 +1388,71 @@ def api_pulse():
     return jsonify(out)
 
 
+def _build_daily_summary_text() -> str:
+    """รวมสถานะธุรกิจสั้นๆ — เงิน/ดีล, roadmap, hunter, SEO, AI health"""
+    lines = ["📊 สรุปสถานะธุรกิจวันนี้", "━━━━━━━━━━━━"]
+
+    try:
+        p = os.path.join(os.path.dirname(__file__), "board.json")
+        with open(p, "r", encoding="utf-8") as f:
+            board = json.load(f)
+        won = [d for d in board.get("deals", []) if d.get("state") == "won"]
+        won_total = sum(d.get("amount", 0) for d in won)
+        urgent = [x for x in board.get("pending", []) if x.get("urgent")]
+        lines.append(f"💰 ปิดแล้ว {len(won)} ดีล (฿{won_total:,}) · ค้างด่วน {len(urgent)} เรื่อง")
+        for u in urgent[:3]:
+            lines.append(f"  ⚠️ {(u.get('t') or '')[:60]}")
+    except Exception:
+        lines.append("💰 อ่าน board.json ไม่ได้")
+
+    try:
+        p = os.path.join(os.path.dirname(__file__), "roadmap.json")
+        with open(p, "r", encoding="utf-8") as f:
+            roadmap = json.load(f)
+        active = next((ph for ph in roadmap.get("phases", []) if ph.get("status") == "active"), None)
+        if active:
+            lines.append(f"🎯 เป้าตอนนี้: {(active.get('goal') or '')[:70]}")
+    except Exception:
+        pass
+
+    try:
+        checked = len(fastwork_hunter.get_hunter_log())
+        alerts = sum(1 for e in fastwork_hunter.get_hunter_log() if e.get("alerted"))
+        lines.append(f"🕵️ Job Hunter: เช็คแล้ว {checked} งาน · แจ้งเตือน {alerts} งาน")
+    except Exception:
+        pass
+
+    try:
+        s = seo_tracker.summary()
+        lines.append(f"🔍 SEO: {s.get('label', '-') if s.get('ok') else 'ยังไม่พร้อม'}")
+    except Exception:
+        pass
+
+    try:
+        h = ai_guard.health()
+        lines.append(f"🤖 AI: {'ปกติ ✅' if h.get('ok') else '❌ มีปัญหา — เช็คด่วน'}")
+    except Exception:
+        pass
+
+    lines.append("━━━━━━━━━━━━")
+    lines.append("เปิด /monitor เพื่อดูรายละเอียดเต็ม")
+    return "\n".join(lines)
+
+
+@app.route("/api/daily-summary", methods=["GET", "POST"])
+def daily_summary():
+    """สรุปสถานะธุรกิจประจำวัน ส่ง LINE ให้เจ้าของ — เรียกจาก scheduled task ทุกเช้า"""
+    if not LINE_TOKEN or not LINE_USER_ID:
+        return jsonify({"success": False, "error": "missing LINE env keys"}), 500
+    try:
+        text = _build_daily_summary_text()
+        ok = _push_line(LINE_USER_ID, text)
+        return jsonify({"success": ok, "message": text})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @app.route("/api/ai-health")
 def api_ai_health():
     """AI ยังหายใจอยู่ไหม — ใช้ดูบน Monitor + ให้ cron เช็คได้"""
