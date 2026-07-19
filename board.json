@@ -7,8 +7,8 @@
       "name": "🏆 Lullabell Beauty Salon — ลูกค้าคนแรก!",
       "amount": 1551,
       "state": "won",
-      "note": "จ่ายแล้ว 18 ก.ค. · บอท Meta Messenger ทำงานจริงแล้ว! (dev mode) น้องเบลล์ตอบพร้อมราคา",
-      "action": "ค้าง: token ถาวร + App Review (เปิดลูกค้าทั่วไป) + Instagram"
+      "note": "จ่ายแล้ว 18 ก.ค. · บอทเผยแพร่แล้ว 19 ก.ค. + token ถาวรตั้งเสร็จ — เหลือทดสอบด้วยแอคนอก role",
+      "action": "ค้าง: ทดสอบทักจริง (แอคนอก role) + เปิด Instagram"
     },
     {
       "name": "Forex Auto-Execution",
@@ -35,7 +35,7 @@
   ],
 
   "pending": [
-    { "t": "🏆 Lullabell: บอท Meta ทำงานแล้ว! ค้าง token ถาวร (ตัวนี้หมด ~1ชม.) + App Review + IG", "who": "รอเรา", "urgent": true },
+    { "t": "🏆 Lullabell: publish + token ถาวรเสร็จ 19 ก.ค. — เหลือทดสอบทักจริง + เปิด Instagram", "who": "รอเรา" },
     { "t": "ลูกค้า Forex เงียบ — รอ paper mode มีผล 3-5 วัน", "who": "รอเรา" },
     { "t": "Garuda วิเคราะห์ตลาด Forex 7 ข้อ (เน้นกฎหมาย ก.ล.ต.)", "who": "รอ Garuda" },
     { "t": "Listing #5 Forex AI Bot รออนุมัติ", "who": "รอ FastWork" },
