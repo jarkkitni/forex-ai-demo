@@ -667,6 +667,24 @@ def dialysis_create_patient():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+@app.route("/api/dialysis/patients/<patient_id>", methods=["PATCH"])
+def dialysis_update_patient(patient_id):
+    """แก้วันฟอกไตคนไข้เดิม (ก่อนหน้านี้ตั้งได้แค่ตอนสร้างคนไข้ใหม่)"""
+    if not _pin_ok():
+        return _need_pin()
+    if not dialysis_api.is_configured():
+        return jsonify({"success": False, "error": "ยังไม่ได้ตั้งค่า Supabase"}), 503
+    try:
+        d = request.get_json(force=True) or {}
+        p = dialysis_api.update_patient_schedule(patient_id, d.get("schedule", ""))
+        return jsonify({"success": True, "patient": p})
+    except ValueError as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @app.route("/api/dialysis/visits", methods=["POST"])
 def dialysis_save_visit():
     if not _pin_ok():

@@ -145,6 +145,26 @@ def create_patient(name: str, hn: str, schedule: str, note: str = "") -> dict:
     return r.json()[0]
 
 
+def update_patient_schedule(patient_id: str, schedule: str) -> dict:
+    """แก้วันฟอกไตของคนไข้เดิม (ตอนสร้างคนไข้ตั้งได้ครั้งเดียว แต่พยาบาลขอแก้ทีหลังได้บ่อย)"""
+    if not patient_id:
+        raise ValueError("ไม่มี patient_id")
+    if not _parse_schedule(schedule):
+        raise ValueError("รูปแบบวันฟอกไม่ถูกต้อง")
+    r = requests.patch(
+        _url("patients"),
+        headers=_h({"Prefer": "return=representation"}),
+        params={"id": f"eq.{patient_id}"},
+        json={"schedule": schedule},
+        timeout=15,
+    )
+    r.raise_for_status()
+    rows = r.json()
+    if not rows:
+        raise ValueError("ไม่พบคนไข้")
+    return rows[0]
+
+
 # ---------------- รอบฟอก ----------------
 
 def next_appointment(schedule: str, from_date: date | None = None) -> str:
