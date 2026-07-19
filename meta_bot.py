@@ -24,6 +24,23 @@ _MAX_TURNS = 8
 _BOOKING_RE = re.compile(r'\n?\[\[BOOKING:\s*(.*?)\s*\]\]', re.S)
 _BOOKING_FIELDS = ("บริการ", "วันที่", "เวลา", "ชื่อ", "เบอร์")
 
+# ---- Ice Breakers — ปุ่มคำถามให้เลือกกดตอนลูกค้าใหม่เปิดแชทครั้งแรก ----
+# question = ข้อความปุ่มที่ลูกค้าเห็น (ตั้งค่าจริงผ่าน setup_ice_breakers.py ยิงไปที่ Meta)
+# payload  = รหัสที่ Meta ส่งกลับมาตอนลูกค้ากด (ไม่ใช่ข้อความ ต้อง map เอง)
+ICE_BREAKERS = [
+    {"question": "ดูราคา/โปรโมชั่น", "payload": "IB_PRICE"},
+    {"question": "อยากจองคิว", "payload": "IB_BOOKING"},
+    {"question": "ที่อยู่ร้าน/เวลาเปิด", "payload": "IB_LOCATION"},
+    {"question": "มีบริการอะไรบ้าง", "payload": "IB_SERVICES"},
+]
+# payload -> ข้อความที่จะป้อนให้ AI ประมวลผลต่อ เหมือนลูกค้าพิมพ์เอง
+_ICE_BREAKER_TEXT = {
+    "IB_PRICE": "ขอดูราคาและโปรโมชั่นทั้งหมดค่ะ",
+    "IB_BOOKING": "อยากจองคิวค่ะ",
+    "IB_LOCATION": "ขอที่อยู่ร้านและเวลาเปิด-ปิดค่ะ",
+    "IB_SERVICES": "มีบริการอะไรบ้างคะ",
+}
+
 
 def _parse_booking_tag(text: str) -> tuple:
     """แยกแท็ก [[BOOKING: ...]] ออกจากข้อความที่จะส่งลูกค้า คืน (ข้อความสะอาด, dict หรือ None)"""
@@ -298,14 +315,24 @@ def handle(data: dict, client, page_token: str, slug: str = "lullabell",
         for ev in events:
             sender = ev.get("sender", {}).get("id", "")
             msg = ev.get("message", {})
-            # ข้าม echo (ข้อความที่เราส่งเอง) / ไม่มี text / ไม่มี sender
-            if not sender or msg.get("is_echo") or "text" not in msg:
-                result["skipped"] += 1
-                continue
-            user_text = (msg.get("text") or "").strip()
-            if not user_text:
-                result["skipped"] += 1
-                continue
+            postback = ev.get("postback", {})
+            postback_payload = postback.get("payload", "")
+
+            if postback_payload and sender:
+                # ลูกค้ากดปุ่ม Ice Breaker (หรือปุ่ม postback อื่นในอนาคต) — map payload -> ข้อความ
+                user_text = _ICE_BREAKER_TEXT.get(postback_payload, "")
+                if not user_text:
+                    result["skipped"] += 1
+                    continue
+            else:
+                # ข้าม echo (ข้อความที่เราส่งเอง) / ไม่มี text / ไม่มี sender
+                if not sender or msg.get("is_echo") or "text" not in msg:
+                    result["skipped"] += 1
+                    continue
+                user_text = (msg.get("text") or "").strip()
+                if not user_text:
+                    result["skipped"] += 1
+                    continue
             if not _rate_ok(sender):
                 result["skipped"] += 1
                 continue
