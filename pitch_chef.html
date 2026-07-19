@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Executive Assistant — Demo</title>
+<style>
+  :root{
+    --bg:#faf6f0; --panel:#fffdfa; --ink:#1f1a17; --sub:#6b5f56;
+    --gold:#c8964a; --gold-dark:#a8763a; --line:#e8ddd0;
+    --good:#3f7d4f; --warn:#c07f26; --bad:#b5473a;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Segoe UI',-apple-system,'Noto Sans Thai',sans-serif;background:var(--bg);color:var(--ink);}
+  header{background:var(--ink);color:#fff;padding:22px 32px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}
+  header h1{margin:0;font-size:20px;font-weight:700;letter-spacing:.3px;}
+  header h1 span{color:var(--gold);}
+  header p{margin:2px 0 0;font-size:13px;color:#cfc4b6;}
+  .badge{background:var(--gold);color:#1f1a17;font-weight:700;font-size:12px;padding:5px 12px;border-radius:20px;}
+  .tabs{display:flex;gap:8px;padding:16px 32px 0;background:var(--bg);border-bottom:1px solid var(--line);}
+  .tab-btn{padding:12px 20px;border:none;background:none;font-size:14px;font-weight:600;color:var(--sub);cursor:pointer;border-bottom:3px solid transparent;}
+  .tab-btn.active{color:var(--ink);border-bottom-color:var(--gold);}
+  .wrap{max-width:980px;margin:0 auto;padding:28px 20px 60px;}
+  .panel{display:none;}
+  .panel.active{display:block;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px;margin-bottom:18px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+  .card h2{margin:0 0 4px;font-size:17px;}
+  .card .desc{color:var(--sub);font-size:13px;margin-bottom:16px;}
+
+  /* Chat */
+  .chat-log{display:flex;flex-direction:column;gap:12px;max-height:420px;overflow-y:auto;padding-right:4px;margin-bottom:14px;}
+  .msg{max-width:80%;padding:11px 15px;border-radius:14px;font-size:14px;line-height:1.55;white-space:pre-wrap;}
+  .msg.user{align-self:flex-end;background:var(--gold);color:#1f1a17;border-bottom-right-radius:3px;}
+  .msg.ai{align-self:flex-start;background:#f1ece3;color:var(--ink);border-bottom-left-radius:3px;}
+  .msg.ai b{color:var(--gold-dark);}
+  .presets{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+  .preset{background:#f1ece3;border:1px solid var(--line);border-radius:20px;padding:7px 14px;font-size:12.5px;cursor:pointer;color:var(--ink);}
+  .preset:hover{background:var(--gold);color:#fff;}
+  .chat-input{display:flex;gap:8px;}
+  .chat-input input{flex:1;padding:12px 14px;border:1px solid var(--line);border-radius:10px;font-size:14px;font-family:inherit;}
+  .chat-input button{background:var(--ink);color:#fff;border:none;padding:0 20px;border-radius:10px;font-weight:600;cursor:pointer;font-size:14px;}
+  .typing{align-self:flex-start;color:var(--sub);font-size:13px;font-style:italic;}
+
+  /* Costing */
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  th{text-align:left;color:var(--sub);font-weight:600;font-size:12px;padding:6px 8px;border-bottom:1px solid var(--line);}
+  td{padding:6px 8px;border-bottom:1px solid var(--line);}
+  td input{width:100%;border:1px solid var(--line);border-radius:6px;padding:7px 8px;font-size:13.5px;font-family:inherit;}
+  .rm-row{background:none;border:none;color:var(--bad);cursor:pointer;font-size:16px;}
+  .add-row{margin-top:10px;background:#f1ece3;border:1px dashed var(--gold);color:var(--gold-dark);padding:9px 16px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;}
+  .cost-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-top:18px;}
+  .stat{background:#f6f1ea;border-radius:10px;padding:14px;}
+  .stat .label{font-size:11.5px;color:var(--sub);margin-bottom:4px;}
+  .stat .value{font-size:20px;font-weight:700;}
+  .stat.good .value{color:var(--good);}
+  .stat.warn .value{color:var(--warn);}
+  .stat.bad .value{color:var(--bad);}
+  .inline-inputs{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;}
+  .inline-inputs label{font-size:12.5px;color:var(--sub);display:block;margin-bottom:4px;}
+  .inline-inputs input{padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-size:14px;width:130px;font-family:inherit;}
+  .actions{display:flex;gap:10px;margin-top:16px;}
+  .actions button{border:none;padding:10px 18px;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;}
+  .btn-primary{background:var(--gold);color:#1f1a17;}
+  .btn-ghost{background:none;border:1px solid var(--line)!important;color:var(--ink);}
+
+  /* Roadmap */
+  .roadmap{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  @media(max-width:700px){.roadmap{grid-template-columns:1fr;}}
+  .phase{border:1px solid var(--line);border-radius:12px;padding:18px;background:var(--panel);}
+  .phase .tag{display:inline-block;background:var(--ink);color:#fff;font-size:11px;padding:3px 10px;border-radius:20px;margin-bottom:8px;}
+  .phase h3{margin:0 0 8px;font-size:15px;}
+  .phase ul{margin:0;padding-left:18px;font-size:13px;color:var(--sub);line-height:1.7;}
+  footer{text-align:center;padding:24px;color:var(--sub);font-size:12px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>AI Executive <span>Assistant</span></h1>
+    <p>Demo เตรียมพรีเซนต์ลูกค้า — Chef & Restaurant Owner</p>
+  </div>
+  <div class="badge">LIVE DEMO</div>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="showTab('chat')">1 · ผู้ช่วย AI (Phase 1)</button>
+  <button class="tab-btn" onclick="showTab('cost')">2 · คำนวณต้นทุนเมนู (Phase 2 ตัวอย่างจริง)</button>
+  <button class="tab-btn" onclick="showTab('roadmap')">แผนงาน & ขั้นตอน</button>
+</div>
+
+<div class="wrap">
+
+  <!-- TAB 1: CHAT -->
+  <div class="panel active" id="tab-chat">
+    <div class="card">
+      <h2>ผู้ช่วย AI ส่วนตัวของร้าน</h2>
+      <div class="desc">ตัวอย่างสิ่งที่ผู้ช่วยทำได้ทันทีที่เริ่มใช้งาน — ลองพิมพ์คำถามอะไรก็ได้ด้านล่าง หรือกดตัวอย่างสำเร็จรูป</div>
+
+      <div class="presets">
+        <div class="preset" onclick="askPreset('stock')">📦 สต๊อกอะไรใกล้หมดบ้าง</div>
+        <div class="preset" onclick="askPreset('memory')">🧠 เมนูพิเศษเดือนที่แล้วคืออะไร</div>
+        <div class="preset" onclick="askPreset('email')">✉️ ร่างอีเมลสั่งของซัพพลายเออร์</div>
+        <div class="preset" onclick="askPreset('schedule')">🗓️ จัดตารางกะพนักงานสัปดาห์นี้</div>
+      </div>
+
+      <div class="chat-log" id="chatLog">
+        <div class="msg ai">สวัสดีครับ ผมคือผู้ช่วย AI ประจำร้าน — จำข้อมูลร้าน เมนู สต๊อก และวิธีทำงานของคุณได้ ถามอะไรก็ได้เลยครับ 🙂</div>
+      </div>
+
+      <div class="chat-input">
+        <input type="text" id="chatInput" placeholder="พิมพ์คำถามอะไรก็ได้... เช่น ช่วยคิดโปรโมชั่นให้หน่อย" onkeypress="if(event.key==='Enter')sendChat()">
+        <button onclick="sendChat()">ส่ง</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: COSTING -->
+  <div class="panel" id="tab-cost">
+    <div class="card">
+      <h2>คำนวณต้นทุนเมนู + ราคาขายที่แนะนำ</h2>
+      <div class="desc">ตัวอย่าง "1 สกิลจริง" ของ Phase 2 — คีย์วัตถุดิบครั้งเดียว ระบบคำนวณ Food Cost % และราคาขายที่ควรตั้งให้อัตโนมัติ (ต่อยอดเป็น Excel/ชีทออนไลน์ที่อัปเดตสดได้)</div>
+
+      <table>
+        <thead>
+          <tr><th style="width:32%">วัตถุดิบ</th><th style="width:18%">ปริมาณ</th><th style="width:15%">หน่วย</th><th style="width:22%">ราคา/หน่วย (บาท)</th><th></th></tr>
+        </thead>
+        <tbody id="ingRows"></tbody>
+      </table>
+      <button class="add-row" onclick="addRow()">+ เพิ่มวัตถุดิบ</button>
+
+      <div class="inline-inputs" style="margin-top:20px;">
+        <div><label>จำนวนที่ปรุงได้ (จาน)</label><input type="number" id="portions" value="4" min="1" oninput="calc()"></div>
+        <div><label>Target Food Cost %</label><input type="number" id="targetPct" value="30" min="1" oninput="calc()"></div>
+        <div><label>ราคาขายปัจจุบัน (บาท)</label><input type="number" id="currentPrice" value="180" min="0" oninput="calc()"></div>
+      </div>
+
+      <div class="cost-summary">
+        <div class="stat"><div class="label">ต้นทุนรวม</div><div class="value" id="totalCost">฿0</div></div>
+        <div class="stat"><div class="label">ต้นทุน/จาน</div><div class="value" id="costPerPortion">฿0</div></div>
+        <div class="stat" id="statSuggested"><div class="label">ราคาขายที่แนะนำ</div><div class="value" id="suggestedPrice">฿0</div></div>
+        <div class="stat" id="statPct"><div class="label">Food Cost % ที่ราคาปัจจุบัน</div><div class="value" id="currentPct">0%</div></div>
+      </div>
+
+      <div class="actions">
+        <button class="btn-primary" onclick="exportCSV()">⬇ Export เป็น Excel/CSV</button>
+        <button class="btn-ghost" onclick="window.print()">🖨 พิมพ์สรุป</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: ROADMAP -->
+  <div class="panel" id="tab-roadmap">
+    <div class="card">
+      <h2>แผนดำเนินงาน</h2>
+      <div class="roadmap">
+        <div class="phase">
+          <span class="tag">PHASE 1</span>
+          <h3>Core AI Assistant</h3>
+          <ul>
+            <li>แชทถาม-ตอบ จดจำข้อมูลร้าน เมนู ลูกค้า ซัพพลายเออร์</li>
+            <li>เข้าถึงไฟล์/สต๊อก/ตารางงานที่มีอยู่แล้ว</li>
+            <li>ร่างอีเมล/ข้อความ จัดตาราง ระบบเตือนความจำ</li>
+            <li>เรียนรู้วิธีทำงานเฉพาะของร้านไปเรื่อย ๆ</li>
+          </ul>
+        </div>
+        <div class="phase">
+          <span class="tag">PHASE 2</span>
+          <h3>Recipe Costing + Excel Automation</h3>
+          <ul>
+            <li>คำนวณต้นทุนเมนู/Food Cost % อัตโนมัติ</li>
+            <li>แนะนำราคาขายตามเป้ากำไรที่ตั้งไว้</li>
+            <li>ซิงก์กับ Excel/Google Sheet ที่ร้านใช้อยู่</li>
+            <li>ต่อยอดสกิลอื่นได้ตามที่ร้านต้องการ (จองโต๊ะ, สต๊อก, มาร์เก็ตติ้ง)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>เตรียมโดยทีมพัฒนา AI Assistant — ราคาและระยะเวลาสรุปตามขอบเขตที่คุยกันในสายนี้</footer>
+
+<script>
+function showTab(id){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+/* ---------- CHAT ---------- */
+const log = document.getElementById('chatLog');
+
+const canned = {
+  stock: "จากข้อมูลสต๊อกล่าสุด วัตถุดิบที่ใกล้หมดคือ:\n• กุ้งแช่แข็ง — เหลือ 2.1 กก. (ปกติใช้ ~5 กก./วัน)\n• ครีมสด — เหลือ 800 มล.\n\n<b>แนะนำ:</b> สั่งเพิ่มภายในวันนี้ ก่อนจะกระทบเมนูวันพรุ่งนี้ครับ",
+  memory: "จำได้ครับ — เดือนที่แล้วร้านออกเมนูพิเศษ <b>\"พาสต้าครีมกุ้งทรัฟเฟิล\"</b> ขายดีสุด 3 สัปดาห์แรก เฉลี่ย 24 จาน/วัน ก่อนยอดตกลงช่วงสุดท้ายของเดือน\n\nอยากให้ช่วยคิดเมนูพิเศษเดือนนี้ต่อจากข้อมูลนี้ไหมครับ?",
+  email: "ร่างอีเมลให้แล้วครับ:\n\n<b>ถึง:</b> ซัพพลายเออร์ผัก-ผลไม้\nเรียน คุณ [ชื่อซัพพลายเออร์]\n\nทางร้านขอสั่งวัตถุดิบเพิ่มเติมสำหรับรอบส่งวันพรุ่งนี้ ตามรายการที่แนบ กรุณายืนยันราคาและเวลาส่งภายในวันนี้ด้วยครับ\n\nขอบคุณครับ",
+  schedule: "จัดตารางกะสัปดาห์นี้ตามชั่วโมงทำงานที่กฎหมายกำหนดและวันหยุดที่พนักงานแจ้งไว้แล้วครับ ✅\n\nพบว่าวันเสาร์กะเย็นมีคนน้อยกว่าปกติ 1 คน — อยากให้ช่วยหาคนสลับกะให้ไหมครับ?"
+};
+
+function addMsg(text, cls){
+  const d = document.createElement('div');
+  d.className = 'msg '+cls;
+  d.innerHTML = text;
+  log.appendChild(d);
+  log.scrollTop = log.scrollHeight;
+  return d;
+}
+
+function aiReply(text){
+  const typing = addMsg('กำลังพิมพ์...', 'typing');
+  setTimeout(()=>{
+    typing.remove();
+    addMsg(text, 'ai');
+  }, 650 + Math.random()*400);
+}
+
+function askPreset(key){
+  const labels = {stock:'สต๊อกอะไรใกล้หมดบ้าง', memory:'เมนูพิเศษเดือนที่แล้วคืออะไร', email:'ร่างอีเมลสั่งของซัพพลายเออร์', schedule:'จัดตารางกะพนักงานสัปดาห์นี้'};
+  addMsg(labels[key], 'user');
+  aiReply(canned[key]);
+}
+
+function smartFallback(q){
+  const s = q.toLowerCase();
+  if (s.includes('ราคา') || s.includes('cost') || s.includes('กำไร'))
+    return "เรื่องต้นทุน/ราคาขาย ลองดูตัวอย่างจริงได้ที่แท็บ <b>\"คำนวณต้นทุนเมนู\"</b> ด้านบนเลยครับ — คีย์วัตถุดิบแล้วระบบคำนวณราคาขายที่แนะนำให้ทันที";
+  if (s.includes('promotion') || s.includes('โปรโมชั่น') || s.includes('โปร'))
+    return "จากข้อมูลยอดขายและวันที่คนเข้าร้านน้อย ผมแนะนำโปรโมชั่นแบบ Happy Hour ช่วง 14:00-16:00 ได้ครับ — พร้อมร่างข้อความโพสต์โซเชียลให้ได้เลย";
+  return "รับทราบครับ — เมื่อเชื่อมกับข้อมูลจริงของร้านแล้ว ผมจะตอบคำถามแบบนี้ได้แม่นยำและเจาะจงร้านคุณ 100% ครับ (ตอนนี้เป็นโหมดสาธิต)";
+}
+
+function sendChat(){
+  const inp = document.getElementById('chatInput');
+  const q = inp.value.trim();
+  if(!q) return;
+  addMsg(q, 'user');
+  inp.value = '';
+  const key = Object.keys(canned).find(k => q.includes(k)); // not used, kept simple
+  aiReply(smartFallback(q));
+}
+
+/* ---------- COSTING ---------- */
+const defaultIngredients = [
+  ['กุ้งสด', 200, 'กรัม', 0.9],
+  ['พาสต้า', 150, 'กรัม', 0.15],
+  ['ครีมสด', 100, 'มล.', 0.35],
+  ['ทรัฟเฟิลออยล์', 5, 'มล.', 6]
+];
+
+function addRow(vals){
+  const tb = document.getElementById('ingRows');
+  const tr = document.createElement('tr');
+  const v = vals || ['', '', '', ''];
+  tr.innerHTML = `
+    <td><input type="text" value="${v[0]}" oninput="calc()"></td>
+    <td><input type="number" value="${v[1]}" oninput="calc()"></td>
+    <td><input type="text" value="${v[2]}" oninput="calc()"></td>
+    <td><input type="number" step="0.01" value="${v[3]}" oninput="calc()"></td>
+    <td><button class="rm-row" onclick="this.closest('tr').remove();calc()">✕</button></td>`;
+  tb.appendChild(tr);
+}
+
+function calc(){
+  const rows = document.querySelectorAll('#ingRows tr');
+  let total = 0;
+  rows.forEach(r=>{
+    const inputs = r.querySelectorAll('input');
+    const qty = parseFloat(inputs[1].value) || 0;
+    const price = parseFloat(inputs[3].value) || 0;
+    total += qty * price;
+  });
+  const portions = parseFloat(document.getElementById('portions').value) || 1;
+  const targetPct = parseFloat(document.getElementById('targetPct').value) || 30;
+  const currentPrice = parseFloat(document.getElementById('currentPrice').value) || 0;
+
+  const perPortion = total / portions;
+  const suggested = targetPct > 0 ? perPortion / (targetPct/100) : 0;
+  const currentPct = currentPrice > 0 ? (perPortion/currentPrice*100) : 0;
+
+  document.getElementById('totalCost').textContent = '฿' + total.toFixed(1);
+  document.getElementById('costPerPortion').textContent = '฿' + perPortion.toFixed(1);
+  document.getElementById('suggestedPrice').textContent = '฿' + suggested.toFixed(0);
+
+  const pctEl = document.getElementById('currentPct');
+  pctEl.textContent = currentPct.toFixed(1) + '%';
+  const statPct = document.getElementById('statPct');
+  statPct.className = 'stat ' + (currentPct <= targetPct ? 'good' : currentPct <= targetPct+8 ? 'warn' : 'bad');
+}
+
+function exportCSV(){
+  const rows = [['วัตถุดิบ','ปริมาณ','หน่วย','ราคา/หน่วย']];
+  document.querySelectorAll('#ingRows tr').forEach(r=>{
+    const inputs = r.querySelectorAll('input');
+    rows.push([inputs[0].value, inputs[1].value, inputs[2].value, inputs[3].value]);
+  });
+  rows.push([]);
+  rows.push(['ต้นทุนรวม', document.getElementById('totalCost').textContent]);
+  rows.push(['ต้นทุน/จาน', document.getElementById('costPerPortion').textContent]);
+  rows.push(['ราคาขายแนะนำ', document.getElementById('suggestedPrice').textContent]);
+  const csv = rows.map(r=>r.join(',')).join('\n');
+  const blob = new Blob(["﻿"+csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'recipe-costing.csv';
+  a.click();
+}
+
+defaultIngredients.forEach(v=>addRow(v));
+calc();
+</script>
+
+</body>
+</html>

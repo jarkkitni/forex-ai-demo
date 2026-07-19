@@ -526,6 +526,22 @@ def monitor():
         return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
 
 
+@app.route("/pitch/chef")
+def pitch_chef():
+    """Demo พรีเซนต์ลูกค้า AI Executive Assistant (Chef/Restaurant) — เปิดได้ทั้ง PC/แท็บเล็ต"""
+    html_path = os.path.join(os.path.dirname(__file__), "pitch_chef.html")
+    with open(html_path, "r", encoding="utf-8") as f:
+        return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
+@app.route("/pitch/chef/notes")
+def pitch_chef_notes():
+    """Cheat sheet มือถือ/แท็บเล็ต คู่กับ /pitch/chef สำหรับดูระหว่างพรีเซนต์สด"""
+    html_path = os.path.join(os.path.dirname(__file__), "pitch_chef_notes.html")
+    with open(html_path, "r", encoding="utf-8") as f:
+        return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
 @app.route("/manifest.json")
 def manifest():
     return jsonify({
