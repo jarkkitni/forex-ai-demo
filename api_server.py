@@ -34,6 +34,8 @@ META_VERIFY_TOKEN   = os.environ.get("META_VERIFY_TOKEN", "")
 META_PAGE_TOKEN     = os.environ.get("META_PAGE_TOKEN", "")
 META_APP_SECRET     = os.environ.get("META_APP_SECRET", "")
 META_SLUG           = os.environ.get("META_SLUG", "lullabell")
+META_PAGE_ID        = os.environ.get("META_PAGE_ID", "783393614867196")  # เพจ Lullabell
+N8N_POST_SECRET     = os.environ.get("N8N_POST_SECRET", "")  # กัน endpoint โพสต์ FB ถูกยิงมั่ว
 # ---- LINE OA ของ "ร้านลูกค้า" (เช่น @lullabell) — คนละตัวกับ LINE_TOKEN/LINE_CHANNEL_SECRET ด้านบนซึ่งเป็นของ ForexAI Pro เอง ----
 LULLABELL_LINE_CHANNEL_SECRET = os.environ.get("LULLABELL_LINE_CHANNEL_SECRET", "")
 LULLABELL_LINE_CHANNEL_TOKEN  = os.environ.get("LULLABELL_LINE_CHANNEL_TOKEN", "")
@@ -1624,9 +1626,31 @@ def meta_health():
             dd = (rd.json().get("data") or {}) if rd.ok else {}
             out["expires_at"] = dd.get("expires_at")                    # 0 = never
             out["data_access_expires_at"] = dd.get("data_access_expires_at")
+            out["scopes"] = dd.get("scopes", [])
+            out["has_publish_scope"] = "pages_manage_posts" in out["scopes"]
     except Exception as e:
         out["error"] = str(e)[:200]
     return jsonify(out)
+
+
+@app.route("/api/n8n/facebook-post", methods=["POST"])
+def n8n_facebook_post():
+    """n8n เรียกมาเพื่อโพสต์แคปชั่นลงเพจ Facebook ตรงผ่าน Graph API
+    บายพาส Postiz (มีบั๊ก hardcode scope เก่า read_insights ที่ Meta เลิกรองรับแล้ว)
+    ต้องส่ง secret ให้ตรงกับ N8N_POST_SECRET ที่ตั้งไว้บน Render"""
+    if not N8N_POST_SECRET:
+        return jsonify({"success": False, "error": "N8N_POST_SECRET ยังไม่ได้ตั้งบน Render"}), 503
+    body = request.get_json(silent=True) or {}
+    if body.get("secret") != N8N_POST_SECRET:
+        return jsonify({"success": False, "error": "invalid secret"}), 403
+    message = (body.get("message") or "").strip()
+    if not message:
+        return jsonify({"success": False, "error": "missing message"}), 400
+    ok, result = meta_bot.post_to_facebook_page(
+        META_PAGE_TOKEN, META_PAGE_ID, message, link=body.get("link"))
+    if ok:
+        return jsonify({"success": True, "post_id": result})
+    return jsonify({"success": False, "error": result}), 502
 
 
 @app.route("/webhook/meta", methods=["GET", "POST"])

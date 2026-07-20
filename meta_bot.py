@@ -86,6 +86,28 @@ def verify_signature(app_secret: str, body_bytes: bytes, header: str) -> bool:
     return hmac.compare_digest(expected, header)
 
 
+def post_to_facebook_page(page_token: str, page_id: str, message: str, link: str = None) -> tuple:
+    """โพสต์ข้อความลง Facebook Page feed ตรงผ่าน Graph API (ไม่ผ่าน Postiz)
+    ใช้ scope ปัจจุบันที่ Meta รองรับจริง (pages_manage_posts) — ไม่มีปัญหา scope เก่าเหมือน Postiz
+    คืน (True, post_id) ถ้าสำเร็จ, (False, error_message) ถ้าพลาด"""
+    if not page_token or not page_id:
+        return False, "missing page_token/page_id"
+    if not message:
+        return False, "empty message"
+    params = {"message": message[:63000], "access_token": page_token}
+    if link:
+        params["link"] = link
+    try:
+        r = requests.post(f"{GRAPH}/{page_id}/feed", data=params, timeout=20)
+        d = r.json()
+        if r.ok and d.get("id"):
+            return True, d["id"]
+        err = (d.get("error") or {}).get("message") or r.text[:300]
+        return False, err
+    except Exception as e:
+        return False, str(e)[:300]
+
+
 def _rate_ok(sender_id: str, limit: int = 40, window: int = 3600) -> bool:
     """กันคนยิงรัว — ดีฟอลต์ 40 ข้อความ/ชม./คน"""
     now = time.time()
