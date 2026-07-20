@@ -148,15 +148,28 @@ def _today_th() -> str:
     return f"{d.day} {months[d.month]} {d.year + 543}"
 
 
+def _map_link(cfg: dict) -> str:
+    """ลิงก์ Google Maps จากที่อยู่ในคอนฟิก — ไม่ต้องมี API key/บัญชี Google Cloud
+    วางลิงก์นี้ในข้อความแชท Facebook Messenger จะโชว์ preview การ์ดแผนที่ให้อัตโนมัติ"""
+    import urllib.parse
+    c = cfg.get("contact", {})
+    addr = c.get("map_query") or c.get("address", "")
+    if not addr:
+        return ""
+    return "https://www.google.com/maps/search/?api=1&query=" + urllib.parse.quote(addr)
+
+
 def _system_prompt(cfg: dict) -> str:
     adv = cfg.get("advisor", {})
     c = cfg.get("contact", {})
     rules = adv.get("rules", [])
     rules_txt = "\n".join(f"- {r}" for r in rules) if isinstance(rules, list) else ""
     close_txt = "\n".join(f"- {x}" for x in cfg.get("close_lines", []))
+    map_link = _map_link(cfg)
     contact_txt = (
         f"โทร {c.get('phone','')} · LINE {c.get('line','')} · "
         f"ที่อยู่ {c.get('address','')} ({c.get('parking','')})"
+        + (f" · แผนที่ {map_link}" if map_link else "")
     )
     perks_txt = "\n".join(f"- {x}" for x in
                           [cfg.get("gift"), cfg.get("perks"), cfg.get("friend_promo"), cfg.get("topup_promo")] if x)
@@ -176,6 +189,7 @@ def _system_prompt(cfg: dict) -> str:
 - ถ้าราคาขึ้นกับสภาพผม/ความยาว ให้บอกช่วงราคาแล้วชวนให้แอดมินประเมิน
 - ถ้าเมนูมีระบุ "หมดเขต <วันที่>" ให้เทียบกับวันนี้ก่อนเสมอ ถ้าหมดเขตไปแล้วห้ามเสนอราคาโปรนั้น ให้แจ้งว่าโปรหมดแล้วและเสนอราคาปกติ/โปรอื่นแทน
 - ถ้าลูกค้าสนใจจอง/ถามคิว → ชวนบอกวัน-เวลาที่สะดวก แล้วบอกว่าจะให้แอดมินยืนยันคิวให้
+- ถ้าลูกค้าถามที่อยู่/ทางมาร้าน ให้บอกที่อยู่ + จุดสังเกตสั้นๆ แล้ว**แปะลิงก์แผนที่ต่อท้ายในข้อความเดียวกันเสมอ**{(" (" + map_link + ")") if map_link else ""} — Facebook จะโชว์รูปแผนที่ preview ให้อัตโนมัติเมื่อมีลิงก์นี้ในข้อความ ห้ามละลิงก์นี้ทิ้ง
 - ถ้าลูกค้าขอคุยคน/เรื่องซับซ้อนเกินเมนู → {adv.get('handoff_msg','ขอส่งต่อให้แอดมินนะคะ')} ({contact_txt})
 - ถ้าลูกค้าสนใจโปรเติมเครดิต/สมัครแพ็กเกจ ให้แนะนำรายละเอียดได้ แต่บอกให้ทำรายการที่หน้าร้านหรือติดต่อแอดมิน (ระบบแชทนี้แค่ให้ข้อมูล ไม่ได้ทำธุรกรรมเครดิตให้)
 - ห้ามสัญญาสิ่งที่ไม่มีในเมนู ห้ามให้คำแนะนำทางการแพทย์
