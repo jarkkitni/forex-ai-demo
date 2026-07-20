@@ -8,11 +8,15 @@
   :root{ --line-green:#06C755; --line-dark:#06C05A; }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   body{margin:0;background:#dedede;font-family:'Segoe UI',-apple-system,'Noto Sans Thai',sans-serif;
-       min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:18px 10px 0;}
-  .caption{color:#555;font-size:12.5px;text-align:center;max-width:400px;margin-bottom:10px;line-height:1.5;}
+       min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:12px 10px 0;}
+  .caption{color:#555;font-size:12.5px;text-align:center;max-width:400px;margin-bottom:8px;line-height:1.4;}
   .caption b{color:#06C755;}
+  /* height: ตั้งค่าสำรอง (vh) ก่อน แล้วค่อย override ด้วย dvh ถ้าเบราว์เซอร์รองรับ (มือถือ Chrome/Safari
+     ที่แถบ URL แสดง/ซ่อนได้ 100vh มักคำนวณสูงเกินจอที่มองเห็นจริง ทำให้ปุ่ม quick-reply + inputbar
+     ตกขอบล่างจอ ต้องเลื่อนหน้าเพิ่มถึงจะเห็น — ลูกค้าหลายคนไม่รู้ว่าต้องเลื่อน คิดว่าปุ่มไม่ขึ้น) */
   .phone{width:100%;max-width:400px;background:#8ec9a0;border-radius:18px 18px 0 0;overflow:hidden;
-         box-shadow:0 8px 30px rgba(0,0,0,.25);display:flex;flex-direction:column;height:78vh;min-height:520px;}
+         box-shadow:0 8px 30px rgba(0,0,0,.25);display:flex;flex-direction:column;
+         height:72vh;height:min(72vh, calc(100dvh - 110px));min-height:420px;max-height:640px;}
   .statusbar{background:#000;color:#fff;font-size:11px;padding:5px 16px;display:flex;justify-content:space-between;}
   .topbar{background:var(--line-green);color:#fff;padding:10px 12px;display:flex;align-items:center;gap:10px;}
   .topbar .back{font-size:20px;opacity:.9;}
