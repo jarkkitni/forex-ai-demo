@@ -1965,9 +1965,11 @@ def posttoday_callback():
     if resp.status_code != 200 or "access_token" not in data:
         return f"<h2>❌ แลก token ไม่สำเร็จ</h2><pre>{json.dumps(data, indent=2, ensure_ascii=False)}</pre><a href='/posttoday'>กลับ</a>", 400
 
-    # เคลียร์ state/verifier หลังใช้เสร็จ
+    # เคลียร์ state/verifier หลังใช้เสร็จ (แต่เก็บ access_token ไว้ใช้ต่อตอนเลือกวิดีโอ+publish)
     session.pop("tiktok_state", None)
     session.pop("tiktok_code_verifier", None)
+    session["tiktok_access_token"] = data["access_token"]
+    session["tiktok_open_id"] = data.get("open_id", "")
 
     display_name = ""
     try:
@@ -1984,9 +1986,164 @@ def posttoday_callback():
     return f"""<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">
     <title>เชื่อมต่อ TikTok สำเร็จ</title>
     <style>body{{font-family:sans-serif;background:#0d1117;color:#e9edf2;display:flex;height:100vh;align-items:center;justify-content:center;text-align:center}}
-    a{{color:#4ea1ff}}</style></head><body>
+    a{{color:#4ea1ff}} .btn{{display:inline-block;margin-top:18px;padding:12px 26px;background:#fe2c55;color:#fff;
+    border-radius:999px;text-decoration:none;font-weight:700}}</style></head><body>
     <div><h2>✓ เชื่อมต่อ TikTok สำเร็จ{f' — สวัสดีคุณ {display_name}' if display_name else ''}</h2>
-    <p><a href="/posttoday">กลับหน้าแรก</a></p></div>
+    <a class="btn" href="/posttoday/publish">ถัดไป: เลือกวิดีโอ →</a>
+    <p style="margin-top:14px"><a href="/posttoday">กลับหน้าแรก</a></p></div>
+    </body></html>""", 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
+@app.route("/posttoday/publish", methods=["GET"])
+def posttoday_publish_page():
+    """หน้าเลือกวิดีโอ + แคปชั่น + privacy level (ดึงตัวเลือกจริงจาก TikTok creator_info) — ห้ามลบ"""
+    token = session.get("tiktok_access_token")
+    if not token:
+        return redirect("/posttoday/login")
+
+    try:
+        r = requests.post(
+            "https://open.tiktokapis.com/v2/post/publish/creator_info/query/",
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json; charset=UTF-8"},
+            timeout=20,
+        )
+        cinfo = r.json().get("data", {}) or {}
+    except Exception as e:
+        return f"<h2>❌ ดึงข้อมูลบัญชี TikTok ไม่สำเร็จ: {e}</h2><a href='/posttoday'>กลับ</a>", 500
+
+    privacy_options = cinfo.get("privacy_level_options") or ["SELF_ONLY"]
+    nickname = cinfo.get("creator_nickname", "")
+    options_html = "\n".join(
+        f'<option value="{p}">{p}</option>' for p in privacy_options
+    )
+
+    return f"""<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">
+<title>เลือกวิดีโอ — PostToday</title>
+<style>
+:root{{--bg:#0e0e14;--card:#181822;--accent:#fe2c55;--accent2:#25f4ee;--text:#f4f4f6;--muted:#a0a0b0}}
+*{{box-sizing:border-box}}
+body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);
+display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0;padding:24px}}
+.card{{background:var(--card);border:1px solid #23232f;border-radius:16px;padding:36px;max-width:460px;width:100%}}
+h2{{margin-top:0}}
+.muted{{color:var(--muted);font-size:14px;margin-bottom:20px}}
+label{{display:block;margin:16px 0 6px;font-size:14px;font-weight:600}}
+input[type=text],select{{width:100%;padding:10px;border-radius:8px;border:1px solid #2a2a38;background:#0e0e14;color:var(--text)}}
+input[type=file]{{width:100%}}
+.chk{{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:14px;color:var(--muted)}}
+button{{margin-top:24px;width:100%;padding:13px;border:none;border-radius:999px;background:var(--accent);
+color:#fff;font-weight:700;font-size:16px;cursor:pointer}}
+.note{{margin-top:14px;font-size:12px;color:var(--muted)}}
+</style></head><body>
+<div class="card">
+  <h2>🎬 เลือกวิดีโอโพสต์{f' — {nickname}' if nickname else ''}</h2>
+  <p class="muted">แอปนี้ยังไม่ผ่านการอนุมัติจาก TikTok (unaudited) วิดีโอที่โพสต์จะถูกบังคับให้เป็นแบบส่วนตัว (มองเห็นได้เฉพาะตัวเอง) เสมอ ตามกติกาของ TikTok</p>
+  <form action="/posttoday/publish" method="POST" enctype="multipart/form-data">
+    <label>ไฟล์วิดีโอ</label>
+    <input type="file" name="video" accept="video/*" required>
+
+    <label>แคปชั่น</label>
+    <input type="text" name="title" maxlength="150" placeholder="เขียนแคปชั่นสั้นๆ">
+
+    <label>Privacy level</label>
+    <select name="privacy_level" required>
+      <option value="" disabled selected>-- เลือก --</option>
+      {options_html}
+    </select>
+
+    <div class="chk"><input type="checkbox" name="disable_comment" id="dc"><label for="dc" style="margin:0">ปิดคอมเมนต์</label></div>
+    <div class="chk"><input type="checkbox" name="disable_duet" id="dd"><label for="dd" style="margin:0">ปิด Duet</label></div>
+    <div class="chk"><input type="checkbox" name="disable_stitch" id="ds"><label for="ds" style="margin:0">ปิด Stitch</label></div>
+
+    <button type="submit">🚀 Publish ไป TikTok</button>
+  </form>
+  <p class="note">ใช้ TikTok Content Posting API (video.publish / video.upload) — อัปโหลดตรงไปยังบัญชี TikTok ของคุณเอง</p>
+</div>
+</body></html>""", 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
+@app.route("/posttoday/publish", methods=["POST"])
+def posttoday_publish_submit():
+    """รับไฟล์วิดีโอ → เรียก TikTok video/init → อัปโหลดไบต์ไปยัง upload_url — ห้ามลบ"""
+    token = session.get("tiktok_access_token")
+    if not token:
+        return redirect("/posttoday/login")
+
+    video_file = request.files.get("video")
+    privacy_level = request.form.get("privacy_level", "")
+    title = request.form.get("title", "")[:150]
+    if not video_file or not video_file.filename:
+        return "<h2>❌ ไม่พบไฟล์วิดีโอ</h2><a href='/posttoday/publish'>กลับ</a>", 400
+    if not privacy_level:
+        return "<h2>❌ ต้องเลือก privacy level</h2><a href='/posttoday/publish'>กลับ</a>", 400
+
+    video_bytes = video_file.read()
+    video_size = len(video_bytes)
+    if video_size == 0:
+        return "<h2>❌ ไฟล์วิดีโอว่างเปล่า</h2><a href='/posttoday/publish'>กลับ</a>", 400
+
+    init_payload = {
+        "post_info": {
+            "title": title,
+            "privacy_level": privacy_level,
+            "disable_duet": "disable_duet" in request.form,
+            "disable_comment": "disable_comment" in request.form,
+            "disable_stitch": "disable_stitch" in request.form,
+            "video_cover_timestamp_ms": 1000,
+        },
+        "source_info": {
+            "source": "FILE_UPLOAD",
+            "video_size": video_size,
+            "chunk_size": video_size,
+            "total_chunk_count": 1,
+        },
+    }
+
+    try:
+        init_resp = requests.post(
+            "https://open.tiktokapis.com/v2/post/publish/video/init/",
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json; charset=UTF-8"},
+            json=init_payload,
+            timeout=30,
+        )
+        init_data = init_resp.json()
+    except Exception as e:
+        return f"<h2>❌ เริ่มโพสต์ไม่สำเร็จ: {e}</h2><a href='/posttoday/publish'>กลับ</a>", 500
+
+    err = init_data.get("error", {})
+    if err.get("code") not in (None, "ok"):
+        return f"<h2>❌ TikTok ปฏิเสธ: {err.get('code')} — {err.get('message')}</h2><a href='/posttoday/publish'>กลับ</a>", 400
+
+    publish_id = init_data.get("data", {}).get("publish_id", "")
+    upload_url = init_data.get("data", {}).get("upload_url", "")
+    if not upload_url:
+        return f"<h2>❌ ไม่ได้ upload_url กลับมา</h2><pre>{json.dumps(init_data, ensure_ascii=False, indent=2)}</pre><a href='/posttoday/publish'>กลับ</a>", 400
+
+    try:
+        put_resp = requests.put(
+            upload_url,
+            data=video_bytes,
+            headers={
+                "Content-Type": "video/mp4",
+                "Content-Range": f"bytes 0-{video_size - 1}/{video_size}",
+            },
+            timeout=120,
+        )
+    except Exception as e:
+        return f"<h2>❌ อัปโหลดวิดีโอไม่สำเร็จ: {e}</h2><a href='/posttoday/publish'>กลับ</a>", 500
+
+    if put_resp.status_code >= 300:
+        return f"<h2>❌ อัปโหลดวิดีโอไม่สำเร็จ (HTTP {put_resp.status_code})</h2><pre>{put_resp.text[:800]}</pre><a href='/posttoday/publish'>กลับ</a>", 400
+
+    return f"""<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">
+    <title>โพสต์สำเร็จ — PostToday</title>
+    <style>body{{font-family:sans-serif;background:#0d1117;color:#e9edf2;display:flex;height:100vh;
+    align-items:center;justify-content:center;text-align:center}}a{{color:#4ea1ff}}</style></head><body>
+    <div><h2>🚀 อัปโหลดวิดีโอสำเร็จแล้ว!</h2>
+    <p>publish_id: <code>{publish_id}</code></p>
+    <p style="color:#a0a0b0;font-size:14px;max-width:420px">โพสต์นี้เป็นแบบส่วนตัว (SELF_ONLY) เพราะแอปยังไม่ผ่านการอนุมัติจาก TikTok —
+    เปิดแอป TikTok ของคุณเพื่อดูผล (Inbox หรือโปรไฟล์)</p>
+    <p style="margin-top:14px"><a href="/posttoday">กลับหน้าแรก</a></p></div>
     </body></html>""", 200, {"Content-Type": "text/html; charset=utf-8"}
 
 
