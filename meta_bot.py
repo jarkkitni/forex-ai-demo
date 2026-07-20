@@ -558,9 +558,13 @@ def handle(data: dict, client, page_token: str, slug: str = "lullabell",
                     map_img = cfg.get("contact", {}).get("map_image", "")
                     if map_img:
                         try:
-                            send_image_message(page_token, sender, map_img)
-                        except Exception:
-                            pass
+                            img_status, img_resp = send_image_message(page_token, sender, map_img)
+                            # send_image_message ไม่ raise ตอน Meta ตอบ error (แค่คืน status code) — เดิมไม่เช็คค่านี้เลย
+                            # ทำให้ส่งรูปพลาดแบบเงียบสนิท ไม่มีทาง debug ได้จาก Render logs (บั๊กที่เจอ 20 ก.ค.)
+                            if not img_status or img_status >= 400:
+                                print(f"[meta_bot] ส่งรูปแผนที่ล้มเหลว sender={sender} status={img_status}: {img_resp}", flush=True)
+                        except Exception as e:
+                            print(f"[meta_bot] ส่งรูปแผนที่ error: {e}", flush=True)
             except Exception:
                 # AI ตาย ai_guard เด้ง LINE ให้แล้ว — ส่งข้อความ fallback ให้ลูกค้าไม่เงียบ
                 fb = cfg.get("advisor", {}).get("handoff_msg",
