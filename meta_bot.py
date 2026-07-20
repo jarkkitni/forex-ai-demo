@@ -188,6 +188,34 @@ def _menu_text(cfg: dict) -> str:
     return "\n".join(out)
 
 
+def _render_promo_list(cfg: dict) -> str:
+    """แสดงรายการโปรโมชั่น "ฮอต" (groups ที่ hot=true) ทุกหมวด แบบ template ตรงจากข้อมูล — ไม่ผ่าน AI เลย
+    ใช้ตอนลูกค้ากดปุ่ม/ถาม "ดูราคา/โปรโมชั่นทั้งหมด" การันตีราคาไม่มีวันเพี้ยน (ไม่ต้องพึ่งความแม่นของ AI/Groq fallback)
+    และไม่เสีย API token เลยสักครั้ง เพราะเป็นการต่อสตริงจาก config ล้วนๆ"""
+    lines = []
+    for cat in cfg.get("categories", []):
+        hot_items = []
+        for grp in cat.get("groups", []):
+            if grp.get("hot"):
+                hot_items.extend(grp.get("items", []))
+        if not hot_items:
+            continue
+        lines.append(f"{cat.get('emoji', '')} {cat.get('name', '')}".strip())
+        for it in hot_items:
+            n, p, d = it.get("n", ""), it.get("p", ""), it.get("d", "")
+            line = f"• {n}: {p}"
+            if d:
+                line += f" ({d})"
+            lines.append(line)
+        lines.append("")
+    # เอาหมายเหตุของหมวด "hair" (มักมีข้อความสำคัญ เช่น ส่งรูปประเมินราคา) มาแปะท้ายสุด ถ้ามี
+    hair_note = next((c.get("note") for c in cfg.get("categories", []) if c.get("id") == "hair" and c.get("note")), "")
+    if hair_note:
+        lines.append(f"📌 {hair_note}")
+    text = "\n".join(lines).strip()
+    return text or "ตอนนี้ยังไม่มีโปรโมชั่นพิเศษค่ะ สอบถามราคาปกติได้เลยนะคะ 🤍"
+
+
 def _today_th() -> str:
     from datetime import datetime, timezone, timedelta
     d = datetime.now(timezone(timedelta(hours=7)))  # เวลาไทย
@@ -272,6 +300,14 @@ def _system_prompt(cfg: dict) -> str:
 """
 
 
+def _remember_turn(sender_id: str, user_text: str, reply: str) -> None:
+    """บันทึกความจำการสนทนา — ใช้ทั้งจาก generate_reply() และ fast-path ที่ตอบตรงไม่ผ่าน AI (เช่น _render_promo_list)
+    กันเทิร์นถัดไป AI ไม่รู้บริบทว่าลูกค้าเพิ่งถามอะไรไป"""
+    hist = _history.get(sender_id, [])
+    hist = hist + [("user", user_text), ("bot", reply)]
+    _history[sender_id] = hist[-_MAX_TURNS * 2:]
+
+
 def generate_reply(client, cfg: dict, sender_id: str, user_text: str,
                    notify_fn=None, line_user_id: str = "") -> tuple:
     """คืน (reply, promo_choices) — promo_choices เป็น list ชื่อโปร (หรือ None ถ้า AI ไม่ได้แนะนำหลายโปร)"""
@@ -292,8 +328,7 @@ def generate_reply(client, cfg: dict, sender_id: str, user_text: str,
     reply, booking = _parse_booking_tag(raw_reply)
     reply, promo_choices = _parse_promo_tag(reply)
     # อัปเดตความจำ (เก็บข้อความสะอาด ไม่มีแท็ก กันแท็กเก่าหลุดเข้าประวัติแล้ว AI เลียนแบบซ้ำ)
-    hist = hist + [("user", user_text), ("bot", reply)]
-    _history[sender_id] = hist[-_MAX_TURNS * 2:]
+    _remember_turn(sender_id, user_text, reply)
 
     if booking and notify_fn and line_user_id:
         try:
@@ -432,6 +467,8 @@ def handle(data: dict, client, page_token: str, slug: str = "lullabell",
             # ส่วนปุ่ม Quick Reply (Ice Breaker หรือปุ่มเลือกโปรแบบ dynamic) Meta จะแนบ msg.text
             # เป็นชื่อปุ่มที่กดมาให้อยู่แล้วเสมอ ไม่ต้อง map — ใช้ msg.text ตรงๆ ได้เลย
             pb_payload = postback.get("payload", "")
+            qr_payload = msg.get("quick_reply", {}).get("payload", "")
+            effective_payload = pb_payload or qr_payload
 
             if pb_payload and sender:
                 user_text = _ICE_BREAKER_TEXT.get(pb_payload, "")
@@ -453,6 +490,15 @@ def handle(data: dict, client, page_token: str, slug: str = "lullabell",
             # เลือกชุดปุ่มลัดให้ตรงภาษาที่ลูกค้าใช้ล่าสุด (ไทย/อังกฤษ) — ปุ่มเลือกโปร dynamic มาก่อนเสมอถ้ามี
             default_qr = QUICK_REPLIES if _is_thai(user_text) else QUICK_REPLIES_EN
             try:
+                # ปุ่ม "ดูราคา/โปรโมชั่น" (IB_PRICE) — ตอบจาก template ตรงจาก config เลย ไม่ผ่าน AI
+                # การันตีราคาไม่มีวันเพี้ยนไม่ว่า Claude/Groq หรือ AI ล่มก็ตาม และไม่เสีย token แม้แต่บาทเดียว
+                # (คำถามราคาที่พิมพ์เองแบบเจาะจง เช่น "ทำสีราคาเท่าไหร่" ยังให้ AI ตอบตามเดิม เพราะต้องใช้ความเข้าใจบริบท)
+                if effective_payload == "IB_PRICE" and _is_thai(user_text):
+                    reply = _render_promo_list(cfg)
+                    _remember_turn(sender, user_text, reply)
+                    _send_with_quick_replies(page_token, sender, reply, quick_replies=default_qr)
+                    result["replied"] += 1
+                    continue
                 reply, promo_choices = generate_reply(client, cfg, sender, user_text,
                                        notify_fn=notify_fn, line_user_id=line_user_id)
                 qr = _build_promo_quick_replies(promo_choices) if promo_choices else default_qr
