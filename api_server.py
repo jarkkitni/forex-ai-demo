@@ -1746,6 +1746,25 @@ def api_admin_warm_attachment():
         return jsonify({"ok": False, "error": str(e)[:300]}), 500
 
 
+@app.route("/api/admin/token-info")
+def api_admin_token_info():
+    """เช็ค scope/สิทธิ์จริงของ META_PAGE_TOKEN ผ่าน Meta debug_token API
+    ตั้งใจ diagnose error (#100) Upload failed / 2018007 ที่เกิดกับทุก url (แม้ url ภายนอกที่รู้ว่า
+    ใช้ได้แน่ๆ ก็พังเหมือนกัน — ตัดปัจจัย url/hosting ของเราทิ้งไปแล้ว 20 ก.ค.) เหลือทางที่เป็นไปได้คือ
+    token หมด scope/permission สำหรับส่ง attachment (pages_messaging ระดับ Advanced Access)
+    ป้องกันด้วย META_VERIFY_TOKEN เดิม"""
+    token = request.args.get("token", "")
+    if not token or token != META_VERIFY_TOKEN or not META_VERIFY_TOKEN:
+        return jsonify({"ok": False, "error": "unauthorized"}), 403
+    try:
+        r = requests.get(f"{meta_bot.GRAPH}/debug_token",
+                          params={"input_token": META_PAGE_TOKEN, "access_token": META_PAGE_TOKEN},
+                          timeout=15)
+        return jsonify({"status": r.status_code, "data": r.json()})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)[:300]}), 500
+
+
 @app.route("/webhook/line/lullabell", methods=["POST"])
 def lullabell_line_webhook():
     """LINE OA webhook ของร้านลูกค้า (@lullabell) — ใช้ AI advisor ตัวเดียวกับ /webhook/meta
