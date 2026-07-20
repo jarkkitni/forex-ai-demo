@@ -1707,16 +1707,31 @@ def api_admin_warm_attachment():
     """อัปโหลดรูป (เช่น การ์ดแผนที่ร้าน) เข้า Meta แบบ reusable ครั้งเดียว ได้ attachment_id กลับมา
     ใส่ใน config (contact.map_attachment_id) แทนการส่ง url ตรงๆ ทุกครั้ง — กัน Meta fetch url เราไม่ทัน
     ตอน Render free tier เพิ่งตื่นจาก spin-down (สาเหตุ error #100/2018007 'Upload failed' ที่เจอ 20 ก.ค.)
-    เรียกครั้งเดียวตอนตั้งค่า ป้องกันด้วย META_VERIFY_TOKEN เดิม (ของที่มีอยู่แล้ว ไม่ต้องเพิ่ม secret ใหม่)"""
+    เรียกครั้งเดียวตอนตั้งค่า ป้องกันด้วย META_VERIFY_TOKEN เดิม (ของที่มีอยู่แล้ว ไม่ต้องเพิ่ม secret ใหม่)
+    รองรับ ?image_url=<url> override เพื่อ diagnose ว่าปัญหาเจาะจงกับ url ของเรา หรือเป็นที่ token/permission ฝั่ง Meta
+    self_fetch = เราลองโหลด url นั้นเองก่อน (เห็น status/content-type/size จริงตามที่ Meta น่าจะเห็น)"""
     token = request.args.get("token", "")
     if not token or token != META_VERIFY_TOKEN or not META_VERIFY_TOKEN:
         return jsonify({"ok": False, "error": "unauthorized"}), 403
     slug = request.args.get("slug", "lullabell")
+    override_url = request.args.get("image_url", "")
     try:
         cfg = meta_bot.load_cfg(slug)
-        image_url = cfg.get("contact", {}).get("map_image", "")
+        image_url = override_url or cfg.get("contact", {}).get("map_image", "")
         if not image_url:
             return jsonify({"ok": False, "error": "no map_image in config"}), 400
+
+        self_fetch = {}
+        try:
+            hr = requests.get(image_url, timeout=15, headers={"User-Agent": "facebookexternalhit/1.1"})
+            self_fetch = {
+                "status": hr.status_code,
+                "content_type": hr.headers.get("Content-Type"),
+                "content_length": hr.headers.get("Content-Length") or len(hr.content),
+            }
+        except Exception as e:
+            self_fetch = {"error": str(e)[:200]}
+
         status, resp = meta_bot.upload_reusable_attachment(META_PAGE_TOKEN, image_url)
         ok = status == 200
         attachment_id = None
@@ -1725,7 +1740,8 @@ def api_admin_warm_attachment():
                 attachment_id = json.loads(resp).get("attachment_id")
             except Exception:
                 pass
-        return jsonify({"ok": ok, "status": status, "response": resp, "attachment_id": attachment_id})
+        return jsonify({"ok": ok, "status": status, "response": resp, "attachment_id": attachment_id,
+                         "image_url": image_url, "self_fetch": self_fetch})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)[:300]}), 500
 
