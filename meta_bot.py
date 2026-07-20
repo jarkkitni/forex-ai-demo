@@ -10,7 +10,7 @@ ENV ที่ใช้:
 
 PAPER-SAFE: ไม่มีการเงิน ไม่มีลบข้อมูล — แค่รับ/ตอบข้อความ
 """
-import os, json, hmac, hashlib, time, re
+import os, json, hmac, hashlib, time, re, traceback
 import requests
 
 GRAPH = "https://graph.facebook.com/v21.0"
@@ -523,9 +523,15 @@ def handle_line(data: dict, client, channel_token: str, slug: str = "lullabell",
                                     notify_fn=notify_fn, line_user_id=line_user_id, slug=slug)
             send_line_reply(channel_token, reply_token, reply)
             result["replied"] += 1
-        except Exception:
-            fb = cfg.get("advisor", {}).get("handoff_msg",
-                 "ขออภัยค่ะ ระบบขัดข้องชั่วคราว เดี๋ยวแอดมินติดต่อกลับนะคะ 🤍")
+        except Exception as e:
+            # เดิม except เปล่าไม่ log อะไรเลย — เจอเคสจริง 20 ก.ค. ที่ลูกค้าโดน fallback message
+            # ซ้ำๆ แต่ไม่มีทาง debug จาก Render logs ได้เลยว่า exception จริงคืออะไร (AI ล่ม/บั๊กโค้ด/อื่นๆ)
+            print(f"[meta_bot/line] generate_reply error sender={sender}: {e}", flush=True)
+            traceback.print_exc()
+            # ใช้ retry_msg (ไม่ใช่ handoff_msg) — กรณีนี้คือ AI ดีเลย์/สะดุดชั่วคราว ไม่ใช่เคสที่ต้องส่งต่อแอดมินจริงๆ
+            # ลูกค้าทักท้วง 20 ก.ค. ว่าข้อความ "ส่งต่อให้แอดมิน" ทำให้เข้าใจผิดว่าเป็นเรื่องใหญ่ ทั้งที่แค่รอสักครู่ก็ตอบได้แล้ว
+            fb = cfg.get("advisor", {}).get("retry_msg",
+                 "รบกวนรอสักครู่นะคะ น้องเบลล์กำลังดูให้อยู่ค่ะ 🤍")
             send_line_reply(channel_token, reply_token, fb)
             result["skipped"] += 1
     return result
@@ -604,10 +610,16 @@ def handle(data: dict, client, page_token: str, slug: str = "lullabell",
                                 print(f"[meta_bot] ส่งรูปแผนที่ล้มเหลว sender={sender} status={img_status}: {img_resp}", flush=True)
                         except Exception as e:
                             print(f"[meta_bot] ส่งรูปแผนที่ error: {e}", flush=True)
-            except Exception:
-                # AI ตาย ai_guard เด้ง LINE ให้แล้ว — ส่งข้อความ fallback ให้ลูกค้าไม่เงียบ
-                fb = cfg.get("advisor", {}).get("handoff_msg",
-                     "ขออภัยค่ะ ระบบขัดข้องชั่วคราว เดี๋ยวแอดมินติดต่อกลับนะคะ 🤍")
+            except Exception as e:
+                # AI ตาย ai_guard เด้ง LINE ให้แล้ว (ถ้าเป็นสาเหตุ) — ส่งข้อความ fallback ให้ลูกค้าไม่เงียบ
+                # เดิม except เปล่าไม่ log อะไรเลย — เจอเคสจริง 20 ก.ค. ลูกค้าโดน fallback ซ้ำๆ ตอนกดปุ่ม
+                # "ที่อยู่/เวลาเปิด" แต่ไม่มีทาง debug จาก Render logs ได้เลยว่า exception จริงคืออะไร
+                print(f"[meta_bot] generate_reply error sender={sender} payload={effective_payload}: {e}", flush=True)
+                traceback.print_exc()
+                # ใช้ retry_msg (ไม่ใช่ handoff_msg) — กรณีนี้คือ AI ดีเลย์/สะดุดชั่วคราว ไม่ใช่เคสที่ต้องส่งต่อแอดมินจริงๆ
+                # ลูกค้าทักท้วง 20 ก.ค. ว่าข้อความ "ส่งต่อให้แอดมิน" ทำให้เข้าใจผิดว่าเป็นเรื่องใหญ่ ทั้งที่แค่รอสักครู่ก็ตอบได้แล้ว
+                fb = cfg.get("advisor", {}).get("retry_msg",
+                     "รบกวนรอสักครู่นะคะ น้องเบลล์กำลังดูให้อยู่ค่ะ 🤍")
                 _send_with_quick_replies(page_token, sender, fb, quick_replies=default_qr)
                 result["skipped"] += 1
     return result
