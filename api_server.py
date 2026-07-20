@@ -1702,6 +1702,34 @@ def meta_webhook():
     return "EVENT_RECEIVED", 200
 
 
+@app.route("/api/admin/warm-attachment")
+def api_admin_warm_attachment():
+    """อัปโหลดรูป (เช่น การ์ดแผนที่ร้าน) เข้า Meta แบบ reusable ครั้งเดียว ได้ attachment_id กลับมา
+    ใส่ใน config (contact.map_attachment_id) แทนการส่ง url ตรงๆ ทุกครั้ง — กัน Meta fetch url เราไม่ทัน
+    ตอน Render free tier เพิ่งตื่นจาก spin-down (สาเหตุ error #100/2018007 'Upload failed' ที่เจอ 20 ก.ค.)
+    เรียกครั้งเดียวตอนตั้งค่า ป้องกันด้วย META_VERIFY_TOKEN เดิม (ของที่มีอยู่แล้ว ไม่ต้องเพิ่ม secret ใหม่)"""
+    token = request.args.get("token", "")
+    if not token or token != META_VERIFY_TOKEN or not META_VERIFY_TOKEN:
+        return jsonify({"ok": False, "error": "unauthorized"}), 403
+    slug = request.args.get("slug", "lullabell")
+    try:
+        cfg = meta_bot.load_cfg(slug)
+        image_url = cfg.get("contact", {}).get("map_image", "")
+        if not image_url:
+            return jsonify({"ok": False, "error": "no map_image in config"}), 400
+        status, resp = meta_bot.upload_reusable_attachment(META_PAGE_TOKEN, image_url)
+        ok = status == 200
+        attachment_id = None
+        if ok:
+            try:
+                attachment_id = json.loads(resp).get("attachment_id")
+            except Exception:
+                pass
+        return jsonify({"ok": ok, "status": status, "response": resp, "attachment_id": attachment_id})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)[:300]}), 500
+
+
 @app.route("/webhook/line/lullabell", methods=["POST"])
 def lullabell_line_webhook():
     """LINE OA webhook ของร้านลูกค้า (@lullabell) — ใช้ AI advisor ตัวเดียวกับ /webhook/meta

@@ -391,12 +391,15 @@ def send_message(page_token: str, recipient_id: str, text: str, quick_replies: l
         return 0, str(e)[:200]
 
 
-def send_image_message(page_token: str, recipient_id: str, image_url: str) -> tuple:
-    """ส่งรูปภาพกลับผ่าน Meta Send API (attachment type=image, ใช้ URL สาธารณะ ไม่ต้องอัปโหลดล่วงหน้า)
-    ใช้ได้ทั้ง FB + IG ที่ผูกเพจ — is_reusable=True ให้ Meta cache ไว้ ไม่ต้องโหลดรูปใหม่ทุกครั้งที่ส่งซ้ำ"""
-    if not page_token or not image_url:
-        return 0, "no page token / image url"
+def send_image_message(page_token: str, recipient_id: str, image_url: str = "", attachment_id: str = "") -> tuple:
+    """ส่งรูปภาพกลับผ่าน Meta Send API (attachment type=image)
+    ใช้ attachment_id ถ้ามี (แนะนำ — ไม่ต้องให้ Meta ไป fetch url เราใหม่ทุกครั้ง กัน cold-start ของ Render
+    free tier ทำให้ Meta fetch ไม่ทันแล้วได้ error 100/2018007 "Upload failed") ไม่งั้น fallback ไปส่งด้วย url ตรงๆ
+    (is_reusable=True ให้ Meta cache ไว้เผื่อกรณีนั้น)"""
+    if not page_token or (not image_url and not attachment_id):
+        return 0, "no page token / image_url / attachment_id"
     url = f"{GRAPH}/me/messages"
+    payload = {"attachment_id": attachment_id} if attachment_id else {"url": image_url, "is_reusable": True}
     try:
         r = requests.post(
             url,
@@ -407,7 +410,7 @@ def send_image_message(page_token: str, recipient_id: str, image_url: str) -> tu
                 "message": {
                     "attachment": {
                         "type": "image",
-                        "payload": {"url": image_url, "is_reusable": True},
+                        "payload": payload,
                     }
                 },
             },
@@ -416,6 +419,33 @@ def send_image_message(page_token: str, recipient_id: str, image_url: str) -> tu
         return r.status_code, r.text[:300]
     except Exception as e:
         return 0, str(e)[:200]
+
+
+def upload_reusable_attachment(page_token: str, image_url: str) -> tuple:
+    """อัปโหลดรูปแบบ reusable ผ่าน Meta Attachment Upload API ครั้งเดียว → ได้ attachment_id เอาไปใช้ส่งซ้ำได้ตลอดไป
+    ไม่ต้องเรียกทุกครั้งที่แชท — เรียกครั้งเดียวตอนตั้งค่า (ตอนเซิร์ฟเวอร์ตื่นแน่ๆ) แล้วเก็บ attachment_id ไว้ใน config ถาวร
+    แก้ปัญหา: ส่ง url ตรงๆ ทุกครั้ง Meta ต้อง fetch url เราใหม่ทุกรอบ ถ้า Render free tier เพิ่งตื่นจาก
+    spin-down อาจช้าจน Meta fetch timeout แล้วได้ error (#100) Upload failed / error_subcode 2018007"""
+    if not page_token or not image_url:
+        return 0, "no page token / image url"
+    url = f"{GRAPH}/me/message_attachments"
+    try:
+        r = requests.post(
+            url,
+            params={"access_token": page_token},
+            json={
+                "message": {
+                    "attachment": {
+                        "type": "image",
+                        "payload": {"is_reusable": True, "url": image_url},
+                    }
+                }
+            },
+            timeout=30,
+        )
+        return r.status_code, r.text[:500]
+    except Exception as e:
+        return 0, str(e)[:300]
 
 
 LINE_API = "https://api.line.me/v2/bot/message"
@@ -556,9 +586,10 @@ def handle(data: dict, client, page_token: str, slug: str = "lullabell",
                 # best-effort ล้วนๆ — ถ้าส่งรูปพลาด ไม่ทำให้คำตอบหลักที่ส่งไปแล้วเสียหาย
                 if effective_payload == "IB_LOCATION" or _is_location_query(user_text):
                     map_img = cfg.get("contact", {}).get("map_image", "")
-                    if map_img:
+                    map_attach_id = cfg.get("contact", {}).get("map_attachment_id", "")
+                    if map_img or map_attach_id:
                         try:
-                            img_status, img_resp = send_image_message(page_token, sender, map_img)
+                            img_status, img_resp = send_image_message(page_token, sender, image_url=map_img, attachment_id=map_attach_id)
                             # send_image_message ไม่ raise ตอน Meta ตอบ error (แค่คืน status code) — เดิมไม่เช็คค่านี้เลย
                             # ทำให้ส่งรูปพลาดแบบเงียบสนิท ไม่มีทาง debug ได้จาก Render logs (บั๊กที่เจอ 20 ก.ค.)
                             if not img_status or img_status >= 400:
