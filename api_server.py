@@ -1397,9 +1397,9 @@ def demo_chat_api(slug):
     try:
         client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
         cfg = meta_bot.load_cfg(slug)
-        reply = meta_bot.generate_reply(client, cfg, f"demo:{slug}:{session_id}", user_text,
+        reply, promo_choices = meta_bot.generate_reply(client, cfg, f"demo:{slug}:{session_id}", user_text,
                                         notify_fn=_push_line, line_user_id=LINE_USER_ID)
-        return jsonify({"success": True, "reply": reply})
+        return jsonify({"success": True, "reply": reply, "promo_choices": promo_choices or []})
     except Exception as e:
         traceback.print_exc()
         return jsonify({"success": False, "error": "ขออภัยค่ะ ระบบขัดข้องชั่วคราว"}), 500

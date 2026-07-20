@@ -24,6 +24,10 @@ _MAX_TURNS = 8
 _BOOKING_RE = re.compile(r'\n?\[\[BOOKING:\s*(.*?)\s*\]\]', re.S)
 _BOOKING_FIELDS = ("บริการ", "วันที่", "เวลา", "ชื่อ", "เบอร์")
 
+# ---- แท็กเลือกโปร — AI แปะท้ายข้อความเวลาแนะนำโปร 2 อย่างขึ้นไป ให้ลูกค้ากดเลือกแทนพิมพ์ ----
+_PROMO_RE = re.compile(r'\n?\[\[PROMO:\s*(.*?)\s*\]\]', re.S)
+_PROMO_TITLE_MAX = 20  # ขีดจำกัด title ปุ่ม quick reply ของ Meta
+
 # ---- Ice Breakers — ปุ่มคำถามให้เลือกกดตอนลูกค้าใหม่เปิดแชทครั้งแรก ----
 # question = ข้อความปุ่มที่ลูกค้าเห็น (ตั้งค่าจริงผ่าน setup_ice_breakers.py ยิงไปที่ Meta)
 # payload  = รหัสที่ Meta ส่งกลับมาตอนลูกค้ากด (ไม่ใช่ข้อความ ต้อง map เอง)
@@ -66,6 +70,24 @@ def _parse_booking_tag(text: str) -> tuple:
     if not (fields.get("วันที่") or fields.get("เวลา")):
         return clean, None
     return clean, fields
+
+
+def _parse_promo_tag(text: str) -> tuple:
+    """แยกแท็ก [[PROMO: ชื่อ1 | ชื่อ2 | ...]] ออกจากข้อความ คืน (ข้อความสะอาด, list ชื่อโปร หรือ None)
+    ใช้ตอน AI แนะนำโปรหลายอย่าง — แปลงเป็นปุ่ม quick reply ให้ลูกค้ากดเลือกแทนพิมพ์"""
+    m = _PROMO_RE.search(text or "")
+    if not m:
+        return (text or "").strip(), None
+    clean = _PROMO_RE.sub("", text).strip()
+    names = [n.strip()[:_PROMO_TITLE_MAX] for n in m.group(1).split("|") if n.strip()]
+    names = names[:8]  # กันปุ่มเยอะเกินไป (รวมกับปุ่มอื่นต้องไม่เกิน 13 ตามสเปก Meta)
+    return clean, names or None
+
+
+def _build_promo_quick_replies(names: list) -> list:
+    """สร้างปุ่ม quick reply จากรายชื่อโปร — กดแล้ว Meta จะส่ง title ปุ่มกลับมาเป็นข้อความลูกค้าเอง
+    (ไม่ต้อง map payload->ข้อความเหมือน Ice Breaker เพราะ title คือข้อความอยู่แล้ว)"""
+    return [{"content_type": "text", "title": n, "payload": f"PROMO_{i}"} for i, n in enumerate(names)]
 
 
 def load_cfg(slug: str = "lullabell") -> dict:
@@ -205,6 +227,12 @@ def _system_prompt(cfg: dict) -> str:
   [[BOOKING: บริการ=<ชื่อบริการที่สนใจ หรือ -> | วันที่=<วันที่ลูกค้าบอก> | เวลา=<เวลาที่ลูกค้าบอก> | ชื่อ=<ชื่อลูกค้าถ้ารู้ หรือ -> | เบอร์=<เบอร์โทรถ้ารู้ หรือ ->]]
 - แท็กนี้ระบบจะตัดออกก่อนส่งข้อความให้ลูกค้าเห็น (ใช้แจ้งเตือนแอดมินเบื้องหลังเท่านั้น) — ใส่ทุกครั้งที่ลูกค้าให้วัน-เวลามา แม้จะยังไม่มีชื่อ/เบอร์ก็ตาม
 
+กติกาปุ่มเลือกโปร (เมื่อแนะนำโปรโมชั่น/บริการตั้งแต่ 2 รายการขึ้นไปในคำตอบเดียว):
+- ตอบชื่อ+ราคาแต่ละโปรตามปกติก่อน จากนั้นขึ้นบรรทัดใหม่ ต่อท้ายด้วยแท็กนี้เป๊ะๆ (ห้ามมีข้อความอื่นแทรกในบรรทัดนี้ ห้ามอธิบายเพิ่ม):
+  [[PROMO: ชื่อโปร1 | ชื่อโปร2 | ชื่อโปร3]]
+- ใส่เฉพาะ "ชื่อโปร" สั้นๆ ตามที่ระบุในเมนู (ไม่ต้องมีราคา) แต่ละชื่อห้ามยาวเกิน 20 ตัวอักษร ถ้าชื่อยาวให้ย่อให้กระชับที่สุดแต่ยังเข้าใจได้
+- แท็กนี้ระบบจะตัดออกก่อนส่งข้อความให้ลูกค้าเห็นเช่นกัน (ใช้แปลงเป็นปุ่มกดเลือกแทนพิมพ์) — ใส่เฉพาะตอนแนะนำหลายโปรจริงๆ ถ้าตอบโปรเดียวหรือคุยเรื่องอื่นไม่ต้องใส่
+
 ประโยคชวนปิดการขาย (ใช้ปรับได้):
 {close_txt}
 
@@ -216,7 +244,8 @@ def _system_prompt(cfg: dict) -> str:
 
 
 def generate_reply(client, cfg: dict, sender_id: str, user_text: str,
-                   notify_fn=None, line_user_id: str = "") -> str:
+                   notify_fn=None, line_user_id: str = "") -> tuple:
+    """คืน (reply, promo_choices) — promo_choices เป็น list ชื่อโปร (หรือ None ถ้า AI ไม่ได้แนะนำหลายโปร)"""
     import ai_guard
     hist = _history.get(sender_id, [])
     convo = "\n".join(f"{'ลูกค้า' if r=='user' else 'น้องเบลล์'}: {t}" for r, t in hist)
@@ -229,6 +258,7 @@ def generate_reply(client, cfg: dict, sender_id: str, user_text: str,
     raw_reply = ai_guard.call(client, prompt, max_tokens=700, smart=True,
                               notify_fn=notify_fn, line_user_id=line_user_id)
     reply, booking = _parse_booking_tag(raw_reply)
+    reply, promo_choices = _parse_promo_tag(reply)
     # อัปเดตความจำ (เก็บข้อความสะอาด ไม่มีแท็ก กันแท็กเก่าหลุดเข้าประวัติแล้ว AI เลียนแบบซ้ำ)
     hist = hist + [("user", user_text), ("bot", reply)]
     _history[sender_id] = hist[-_MAX_TURNS * 2:]
@@ -245,7 +275,7 @@ def generate_reply(client, cfg: dict, sender_id: str, user_text: str,
         except Exception:
             pass  # แจ้งเตือนพลาดไม่ควรทำให้ตอบลูกค้าไม่ได้
 
-    return reply
+    return reply, promo_choices
 
 
 def send_message(page_token: str, recipient_id: str, text: str, quick_replies: list = None) -> tuple:
@@ -336,7 +366,7 @@ def handle_line(data: dict, client, channel_token: str, slug: str = "lullabell",
             result["skipped"] += 1
             continue
         try:
-            reply = generate_reply(client, cfg, history_key, user_text,
+            reply, _promo_choices = generate_reply(client, cfg, history_key, user_text,
                                     notify_fn=notify_fn, line_user_id=line_user_id)
             send_line_reply(channel_token, reply_token, reply)
             result["replied"] += 1
@@ -366,13 +396,13 @@ def handle(data: dict, client, page_token: str, slug: str = "lullabell",
             sender = ev.get("sender", {}).get("id", "")
             msg = ev.get("message", {})
             postback = ev.get("postback", {})
-            # payload มาได้ 2 ทาง: กดปุ่ม postback (Ice Breaker ตอนเปิดแชท) หรือกดปุ่ม Quick Reply
-            # (แนบมากับข้อความปกติทุกครั้งที่บอทตอบ — มาในรูป msg.quick_reply.payload)
-            postback_payload = postback.get("payload", "") or msg.get("quick_reply", {}).get("payload", "")
+            # postback มาจากปุ่ม Ice Breaker ตอนเปิดแชทครั้งแรก (ไม่มี msg.text แนบมาด้วย ต้อง map เอง)
+            # ส่วนปุ่ม Quick Reply (Ice Breaker หรือปุ่มเลือกโปรแบบ dynamic) Meta จะแนบ msg.text
+            # เป็นชื่อปุ่มที่กดมาให้อยู่แล้วเสมอ ไม่ต้อง map — ใช้ msg.text ตรงๆ ได้เลย
+            pb_payload = postback.get("payload", "")
 
-            if postback_payload and sender:
-                # ลูกค้ากดปุ่ม Ice Breaker หรือ Quick Reply — map payload -> ข้อความ เหมือนพิมพ์เอง
-                user_text = _ICE_BREAKER_TEXT.get(postback_payload, "")
+            if pb_payload and sender:
+                user_text = _ICE_BREAKER_TEXT.get(pb_payload, "")
                 if not user_text:
                     result["skipped"] += 1
                     continue
@@ -389,9 +419,10 @@ def handle(data: dict, client, page_token: str, slug: str = "lullabell",
                 result["skipped"] += 1
                 continue
             try:
-                reply = generate_reply(client, cfg, sender, user_text,
+                reply, promo_choices = generate_reply(client, cfg, sender, user_text,
                                        notify_fn=notify_fn, line_user_id=line_user_id)
-                _send_with_quick_replies(page_token, sender, reply)
+                qr = _build_promo_quick_replies(promo_choices) if promo_choices else None
+                _send_with_quick_replies(page_token, sender, reply, quick_replies=qr)
                 result["replied"] += 1
             except Exception:
                 # AI ตาย ai_guard เด้ง LINE ให้แล้ว — ส่งข้อความ fallback ให้ลูกค้าไม่เงียบ
@@ -402,10 +433,11 @@ def handle(data: dict, client, page_token: str, slug: str = "lullabell",
     return result
 
 
-def _send_with_quick_replies(page_token: str, sender: str, text: str) -> None:
+def _send_with_quick_replies(page_token: str, sender: str, text: str, quick_replies: list = None) -> None:
     """ส่งข้อความพร้อม Quick Replies — ถ้า Meta ปฏิเสธ (เช่น payload ผิดสเปก) ให้ log ไว้ดูใน Render logs
-    แล้วลองส่งใหม่แบบไม่มีปุ่ม กันลูกค้าไม่ได้รับข้อความเลยเพราะปุ่มพัง"""
-    status, resp_text = send_message(page_token, sender, text, quick_replies=QUICK_REPLIES)
+    แล้วลองส่งใหม่แบบไม่มีปุ่ม กันลูกค้าไม่ได้รับข้อความเลยเพราะปุ่มพัง
+    quick_replies: ถ้าไม่ใส่ (None) จะใช้ปุ่ม Ice Breaker เริ่มต้น (QUICK_REPLIES) — ใส่มาเองได้เมื่อ AI แนะนำโปรหลายอย่าง"""
+    status, resp_text = send_message(page_token, sender, text, quick_replies=quick_replies or QUICK_REPLIES)
     if not status or status >= 400:
         print(f"[meta_bot] send_message with quick_replies failed ({status}): {resp_text} — retry without buttons")
         send_message(page_token, sender, text)
