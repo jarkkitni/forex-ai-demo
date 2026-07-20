@@ -79,6 +79,18 @@ def _is_thai(text: str) -> bool:
     return bool(_THAI_CHAR_RE.search(text or ""))
 
 
+_LOCATION_RE = re.compile(
+    r'ที่อยู่|แผนที่|ทางมา|เส้นทาง|เดินทางมา|อยู่ที่ไหน|อยู่ตรงไหน|อยู่ไหน|อยู่แถวไหน|'
+    r'\bmap\b|\blocation\b|\baddress\b|\bdirection', re.I
+)
+
+
+def _is_location_query(text: str) -> bool:
+    """เดาว่าลูกค้ากำลังถามเรื่องที่อยู่/ทางมาร้านไหม — ใช้ตัดสินใจว่าจะแนบรูปการ์ดแผนที่ (map-card) ไปด้วยหรือเปล่า
+    คำตอบพลาด (false positive/negative) ไม่ร้ายแรง แค่ไม่ได้แนบรูป/แนบเกิน ไม่กระทบคำตอบข้อความหลัก"""
+    return bool(_LOCATION_RE.search(text or ""))
+
+
 def _parse_booking_tag(text: str) -> tuple:
     """แยกแท็ก [[BOOKING: ...]] ออกจากข้อความที่จะส่งลูกค้า คืน (ข้อความสะอาด, dict หรือ None)"""
     m = _BOOKING_RE.search(text or "")
@@ -251,6 +263,10 @@ def _system_prompt(cfg: dict) -> str:
         f"ที่อยู่ {c.get('address','')} ({c.get('parking','')})"
         + (f" · แผนที่ {map_link}" if map_link else "")
     )
+    # จุดสังเกต — เดิม config มี field นี้อยู่แล้วแต่ไม่เคยถูกส่งเข้า system prompt เลย (บั๊กที่เจอ 20 ก.ค.)
+    # ทำให้ AI ตอบที่อยู่ได้แต่ไม่มีจุดสังเกตประกอบเลยสักครั้ง — แก้โดยต่อเป็นข้อความสำเร็จรูปมาให้ตรงเป๊ะ
+    landmarks = c.get("landmarks", [])
+    landmarks_txt = " / ".join(landmarks) if isinstance(landmarks, list) else ""
     perks_txt = "\n".join(f"- {x}" for x in
                           [cfg.get("gift"), cfg.get("perks"), cfg.get("friend_promo"), cfg.get("topup_promo")] if x)
     return f"""คุณคือ "น้องเบลล์" ผู้ช่วยตอบแชทของร้าน {cfg.get('biz_full', cfg.get('biz_name',''))} {cfg.get('emoji','')}
@@ -273,7 +289,7 @@ def _system_prompt(cfg: dict) -> str:
 - ถ้าราคาขึ้นกับสภาพผม/ความยาว ให้บอกช่วงราคาแล้วชวนให้แอดมินประเมิน
 - ถ้าเมนูมีระบุ "หมดเขต <วันที่>" ให้เทียบกับวันนี้ก่อนเสมอ ถ้าหมดเขตไปแล้วห้ามเสนอราคาโปรนั้น ให้แจ้งว่าโปรหมดแล้วและเสนอราคาปกติ/โปรอื่นแทน
 - ถ้าลูกค้าสนใจจอง/ถามคิว → ชวนบอกวัน-เวลาที่สะดวก แล้วบอกว่าจะให้แอดมินยืนยันคิวให้
-- ถ้าลูกค้าถามที่อยู่/ทางมาร้าน ให้บอกที่อยู่ + จุดสังเกตสั้นๆ แล้ว**แปะลิงก์แผนที่ต่อท้ายในข้อความเดียวกันเสมอ**{(" (" + map_link + ")") if map_link else ""} — Facebook จะโชว์รูปแผนที่ preview ให้อัตโนมัติเมื่อมีลิงก์นี้ในข้อความ ห้ามละลิงก์นี้ทิ้ง
+- ถ้าลูกค้าถามที่อยู่/ทางมาร้าน ให้บอกที่อยู่ + จุดสังเกต{(" (ใช้ตามนี้เป๊ะๆ: " + landmarks_txt + ")") if landmarks_txt else "สั้นๆ"} แล้ว**แปะลิงก์แผนที่ต่อท้ายในข้อความเดียวกันเสมอ**{(" (" + map_link + ")") if map_link else ""} — Facebook จะโชว์รูปแผนที่ preview ให้อัตโนมัติเมื่อมีลิงก์นี้ในข้อความ ห้ามละลิงก์นี้ทิ้ง ระบบจะแนบรูปการ์ดแผนที่ของร้านให้อัตโนมัติแยกต่างหากอยู่แล้ว ไม่ต้องพูดถึงรูปในข้อความ
 - ถ้าลูกค้าขอคุยคน/เรื่องซับซ้อนเกินเมนู → {adv.get('handoff_msg','ขอส่งต่อให้แอดมินนะคะ')} ({contact_txt})
 - ถ้าลูกค้าสนใจโปรเติมเครดิต/สมัครแพ็กเกจ ให้แนะนำรายละเอียดได้ แต่บอกให้ทำรายการที่หน้าร้านหรือติดต่อแอดมิน (ระบบแชทนี้แค่ให้ข้อมูล ไม่ได้ทำธุรกรรมเครดิตให้)
 - ห้ามสัญญาสิ่งที่ไม่มีในเมนู ห้ามให้คำแนะนำทางการแพทย์
@@ -367,6 +383,33 @@ def send_message(page_token: str, recipient_id: str, text: str, quick_replies: l
                 "recipient": {"id": recipient_id},
                 "messaging_type": "RESPONSE",
                 "message": message,
+            },
+            timeout=15,
+        )
+        return r.status_code, r.text[:300]
+    except Exception as e:
+        return 0, str(e)[:200]
+
+
+def send_image_message(page_token: str, recipient_id: str, image_url: str) -> tuple:
+    """ส่งรูปภาพกลับผ่าน Meta Send API (attachment type=image, ใช้ URL สาธารณะ ไม่ต้องอัปโหลดล่วงหน้า)
+    ใช้ได้ทั้ง FB + IG ที่ผูกเพจ — is_reusable=True ให้ Meta cache ไว้ ไม่ต้องโหลดรูปใหม่ทุกครั้งที่ส่งซ้ำ"""
+    if not page_token or not image_url:
+        return 0, "no page token / image url"
+    url = f"{GRAPH}/me/messages"
+    try:
+        r = requests.post(
+            url,
+            params={"access_token": page_token},
+            json={
+                "recipient": {"id": recipient_id},
+                "messaging_type": "RESPONSE",
+                "message": {
+                    "attachment": {
+                        "type": "image",
+                        "payload": {"url": image_url, "is_reusable": True},
+                    }
+                },
             },
             timeout=15,
         )
@@ -509,6 +552,15 @@ def handle(data: dict, client, page_token: str, slug: str = "lullabell",
                 qr = _build_promo_quick_replies(promo_choices) if promo_choices else default_qr
                 _send_with_quick_replies(page_token, sender, reply, quick_replies=qr)
                 result["replied"] += 1
+                # ลูกค้าถามที่อยู่/แผนที่ (กดปุ่ม IB_LOCATION หรือพิมพ์เอง) → แนบรูปการ์ดแผนที่ตามหลังข้อความ
+                # best-effort ล้วนๆ — ถ้าส่งรูปพลาด ไม่ทำให้คำตอบหลักที่ส่งไปแล้วเสียหาย
+                if effective_payload == "IB_LOCATION" or _is_location_query(user_text):
+                    map_img = cfg.get("contact", {}).get("map_image", "")
+                    if map_img:
+                        try:
+                            send_image_message(page_token, sender, map_img)
+                        except Exception:
+                            pass
             except Exception:
                 # AI ตาย ai_guard เด้ง LINE ให้แล้ว — ส่งข้อความ fallback ให้ลูกค้าไม่เงียบ
                 fb = cfg.get("advisor", {}).get("handoff_msg",
