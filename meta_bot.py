@@ -284,7 +284,10 @@ def generate_reply(client, cfg: dict, sender_id: str, user_text: str,
         + f"\n\nลูกค้าเพิ่งพิมพ์ว่า: \"{user_text}\"\n"
         + "ตอบกลับในฐานะน้องเบลล์ (ข้อความเดียว สั้น กระชับ):"
     )
-    raw_reply = ai_guard.call(client, prompt, max_tokens=700, smart=True,
+    # ai_tier ต่อร้าน: "smart" (ค่าเริ่มต้น กันของเก่าพังถ้าไม่ได้ตั้ง) = ใช้ Claude เป็นหลัก + fallback Groq อัตโนมัติถ้า Claude ล่ม
+    # "free" = ใช้ Groq (ฟรี) เป็นหลักเลย สำหรับร้านที่ยังไม่ได้อัปเกรดแพ็กเกจ AI ฉลาดขึ้น
+    tier = cfg.get("ai_tier", "smart")
+    raw_reply = ai_guard.call(client, prompt, max_tokens=700, smart=True, tier=tier,
                               notify_fn=notify_fn, line_user_id=line_user_id)
     reply, booking = _parse_booking_tag(raw_reply)
     reply, promo_choices = _parse_promo_tag(reply)

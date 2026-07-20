@@ -2,6 +2,9 @@
   "_client": "Lullabell Beauty Salon — ลูกค้าจ่ายจริงคนแรก (order #49XOM4U4, 18 ก.ค. 2026)",
   "_note": "ราคาจากเมนูที่ลูกค้าส่งมา 18 ก.ค. · ใบสีชมพู/ครีม = ราคาปกติ (ไม่ใช่โปร) · อัปเดตโปรเพิ่ม 19 ก.ค. (Color Retouch, Color Premium Vegan, หมดเขตโปร 31 ส.ค.)",
 
+  "ai_tier": "smart",
+  "_ai_tier_note": "grandfathered เป็น smart (Claude) — ลูกค้ารายแรกที่จูนพรอมต์มาละเอียดแล้ว อย่าลดเป็น free (Groq) โดยไม่ถามก่อน ลูกค้าใหม่ต่อจากนี้ default = free เว้นจ่ายอัปเกรด",
+
   "biz_name": "Lullabell",
   "biz_full": "ลัลลาเบล บิวตี้ ซาลอน",
   "emoji": "🤍",
