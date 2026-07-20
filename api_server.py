@@ -1641,8 +1641,13 @@ def n8n_facebook_post():
     if not N8N_POST_SECRET:
         return jsonify({"success": False, "error": "N8N_POST_SECRET ยังไม่ได้ตั้งบน Render"}), 503
     body = request.get_json(silent=True) or {}
-    if body.get("secret") != N8N_POST_SECRET:
-        return jsonify({"success": False, "error": "invalid secret"}), 403
+    got_secret = (body.get("secret") or "").strip()
+    if got_secret != N8N_POST_SECRET.strip():
+        # ไม่โชว์ค่าจริงเพื่อความปลอดภัย แต่บอกความยาวช่วย debug เคส copy-paste เผลอมีช่องว่าง/ตัดตัวอักษร
+        return jsonify({
+            "success": False, "error": "invalid secret",
+            "hint": f"ได้รับ {len(got_secret)} ตัวอักษร ต้องการ {len(N8N_POST_SECRET.strip())} ตัวอักษร"
+        }), 403
     message = (body.get("message") or "").strip()
     if not message:
         return jsonify({"success": False, "error": "missing message"}), 400
