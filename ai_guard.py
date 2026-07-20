@@ -63,9 +63,11 @@ def _call_groq(prompt: str, max_tokens: int = 1000) -> str:
     return r.json()["choices"][0]["message"]["content"].strip()
 
 
-def _alert(err: str, notify_fn, line_user_id: str, degraded: bool = False) -> None:
-    """AI มีปัญหา — degraded=True หมายถึง Claude ล่มแต่ fallback ไป Groq ได้ (ลูกค้ายังได้คำตอบ แค่คุณภาพลดลงชั่วคราว)
-    degraded=False หมายถึงทุกทางตันหมด ต้องรู้เดี๋ยวนี้"""
+def _alert(err: str, notify_fn, line_user_id: str, degraded: bool = False,
+           failed_provider: str = "Claude", fallback_provider: str = "Groq") -> None:
+    """AI มีปัญหา — degraded=True หมายถึงตัวหลักล่มแต่ fallback ไปตัวสำรองได้ (ลูกค้ายังได้คำตอบ แค่คุณภาพลดลงชั่วคราว)
+    degraded=False หมายถึงทุกทางตันหมด ต้องรู้เดี๋ยวนี้
+    failed_provider/fallback_provider: ระบุทิศทางจริงที่เกิดขึ้น (Claude→Groq หรือ Groq→Claude Haiku) กันข้อความแจ้งเตือนผิดทิศ"""
     now = time.time()
     if now - _health["alerted_at"] < ALERT_COOLDOWN:
         return
@@ -83,7 +85,7 @@ def _alert(err: str, notify_fn, line_user_id: str, degraded: bool = False) -> No
     try:
         if degraded:
             notify_fn(line_user_id, (
-                "⚠️ Claude ใช้งานไม่ได้ชั่วคราว — สลับไปใช้ Groq (ฟรี) แทนอัตโนมัติแล้ว\n"
+                f"⚠️ {failed_provider} ใช้งานไม่ได้ชั่วคราว — สลับไปใช้ {fallback_provider} แทนอัตโนมัติแล้ว\n"
                 "━━━━━━━━━━━━\n"
                 "บอทลูกค้ายังตอบได้ปกติ แค่คุณภาพคำตอบอาจลดลงเล็กน้อยชั่วคราว\n"
                 "━━━━━━━━━━━━\n"
@@ -115,7 +117,8 @@ def call(client, prompt: str, max_tokens: int = 1000, smart: bool = True,
     เรียก AI แบบมีเกราะ — คืน text ดิบ
     tier="smart" (ค่าเริ่มต้น) → ใช้ Claude (smart=True→Sonnet, False→Haiku) เป็นหลัก
                                   ถ้า Claude ล่ม (เครดิตหมด/quota/key พัง) จะ fallback ไป Groq (ฟรี) อัตโนมัติ กันบอทลูกค้าเงียบ
-    tier="free"  → ใช้ Groq (ฟรี) เป็นหลักเลย ไม่แตะเครดิต Claude — ใช้กับบอทลูกค้าที่ยังไม่ได้อัปเกรดเป็นแพ็กเกจ AI ฉลาดขึ้น
+    tier="free"  → ใช้ Groq (ฟรี) เป็นหลักเลย ไม่แตะเครดิต Claude ตามปกติ — ใช้กับบอทลูกค้าที่ยังไม่ได้อัปเกรดเป็นแพ็กเกจ AI ฉลาดขึ้น
+                                  ถ้า Groq ล่ม (rate limit/API ปัญหา) จะ fallback ไป Claude Haiku (ถูก) อัตโนมัติเช่นกัน กันบอทเงียบสนิท
     """
     _health["calls"] += 1
 
@@ -127,10 +130,25 @@ def call(client, prompt: str, max_tokens: int = 1000, smart: bool = True,
             _health["last_ok"] = datetime.now(timezone.utc).isoformat()
             return text
         except Exception as e:
-            _health["ok"] = False
             _health["fails"] += 1
             _health["last_error"] = f"[groq] {str(e)[:190]}"
             _health["last_error_at"] = datetime.now(timezone.utc).isoformat()
+            # Groq ล่ม → ลอง fallback ไป Claude Haiku (ถูกสุด) ก่อนยอมแพ้ กันบอทลูกค้าเงียบไปเลย
+            if client:
+                try:
+                    msg = client.messages.create(
+                        model=MODEL_CHEAP, max_tokens=max_tokens,
+                        messages=[{"role": "user", "content": prompt}],
+                    )
+                    _health["ok"] = True
+                    _health["last_provider"] = "claude-haiku (fallback)"
+                    _health["last_ok"] = datetime.now(timezone.utc).isoformat()
+                    _alert(str(e), notify_fn, line_user_id, degraded=True,
+                           failed_provider="Groq", fallback_provider="Claude Haiku")
+                    return msg.content[0].text.strip()
+                except Exception:
+                    pass  # fallback ก็พังด้วย ปล่อยให้ตกไป alert แบบเต็มข้างล่าง
+            _health["ok"] = False
             _alert(str(e), notify_fn, line_user_id, degraded=False)
             raise
 
