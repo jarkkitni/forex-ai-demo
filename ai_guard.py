@@ -88,22 +88,40 @@ def health_all() -> dict:
     return {slug: health(slug) for slug in list(_health_by_slug)}
 
 
+GROQ_RETRY_MAX = 1          # จำนวนครั้งที่ลองใหม่ตอนโดน rate limit (429) ก่อนยอมแพ้ไป fallback
+GROQ_RETRY_WAIT_CAP = 3.0   # วินาที — กันรอนานเกินจน Meta webhook timeout (Meta รอ ~20 วิ)
+
+
 def _call_groq(prompt: str, max_tokens: int = 1000) -> str:
-    """เรียก Groq (ฟรี, OpenAI-compatible endpoint) — ใช้ requests ตรงๆ ไม่ต้องเพิ่ม dependency ใหม่"""
+    """เรียก Groq (ฟรี, OpenAI-compatible endpoint) — ใช้ requests ตรงๆ ไม่ต้องเพิ่ม dependency ใหม่
+    20 ก.ค. เจอเคสจริง: ลูกค้าพิมพ์ถี่ 2 ข้อความติดกัน โดน Groq free tier rate limit (429) ตอบข้อความที่ 2
+    ทั้งที่ไม่ได้ล่มจริง แค่ชนลิมิตความถี่ต่อนาทีเฉยๆ → เพิ่ม retry สั้นๆ ก่อนยอมแพ้ไป fallback
+    (ใช้ Retry-After header จาก Groq ถ้ามีบอกมา ไม่งั้น backoff เอง) กันเด้งไป fallback บ่อยเกินจำเป็น"""
     if not GROQ_API_KEY:
         raise RuntimeError("GROQ_API_KEY ยังไม่ได้ตั้ง — สมัครฟรีที่ console.groq.com แล้วใส่ค่าใน Render")
-    r = requests.post(
-        GROQ_URL,
-        headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
-        json={
-            "model": GROQ_MODEL,
-            "messages": [{"role": "user", "content": prompt}],
-            "max_tokens": max_tokens,
-        },
-        timeout=30,
-    )
-    r.raise_for_status()
-    return r.json()["choices"][0]["message"]["content"].strip()
+    attempt = 0
+    while True:
+        r = requests.post(
+            GROQ_URL,
+            headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
+            json={
+                "model": GROQ_MODEL,
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": max_tokens,
+            },
+            timeout=30,
+        )
+        if r.status_code == 429 and attempt < GROQ_RETRY_MAX:
+            try:
+                wait = float(r.headers.get("Retry-After", 0))
+            except (TypeError, ValueError):
+                wait = 0
+            wait = min(wait or 1.5 * (attempt + 1), GROQ_RETRY_WAIT_CAP)
+            time.sleep(wait)
+            attempt += 1
+            continue
+        r.raise_for_status()
+        return r.json()["choices"][0]["message"]["content"].strip()
 
 
 def _alert(slug: str, err: str, notify_fn, line_user_id: str, degraded: bool = False,
