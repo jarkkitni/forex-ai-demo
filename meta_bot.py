@@ -225,10 +225,14 @@ def _today_th() -> str:
 
 
 def _map_link(cfg: dict) -> str:
-    """ลิงก์ Google Maps จากที่อยู่ในคอนฟิก — ไม่ต้องมี API key/บัญชี Google Cloud
+    """ลิงก์ Google Maps ของร้าน — ถ้าคอนฟิกมี "map_link" ตรงๆ (เช่นลิงก์สั้นที่ร้านส่งมาเอง maps.app.goo.gl/...)
+    จะใช้อันนั้นเลย (สั้นกว่า แม่นกว่า เพราะปักหมุดตำแหน่งจริง ไม่ใช่แค่ค้นหาจากข้อความที่อยู่)
+    ถ้าไม่มีจะ fallback ไปสร้างลิงก์ค้นหาจากที่อยู่ในคอนฟิกแทน (ไม่ต้องมี API key/บัญชี Google Cloud)
     วางลิงก์นี้ในข้อความแชท Facebook Messenger จะโชว์ preview การ์ดแผนที่ให้อัตโนมัติ"""
     import urllib.parse
     c = cfg.get("contact", {})
+    if c.get("map_link"):
+        return c["map_link"]
     addr = c.get("map_query") or c.get("address", "")
     if not addr:
         return ""
