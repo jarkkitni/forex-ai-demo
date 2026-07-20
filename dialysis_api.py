@@ -23,20 +23,7 @@ FILTERS = {"F7": 96, "F60": 82, "F80": 110, "F100": 132}
 CUTOFF_PCT = 80
 MAX_REUSE = 20
 
-SCHEDULE_MAP = {"จ-พ-ศ": [0, 2, 4], "อ-พฤ-ส": [1, 3, 5]}  # Mon=0 (เก็บไว้เป็น default อ้างอิง)
-
-# แปลงรหัสวัน → รองรับ "ทุก" ชุดวันที่พยาบาลกำหนดเอง ไม่ใช่แค่ 2 แพทเทิร์นเดิม
-DAY_CODE = {"จ": 0, "อ": 1, "พ": 2, "พฤ": 3, "ศ": 4, "ส": 5, "อา": 6}
-
-
-def _parse_schedule(schedule: str) -> list[int]:
-    """'จ-พ-ศ' / 'พ-อา' / 'จ-ศ' ฯลฯ → weekday index list (แตะเลือกกี่วันก็ได้)"""
-    out = []
-    for token in (schedule or "").split("-"):
-        token = token.strip()
-        if token in DAY_CODE:
-            out.append(DAY_CODE[token])
-    return sorted(set(out))
+SCHEDULE_MAP = {"จ-พ-ศ": [0, 2, 4], "อ-พฤ-ส": [1, 3, 5]}  # Mon=0
 
 
 def is_configured() -> bool:
@@ -118,8 +105,8 @@ def create_patient(name: str, hn: str, schedule: str, note: str = "") -> dict:
     hn = (hn or "").strip()
     if not name:
         raise ValueError("ต้องระบุชื่อคนไข้")
-    if not _parse_schedule(schedule):
-        raise ValueError("รอบฟอกไม่ถูกต้อง — เลือกอย่างน้อย 1 วัน")
+    if schedule not in SCHEDULE_MAP:
+        raise ValueError("รอบฟอกไม่ถูกต้อง")
 
     # id: ใช้ HN ถ้ามี (กันซ้ำ) ไม่มีก็ generate
     pid = f"HN{hn}" if hn else f"P{datetime.now().strftime('%y%m%d%H%M%S')}"
@@ -145,30 +132,10 @@ def create_patient(name: str, hn: str, schedule: str, note: str = "") -> dict:
     return r.json()[0]
 
 
-def update_patient_schedule(patient_id: str, schedule: str) -> dict:
-    """แก้วันฟอกไตของคนไข้เดิม (ตอนสร้างคนไข้ตั้งได้ครั้งเดียว แต่พยาบาลขอแก้ทีหลังได้บ่อย)"""
-    if not patient_id:
-        raise ValueError("ไม่มี patient_id")
-    if not _parse_schedule(schedule):
-        raise ValueError("รูปแบบวันฟอกไม่ถูกต้อง")
-    r = requests.patch(
-        _url("patients"),
-        headers=_h({"Prefer": "return=representation"}),
-        params={"id": f"eq.{patient_id}"},
-        json={"schedule": schedule},
-        timeout=15,
-    )
-    r.raise_for_status()
-    rows = r.json()
-    if not rows:
-        raise ValueError("ไม่พบคนไข้")
-    return rows[0]
-
-
 # ---------------- รอบฟอก ----------------
 
 def next_appointment(schedule: str, from_date: date | None = None) -> str:
-    days = _parse_schedule(schedule) or [0, 2, 4]
+    days = SCHEDULE_MAP.get(schedule, [0, 2, 4])
     d0 = from_date or date.today()
     for i in range(1, 8):
         d = d0 + timedelta(days=i)

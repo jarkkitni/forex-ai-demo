@@ -134,16 +134,15 @@ def _triage(client, job: dict, matched: list, notify_fn=None, uid: str = "") -> 
 ตอบคำเดียว: YES ถ้าพอทำได้ / NO ถ้าคนละสายเลย (เช่น กราฟิก ยิงแอด เขียนบทความ แปลภาษา)"""
     try:
         ans = ai_guard.call(client, prompt, max_tokens=5, smart=False,
-                            notify_fn=notify_fn, line_user_id=uid, slug="job_hunter")
+                            notify_fn=notify_fn, line_user_id=uid)
         return "YES" in ans.upper()
     except Exception as e:
         print(f"[Hunter] triage ล้มเหลว ปล่อยผ่าน: {e}", flush=True)
         return True
 
 
-def _analyze_job(client, job: dict, matched: list, notify_fn=None, uid: str = "") -> dict:
+def _analyze_job(client, job: dict, matched: list) -> dict:
     """ให้ Claude (Sonnet) วิเคราะห์งาน + ร่างข้อเสนอ — เรียกเฉพาะงานที่ผ่านด่าน Haiku"""
-    import ai_guard
     desc = (job.get("description") or "")[:2000]
     budget = job.get("budget") or "ไม่ระบุ"
 
@@ -169,8 +168,12 @@ n8n automation, Web Dashboard, Python, Supabase
   "proposal": "<ร่างข้อเสนองานภาษาไทย สุภาพ ตรงประเด็น ~120 คำ ลงท้ายชวนคุย>"
 }}"""
 
-    raw = ai_guard.call(client, prompt, max_tokens=1000, smart=True,
-                        notify_fn=notify_fn, line_user_id=uid, slug="job_hunter")
+    msg = client.messages.create(
+        model="claude-sonnet-4-5",
+        max_tokens=1000,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    raw = msg.content[0].text.strip()
     # ตัด markdown fence ถ้ามี
     if raw.startswith("```"):
         raw = raw.split("```")[1].lstrip("json").strip()
@@ -271,7 +274,7 @@ def run_hunter(anthropic_client, push_line_fn, line_user_id: str,
 
         # ด่าน 2: Sonnet วิเคราะห์เต็ม + ร่างข้อเสนอ (แพง แต่คุ้มเพราะกรองมาแล้ว)
         try:
-            analysis = _analyze_job(anthropic_client, job, matched, push_line_fn, line_user_id)
+            analysis = _analyze_job(anthropic_client, job, matched)
         except Exception as e:
             print(f"[Hunter] analyze failed: {e}", flush=True)
             continue

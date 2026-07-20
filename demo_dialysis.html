@@ -333,112 +333,9 @@ async function start(){
     await bot('⚠️ <b>โหมดทดลอง</b> — ข้อมูลจะไม่ถูกบันทึกจริง\nคนไข้ในระบบเป็นชื่อสมมติ ห้ามใส่ข้อมูลคนไข้จริงค่ะ', 'alert');
   }
   await bot('สวัสดีค่ะ 🏥 ระบบบันทึกรอบฟอกไต\nเลือกได้เลยค่ะ');
-  ask(['👤 คนไข้เดิม', '🆕 คนไข้ใหม่ (ครั้งแรก)', '✏️ แก้วันฟอกคนไข้เดิม'],
-      c => c.includes('ใหม่') ? goto(newPatient)
-         : c.includes('แก้วันฟอก') ? goto(editSchedule)
-         : goto(pickPatient),
+  ask(['👤 คนไข้เดิม', '🆕 คนไข้ใหม่ (ครั้งแรก)'],
+      c => c.includes('ใหม่') ? goto(newPatient) : goto(pickPatient),
       {back:false});
-}
-
-// ---------- แก้วันฟอกคนไข้เดิม ----------
-async function editSchedule(){
-  const names = Object.keys(PATIENTS);
-  if(!names.length){
-    await bot('ยังไม่มีคนไข้ในระบบค่ะ', 'info');
-    return ask(['◀ กลับเมนูหลัก'], ()=> goto(start), {back:false});
-  }
-  await bot('เลือกคนไข้ที่ต้องการแก้วันฟอกค่ะ');
-  ask(names, name => editScheduleForm(name, PATIENTS[name]));
-}
-
-function editScheduleForm(name, p){
-  const curSch = p.schedule || 'จ-พ-ศ';
-  const f = el(`<div class="manual">
-      <label>👤 ${name}</label>
-      <div style="font-size:12px;color:#94a3b8;margin-bottom:8px">รอบฟอกปัจจุบัน: <b>${curSch}</b></div>
-      <label>รอบฟอกใหม่ (เลือกวันที่ฟอก) *</label>
-      <div class="mrow" style="flex-wrap:wrap;gap:6px;margin-bottom:6px">
-        <button type="button" class="preset" data-v="จ-พ-ศ">จ-พ-ศ</button>
-        <button type="button" class="preset" data-v="อ-พฤ-ส">อ-พฤ-ส</button>
-        <button type="button" class="preset" data-v="จ-พ-ส">จ-พ-ส</button>
-        <button type="button" class="preset" data-v="จ-พฤ-ส">จ-พฤ-ส</button>
-        <button type="button" class="preset" data-v="อ-ส">อ-ส</button>
-        <button type="button" class="preset" data-v="พ-อา">พ-อา</button>
-        <button type="button" class="preset" data-v="จ-ศ">จ-ศ</button>
-      </div>
-      <div style="font-size:11px;color:#94a3b8;margin-bottom:5px">หรือแตะเลือกวันเอง (เลือกได้หลายวัน):</div>
-      <div class="mrow daypick" style="flex-wrap:wrap;gap:6px;margin-bottom:9px">
-        <button type="button" class="day" data-t="จ">จ</button>
-        <button type="button" class="day" data-t="อ">อ</button>
-        <button type="button" class="day" data-t="พ">พ</button>
-        <button type="button" class="day" data-t="พฤ">พฤ</button>
-        <button type="button" class="day" data-t="ศ">ศ</button>
-        <button type="button" class="day" data-t="ส">ส</button>
-        <button type="button" class="day" data-t="อา">อา</button>
-      </div>
-      <div class="mrow">
-        <button class="ok">✓ บันทึกวันฟอกใหม่</button>
-        <button class="cancel">ยกเลิก</button>
-      </div>
-      <div id="es_err" style="color:#dc2626;font-size:11.5px;margin-top:7px;display:none"></div>
-    </div>`);
-  chat.appendChild(f); scroll();
-
-  let selDays = new Set(String(curSch).split('-').map(s=>s.trim()).filter(Boolean));
-  const buildSch = () => DAY_ORDER.filter(d=>selDays.has(d)).join('-');
-  const paintDays = () => {
-    f.querySelectorAll('.day').forEach(x=>{
-      const on = selDays.has(x.dataset.t);
-      x.style.background = on ? '#0284c7' : '#f1f5f9';
-      x.style.color = on ? '#fff' : '#475569';
-      x.style.borderColor = on ? '#0284c7' : '#cbd5e1';
-    });
-  };
-  f.querySelectorAll('.day').forEach(b=>{
-    b.style.cssText = 'background:#f1f5f9;color:#475569;border:1.5px solid #cbd5e1;border-radius:9px;padding:9px 13px;font-size:13px;font-weight:700;cursor:pointer;min-width:42px';
-    b.onclick = () => {
-      const t = b.dataset.t;
-      selDays.has(t) ? selDays.delete(t) : selDays.add(t);
-      paintDays();
-    };
-  });
-  paintDays();
-  f.querySelectorAll('.preset').forEach(b=>{
-    b.style.cssText = 'background:#e0f2fe;color:#0369a1;border:1.5px solid #7dd3fc;border-radius:9px;padding:7px 11px;font-size:12.5px;font-weight:700;cursor:pointer';
-    b.onclick = () => { selDays = new Set(b.dataset.v.split('-')); paintDays(); };
-  });
-
-  const err = m => { const e=f.querySelector('#es_err'); e.textContent=m; e.style.display='block'; };
-  f.querySelector('.cancel').onclick = () => { f.remove(); goto(start); };
-
-  f.querySelector('.ok').onclick = async () => {
-    const sch = buildSch();
-    if(!sch) return err('กรุณาเลือกวันฟอกอย่างน้อย 1 วัน');
-    const btn = f.querySelector('.ok');
-    btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
-
-    if(DB_ON && p.id){
-      try{
-        const r = await (await api(`/api/dialysis/patients/${p.id}`,{
-          method:'PATCH', body: JSON.stringify({schedule: sch})
-        })).json();
-        if(!r.success) throw new Error(r.error||'บันทึกไม่สำเร็จ');
-      }catch(e){
-        btn.disabled=false; btn.textContent='✓ บันทึกวันฟอกใหม่';
-        return err('❌ ' + e.message);
-      }
-    }
-    p.schedule = sch;
-    f.remove();
-    me(`✏️ แก้วันฟอก ${name} → ${sch}`);
-    await bot(
-      `✅ เปลี่ยนวันฟอกเรียบร้อยค่ะ\n📅 รอบใหม่: <b>${sch}</b>` +
-      (DB_ON ? '' : '\n<i>(โหมดทดลอง — ยังไม่บันทึกจริง)</i>'),
-      'okmsg');
-    ask(['✏️ แก้คนไข้อีกคน', '◀ กลับเมนูหลัก'],
-        c => c.includes('อีกคน') ? goto(editSchedule) : goto(start),
-        {back:false});
-  };
 }
 
 // ---------- คนไข้เดิม ----------
@@ -499,8 +396,6 @@ async function newPatient(){
         <button type="button" class="preset" data-v="จ-พ-ส">จ-พ-ส</button>
         <button type="button" class="preset" data-v="จ-พฤ-ส">จ-พฤ-ส</button>
         <button type="button" class="preset" data-v="อ-ส">อ-ส</button>
-        <button type="button" class="preset" data-v="พ-อา">พ-อา</button>
-        <button type="button" class="preset" data-v="จ-ศ">จ-ศ</button>
       </div>
       <div style="font-size:11px;color:#94a3b8;margin-bottom:5px">หรือแตะเลือกวันเอง (เลือกได้หลายวัน):</div>
       <div class="mrow daypick" style="flex-wrap:wrap;gap:6px;margin-bottom:9px">
