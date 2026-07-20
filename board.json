@@ -42,6 +42,7 @@
   ],
 
   "pending": [
+    { "t": "🔴 n8n→FB โพสต์ตรง (บายพาส Postiz bug): โค้ด+ทดสอบเสร็จ, commit local แล้ว — ค้าง 2 อย่าง: (1) git push origin main ในโฟลเดอร์ forex-ai-demo (2) ตั้ง N8N_POST_SECRET บน Render env ค่า sp1T2o-tgBeJGd1pox5B7NpjqctmcS97", "who": "รอเรา (ทำเมื่อกลับมา)" },
     { "t": "🏆 Lullabell: publish + token ถาวร + Quick Replies 4 ปุ่มเสร็จ 19 ก.ค. — เหลือทดสอบทักจริง + เปิด Instagram", "who": "รอเรา" },
     { "t": "🎉 ร้านเสริมสวยงานแรก ฿1,500 — กดส่งงาน FastWork", "who": "รอเรา" },
     { "t": "🍳 Chef & Restaurant: เตรียม Blueprint + คู่มือรีโมทพร้อมแล้ว — รอนัดวันรีโมทเข้าติดตั้ง", "who": "รอลูกค้า" },
