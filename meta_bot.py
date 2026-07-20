@@ -423,24 +423,31 @@ def send_image_message(page_token: str, recipient_id: str, image_url: str = "", 
 
 def upload_reusable_attachment(page_token: str, image_url: str) -> tuple:
     """อัปโหลดรูปแบบ reusable ผ่าน Meta Attachment Upload API ครั้งเดียว → ได้ attachment_id เอาไปใช้ส่งซ้ำได้ตลอดไป
-    ไม่ต้องเรียกทุกครั้งที่แชท — เรียกครั้งเดียวตอนตั้งค่า (ตอนเซิร์ฟเวอร์ตื่นแน่ๆ) แล้วเก็บ attachment_id ไว้ใน config ถาวร
-    แก้ปัญหา: ส่ง url ตรงๆ ทุกครั้ง Meta ต้อง fetch url เราใหม่ทุกรอบ ถ้า Render free tier เพิ่งตื่นจาก
-    spin-down อาจช้าจน Meta fetch timeout แล้วได้ error (#100) Upload failed / error_subcode 2018007"""
+    ไม่ต้องเรียกทุกครั้งที่แชท — เรียกครั้งเดียวตอนตั้งค่า แล้วเก็บ attachment_id ไว้ใน config ถาวร
+
+    ใช้วิธี "Upload from File" (multipart/form-data + filedata) — โหลดรูปมาเองแล้วส่งไบต์ตรงให้ Meta
+    ไม่ใช่วิธี "Upload from URL" (ให้ Meta ไป fetch url เราเอง) เพราะพิสูจน์แล้วว่าวิธี url พังกับ
+    ทุก url แม้ url ภายนอกที่รู้ว่าใช้ได้แน่ (ตัดปัจจัย hosting/cold-start/token scope ของเราทิ้งหมดแล้ว
+    20 ก.ค.) ตรงกับที่นักพัฒนาคนอื่นเจอปัญหาเดียวกันจำนวนมากใน Meta developer community —
+    เป็นบั๊กที่รู้กันแพร่หลายฝั่ง Meta เอง (error #100 / 2018007 หรือ 2018047 "Upload failed")
+    วิธี filedata ตัด Meta ไม่ต้องมา fetch url เราเลย จึงเลี่ยงบั๊กนี้ได้"""
     if not page_token or not image_url:
         return 0, "no page token / image url"
+    try:
+        img_r = requests.get(image_url, timeout=20)
+        if img_r.status_code != 200 or not img_r.content:
+            return 0, f"fetch image failed: status={img_r.status_code}"
+        content_type = img_r.headers.get("Content-Type", "image/jpeg") or "image/jpeg"
+    except Exception as e:
+        return 0, f"fetch image error: {str(e)[:200]}"
+
     url = f"{GRAPH}/me/message_attachments"
     try:
         r = requests.post(
             url,
             params={"access_token": page_token},
-            json={
-                "message": {
-                    "attachment": {
-                        "type": "image",
-                        "payload": {"is_reusable": True, "url": image_url},
-                    }
-                }
-            },
+            data={"message": json.dumps({"attachment": {"type": "image", "payload": {"is_reusable": True}}})},
+            files={"filedata": ("image.jpg", img_r.content, content_type)},
             timeout=30,
         )
         return r.status_code, r.text[:500]
