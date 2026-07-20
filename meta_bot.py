@@ -30,7 +30,7 @@ _BOOKING_FIELDS = ("บริการ", "วันที่", "เวลา", "
 ICE_BREAKERS = [
     {"question": "ดูราคา/โปรโมชั่น", "payload": "IB_PRICE"},
     {"question": "อยากจองคิว", "payload": "IB_BOOKING"},
-    {"question": "ที่อยู่ร้าน/เวลาเปิด", "payload": "IB_LOCATION"},
+    {"question": "ที่อยู่/เวลาเปิด", "payload": "IB_LOCATION"},
     {"question": "มีบริการอะไรบ้าง", "payload": "IB_SERVICES"},
 ]
 # payload -> ข้อความที่จะป้อนให้ AI ประมวลผลต่อ เหมือนลูกค้าพิมพ์เอง
@@ -376,12 +376,21 @@ def handle(data: dict, client, page_token: str, slug: str = "lullabell",
             try:
                 reply = generate_reply(client, cfg, sender, user_text,
                                        notify_fn=notify_fn, line_user_id=line_user_id)
-                send_message(page_token, sender, reply, quick_replies=QUICK_REPLIES)
+                _send_with_quick_replies(page_token, sender, reply)
                 result["replied"] += 1
             except Exception:
                 # AI ตาย ai_guard เด้ง LINE ให้แล้ว — ส่งข้อความ fallback ให้ลูกค้าไม่เงียบ
                 fb = cfg.get("advisor", {}).get("handoff_msg",
                      "ขออภัยค่ะ ระบบขัดข้องชั่วคราว เดี๋ยวแอดมินติดต่อกลับนะคะ 🤍")
-                send_message(page_token, sender, fb, quick_replies=QUICK_REPLIES)
+                _send_with_quick_replies(page_token, sender, fb)
                 result["skipped"] += 1
     return result
+
+
+def _send_with_quick_replies(page_token: str, sender: str, text: str) -> None:
+    """ส่งข้อความพร้อม Quick Replies — ถ้า Meta ปฏิเสธ (เช่น payload ผิดสเปก) ให้ log ไว้ดูใน Render logs
+    แล้วลองส่งใหม่แบบไม่มีปุ่ม กันลูกค้าไม่ได้รับข้อความเลยเพราะปุ่มพัง"""
+    status, resp_text = send_message(page_token, sender, text, quick_replies=QUICK_REPLIES)
+    if not status or status >= 400:
+        print(f"[meta_bot] send_message with quick_replies failed ({status}): {resp_text} — retry without buttons")
+        send_message(page_token, sender, text)
