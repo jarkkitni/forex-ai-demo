@@ -58,6 +58,7 @@ def _alert_dead(err: str, notify_fn, line_user_id: str) -> None:
             "🚨 AI เรียกไม่ได้ — ระบบหยุดทำงาน!\n"
             "━━━━━━━━━━━━\n"
             "กระทบ:\n"
+            "• บอทลูกค้า (Lullabell) — ตอบลูกค้าจริงไม่ได้ 😱 ลูกค้าจะได้ข้อความ fallback แทน\n"
             "• Job Hunter — ดักงานไม่ได้ 🔥\n"
             "• Forex analyze — วิเคราะห์ไม่ได้\n"
             "• Auto-Execution — เทรดกระดาษไม่ได้\n"
