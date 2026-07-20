@@ -52,6 +52,32 @@ QUICK_REPLIES = [
     for qb in ICE_BREAKERS
 ]
 
+# ---- เวอร์ชันอังกฤษของปุ่มลัด — ใช้ payload เดิมเป๊ะ (แค่ label เปลี่ยน) กันลูกค้าต่างชาติเจอปุ่มไทย ----
+ICE_BREAKERS_EN = [
+    {"question": "Prices / Promotions", "payload": "IB_PRICE"},
+    {"question": "Book an appointment", "payload": "IB_BOOKING"},
+    {"question": "Address / Hours", "payload": "IB_LOCATION"},
+    {"question": "Our services", "payload": "IB_SERVICES"},
+]
+_ICE_BREAKER_TEXT_EN = {
+    "IB_PRICE": "Please show me all prices and promotions.",
+    "IB_BOOKING": "I'd like to book an appointment.",
+    "IB_LOCATION": "Can I get the address and opening hours?",
+    "IB_SERVICES": "What services do you offer?",
+}
+QUICK_REPLIES_EN = [
+    {"content_type": "text", "title": qb["question"], "payload": qb["payload"]}
+    for qb in ICE_BREAKERS_EN
+]
+
+_THAI_CHAR_RE = re.compile(r'[฀-๿]')
+
+
+def _is_thai(text: str) -> bool:
+    """เดาภาษาแบบง่ายจากตัวอักษรไทย — ใช้เลือกชุดปุ่ม Quick Reply (ไทย/อังกฤษ) ให้ตรงกับภาษาที่ลูกค้าใช้ล่าสุด
+    ไม่มีตัวอักษรไทยเลย = ถือว่าเป็นอังกฤษ (หรือภาษาอื่นที่ AI จะตอบเป็นอังกฤษตามกติกาเริ่มต้น)"""
+    return bool(_THAI_CHAR_RE.search(text or ""))
+
 
 def _parse_booking_tag(text: str) -> tuple:
     """แยกแท็ก [[BOOKING: ...]] ออกจากข้อความที่จะส่งลูกค้า คืน (ข้อความสะอาด, dict หรือ None)"""
@@ -421,17 +447,19 @@ def handle(data: dict, client, page_token: str, slug: str = "lullabell",
             if not _rate_ok(sender):
                 result["skipped"] += 1
                 continue
+            # เลือกชุดปุ่มลัดให้ตรงภาษาที่ลูกค้าใช้ล่าสุด (ไทย/อังกฤษ) — ปุ่มเลือกโปร dynamic มาก่อนเสมอถ้ามี
+            default_qr = QUICK_REPLIES if _is_thai(user_text) else QUICK_REPLIES_EN
             try:
                 reply, promo_choices = generate_reply(client, cfg, sender, user_text,
                                        notify_fn=notify_fn, line_user_id=line_user_id)
-                qr = _build_promo_quick_replies(promo_choices) if promo_choices else None
+                qr = _build_promo_quick_replies(promo_choices) if promo_choices else default_qr
                 _send_with_quick_replies(page_token, sender, reply, quick_replies=qr)
                 result["replied"] += 1
             except Exception:
                 # AI ตาย ai_guard เด้ง LINE ให้แล้ว — ส่งข้อความ fallback ให้ลูกค้าไม่เงียบ
                 fb = cfg.get("advisor", {}).get("handoff_msg",
                      "ขออภัยค่ะ ระบบขัดข้องชั่วคราว เดี๋ยวแอดมินติดต่อกลับนะคะ 🤍")
-                _send_with_quick_replies(page_token, sender, fb)
+                _send_with_quick_replies(page_token, sender, fb, quick_replies=default_qr)
                 result["skipped"] += 1
     return result
 
