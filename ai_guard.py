@@ -25,24 +25,67 @@ GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-_health = {
-    "ok": True,
-    "last_ok": None,
-    "last_error": None,
-    "last_error_at": None,
-    "last_provider": None,   # "claude" | "groq" — ใช้ตัวไหนล่าสุด
-    "alerted_at": 0,      # กันสแปม LINE
-    "calls": 0,
-    "fails": 0,
-}
-ALERT_COOLDOWN = 3600 * 6     # เตือนซ้ำได้ทุก 6 ชม. พอ
+# ---- สถานะ AI แยกต่อโปรเจกต์ (slug) — กันบั๊ก 20 ก.ค.: เดิม _health เป็น dict ก้อนเดียวใช้ร่วมกันทุกบอท
+# ทำให้ถ้าร้าน A ชน AI ล่มจนแจ้งเตือนไปแล้ว ระบบจะเงียบไม่แจ้งร้าน B อีก 6 ชม. แม้ร้าน B ล่มคนละเวลาคนละสาเหตุ
+# → ต้องแยกสถานะ+cooldown ต่อ slug กันเดี๋ยวรับงานลูกค้าหลายเจ้าพร้อมกันแล้วเจ้าหนึ่งบังอีกเจ้า
+_health_by_slug: dict = {}   # slug -> {ok, last_ok, last_error, last_error_at, last_provider, alerted_at, calls, fails}
+ALERT_COOLDOWN = 3600 * 6     # เตือนซ้ำได้ทุก 6 ชม. พอ (ต่อ slug)
+_DEFAULT_SLUG = "default"    # ใช้กับโค้ดเก่าที่ยังไม่ได้ส่ง slug มา (เช่นตอน migrate ครั้งแรก)
 
 
-def health() -> dict:
-    h = dict(_health)
-    h.pop("alerted_at", None)
-    h["groq_configured"] = bool(GROQ_API_KEY)
-    return h
+def _new_bucket() -> dict:
+    return {
+        "ok": True, "last_ok": None, "last_error": None, "last_error_at": None,
+        "last_provider": None, "alerted_at": 0, "calls": 0, "fails": 0,
+    }
+
+
+def _bucket(slug: str) -> dict:
+    return _health_by_slug.setdefault(slug or _DEFAULT_SLUG, _new_bucket())
+
+
+def health(slug: str = None) -> dict:
+    """ใส่ slug (เช่น 'lullabell', 'job_hunter', 'forex') = ดูสถานะเฉพาะโปรเจกต์นั้น
+    ไม่ใส่ slug = สรุปรวมทุกโปรเจกต์ที่เคยเรียก AI (ok=False ถ้ามีตัวไหนพัง, last_error = ตัวที่พังล่าสุดจริง)
+    ใช้กับ dashboard เก่า (/api/pulse, daily-summary) ที่อยากได้ไฟเขียว/แดงรวมดวงเดียว"""
+    if slug:
+        b = dict(_bucket(slug))
+        b.pop("alerted_at", None)
+        b["slug"] = slug
+        b["groq_configured"] = bool(GROQ_API_KEY)
+        return b
+
+    if not _health_by_slug:
+        return {"ok": True, "last_ok": None, "last_error": None, "last_error_at": None,
+                "last_provider": None, "calls": 0, "fails": 0, "groq_configured": bool(GROQ_API_KEY)}
+
+    buckets = _health_by_slug.items()
+    all_ok = all(b["ok"] for b in _health_by_slug.values())
+    total_calls = sum(b["calls"] for b in _health_by_slug.values())
+    total_fails = sum(b["fails"] for b in _health_by_slug.values())
+
+    ok_buckets = [(s, b) for s, b in buckets if b.get("last_ok")]
+    last_ok_slug, last_ok_bucket = max(ok_buckets, key=lambda x: x[1]["last_ok"]) if ok_buckets else (None, {})
+
+    err_buckets = [(s, b) for s, b in _health_by_slug.items() if b.get("last_error_at")]
+    last_err_slug, last_err_bucket = max(err_buckets, key=lambda x: x[1]["last_error_at"]) if err_buckets else (None, {})
+
+    return {
+        "ok": all_ok,
+        "last_ok": last_ok_bucket.get("last_ok"),
+        "last_provider": last_ok_bucket.get("last_provider"),
+        "last_error": last_err_bucket.get("last_error"),
+        "last_error_at": last_err_bucket.get("last_error_at"),
+        "last_error_slug": last_err_slug,
+        "calls": total_calls,
+        "fails": total_fails,
+        "groq_configured": bool(GROQ_API_KEY),
+    }
+
+
+def health_all() -> dict:
+    """คืนสถานะแยกทุกโปรเจกต์ {slug: health} — ใช้ทำ dashboard ละเอียดดูทีละร้าน"""
+    return {slug: health(slug) for slug in list(_health_by_slug)}
 
 
 def _call_groq(prompt: str, max_tokens: int = 1000) -> str:
@@ -63,17 +106,20 @@ def _call_groq(prompt: str, max_tokens: int = 1000) -> str:
     return r.json()["choices"][0]["message"]["content"].strip()
 
 
-def _alert(err: str, notify_fn, line_user_id: str, degraded: bool = False,
+def _alert(slug: str, err: str, notify_fn, line_user_id: str, degraded: bool = False,
            failed_provider: str = "Claude", fallback_provider: str = "Groq") -> None:
     """AI มีปัญหา — degraded=True หมายถึงตัวหลักล่มแต่ fallback ไปตัวสำรองได้ (ลูกค้ายังได้คำตอบ แค่คุณภาพลดลงชั่วคราว)
     degraded=False หมายถึงทุกทางตันหมด ต้องรู้เดี๋ยวนี้
-    failed_provider/fallback_provider: ระบุทิศทางจริงที่เกิดขึ้น (Claude→Groq หรือ Groq→Claude Haiku) กันข้อความแจ้งเตือนผิดทิศ"""
+    failed_provider/fallback_provider: ระบุทิศทางจริงที่เกิดขึ้น (Claude→Groq หรือ Groq→Claude Haiku) กันข้อความแจ้งเตือนผิดทิศ
+    slug: กัน cooldown ของโปรเจกต์หนึ่งไปบังการแจ้งเตือนของอีกโปรเจกต์ — แต่ละ slug มี cooldown ของตัวเอง"""
+    b = _bucket(slug)
     now = time.time()
-    if now - _health["alerted_at"] < ALERT_COOLDOWN:
+    if now - b["alerted_at"] < ALERT_COOLDOWN:
         return
     if not (notify_fn and line_user_id):
         return
-    _health["alerted_at"] = now
+    b["alerted_at"] = now
+    label = f"🏷️ ระบบ: {slug}\n" if slug and slug != _DEFAULT_SLUG else ""
 
     hint = "เช็ค ANTHROPIC_API_KEY ใน Render"
     e = err.lower()
@@ -85,7 +131,7 @@ def _alert(err: str, notify_fn, line_user_id: str, degraded: bool = False,
     try:
         if degraded:
             notify_fn(line_user_id, (
-                f"⚠️ {failed_provider} ใช้งานไม่ได้ชั่วคราว — สลับไปใช้ {fallback_provider} แทนอัตโนมัติแล้ว\n"
+                f"{label}⚠️ {failed_provider} ใช้งานไม่ได้ชั่วคราว — สลับไปใช้ {fallback_provider} แทนอัตโนมัติแล้ว\n"
                 "━━━━━━━━━━━━\n"
                 "บอทลูกค้ายังตอบได้ปกติ แค่คุณภาพคำตอบอาจลดลงเล็กน้อยชั่วคราว\n"
                 "━━━━━━━━━━━━\n"
@@ -95,9 +141,9 @@ def _alert(err: str, notify_fn, line_user_id: str, degraded: bool = False,
             ))
         else:
             notify_fn(line_user_id, (
-                "🚨 AI เรียกไม่ได้ทั้ง Claude และ Groq — ระบบหยุดทำงาน!\n"
+                f"{label}🚨 AI เรียกไม่ได้ทั้ง Claude และ Groq — ระบบหยุดทำงาน!\n"
                 "━━━━━━━━━━━━\n"
-                "กระทบ:\n"
+                "กระทบ (ถ้าเป็น key/เครดิตหมดร่วมกัน จะกระทบทุกอย่างที่ใช้ AI):\n"
                 "• บอทลูกค้า (Lullabell) — ตอบลูกค้าจริงไม่ได้ 😱 ลูกค้าจะได้ข้อความ fallback แทน\n"
                 "• Job Hunter — ดักงานไม่ได้ 🔥\n"
                 "• Forex analyze — วิเคราะห์ไม่ได้\n"
@@ -112,27 +158,31 @@ def _alert(err: str, notify_fn, line_user_id: str, degraded: bool = False,
 
 
 def call(client, prompt: str, max_tokens: int = 1000, smart: bool = True,
-         notify_fn=None, line_user_id: str = "", tier: str = "smart") -> str:
+         notify_fn=None, line_user_id: str = "", tier: str = "smart", slug: str = "") -> str:
     """
     เรียก AI แบบมีเกราะ — คืน text ดิบ
     tier="smart" (ค่าเริ่มต้น) → ใช้ Claude (smart=True→Sonnet, False→Haiku) เป็นหลัก
                                   ถ้า Claude ล่ม (เครดิตหมด/quota/key พัง) จะ fallback ไป Groq (ฟรี) อัตโนมัติ กันบอทลูกค้าเงียบ
     tier="free"  → ใช้ Groq (ฟรี) เป็นหลักเลย ไม่แตะเครดิต Claude ตามปกติ — ใช้กับบอทลูกค้าที่ยังไม่ได้อัปเกรดเป็นแพ็กเกจ AI ฉลาดขึ้น
                                   ถ้า Groq ล่ม (rate limit/API ปัญหา) จะ fallback ไป Claude Haiku (ถูก) อัตโนมัติเช่นกัน กันบอทเงียบสนิท
+    slug: ชื่อโปรเจกต์/ร้าน (เช่น "lullabell", "job_hunter", "forex") — แยกสถานะ+cooldown แจ้งเตือนต่อร้าน
+          กันร้าน A ล่มจนแจ้งเตือนไปแล้ว บังไม่ให้ร้าน B ได้รับแจ้งเตือนอีก 6 ชม. ทั้งที่คนละปัญหาคนละเวลา
+          ไม่ใส่ = ใช้ bucket "default" ร่วมกัน (ของเก่าที่ยังไม่ได้ migrate)
     """
-    _health["calls"] += 1
+    b = _bucket(slug)
+    b["calls"] += 1
 
     if tier == "free":
         try:
             text = _call_groq(prompt, max_tokens)
-            _health["ok"] = True
-            _health["last_provider"] = "groq"
-            _health["last_ok"] = datetime.now(timezone.utc).isoformat()
+            b["ok"] = True
+            b["last_provider"] = "groq"
+            b["last_ok"] = datetime.now(timezone.utc).isoformat()
             return text
         except Exception as e:
-            _health["fails"] += 1
-            _health["last_error"] = f"[groq] {str(e)[:190]}"
-            _health["last_error_at"] = datetime.now(timezone.utc).isoformat()
+            b["fails"] += 1
+            b["last_error"] = f"[groq] {str(e)[:190]}"
+            b["last_error_at"] = datetime.now(timezone.utc).isoformat()
             # Groq ล่ม → ลอง fallback ไป Claude Haiku (ถูกสุด) ก่อนยอมแพ้ กันบอทลูกค้าเงียบไปเลย
             if client:
                 try:
@@ -140,16 +190,16 @@ def call(client, prompt: str, max_tokens: int = 1000, smart: bool = True,
                         model=MODEL_CHEAP, max_tokens=max_tokens,
                         messages=[{"role": "user", "content": prompt}],
                     )
-                    _health["ok"] = True
-                    _health["last_provider"] = "claude-haiku (fallback)"
-                    _health["last_ok"] = datetime.now(timezone.utc).isoformat()
-                    _alert(str(e), notify_fn, line_user_id, degraded=True,
+                    b["ok"] = True
+                    b["last_provider"] = "claude-haiku (fallback)"
+                    b["last_ok"] = datetime.now(timezone.utc).isoformat()
+                    _alert(slug, str(e), notify_fn, line_user_id, degraded=True,
                            failed_provider="Groq", fallback_provider="Claude Haiku")
                     return msg.content[0].text.strip()
                 except Exception:
                     pass  # fallback ก็พังด้วย ปล่อยให้ตกไป alert แบบเต็มข้างล่าง
-            _health["ok"] = False
-            _alert(str(e), notify_fn, line_user_id, degraded=False)
+            b["ok"] = False
+            _alert(slug, str(e), notify_fn, line_user_id, degraded=False)
             raise
 
     try:
@@ -158,27 +208,27 @@ def call(client, prompt: str, max_tokens: int = 1000, smart: bool = True,
             max_tokens=max_tokens,
             messages=[{"role": "user", "content": prompt}],
         )
-        _health["ok"] = True
-        _health["last_provider"] = "claude"
-        _health["last_ok"] = datetime.now(timezone.utc).isoformat()
+        b["ok"] = True
+        b["last_provider"] = "claude"
+        b["last_ok"] = datetime.now(timezone.utc).isoformat()
         return msg.content[0].text.strip()
     except Exception as e:
-        _health["fails"] += 1
-        _health["last_error"] = str(e)[:200]
-        _health["last_error_at"] = datetime.now(timezone.utc).isoformat()
+        b["fails"] += 1
+        b["last_error"] = str(e)[:200]
+        b["last_error_at"] = datetime.now(timezone.utc).isoformat()
         # Claude ล่ม → ลอง fallback ไป Groq ก่อนยอมแพ้ กันบอทลูกค้าเงียบไปเลย
         if GROQ_API_KEY:
             try:
                 text = _call_groq(prompt, max_tokens)
-                _health["ok"] = True
-                _health["last_provider"] = "groq (fallback)"
-                _health["last_ok"] = datetime.now(timezone.utc).isoformat()
-                _alert(str(e), notify_fn, line_user_id, degraded=True)
+                b["ok"] = True
+                b["last_provider"] = "groq (fallback)"
+                b["last_ok"] = datetime.now(timezone.utc).isoformat()
+                _alert(slug, str(e), notify_fn, line_user_id, degraded=True)
                 return text
             except Exception:
                 pass  # fallback ก็พังด้วย ปล่อยให้ตกไป alert แบบเต็มข้างล่าง
-        _health["ok"] = False
-        _alert(str(e), notify_fn, line_user_id, degraded=False)
+        b["ok"] = False
+        _alert(slug, str(e), notify_fn, line_user_id, degraded=False)
         raise
 
 

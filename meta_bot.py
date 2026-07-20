@@ -309,8 +309,9 @@ def _remember_turn(sender_id: str, user_text: str, reply: str) -> None:
 
 
 def generate_reply(client, cfg: dict, sender_id: str, user_text: str,
-                   notify_fn=None, line_user_id: str = "") -> tuple:
-    """คืน (reply, promo_choices) — promo_choices เป็น list ชื่อโปร (หรือ None ถ้า AI ไม่ได้แนะนำหลายโปร)"""
+                   notify_fn=None, line_user_id: str = "", slug: str = "") -> tuple:
+    """คืน (reply, promo_choices) — promo_choices เป็น list ชื่อโปร (หรือ None ถ้า AI ไม่ได้แนะนำหลายโปร)
+    slug: ชื่อร้าน (เช่น "lullabell") — ส่งต่อให้ ai_guard แยกสถานะ/cooldown แจ้งเตือนต่อร้าน กันร้านหนึ่งล่มบังไม่ให้อีกร้านได้แจ้งเตือน"""
     import ai_guard
     hist = _history.get(sender_id, [])
     convo = "\n".join(f"{'ลูกค้า' if r=='user' else 'น้องเบลล์'}: {t}" for r, t in hist)
@@ -324,7 +325,7 @@ def generate_reply(client, cfg: dict, sender_id: str, user_text: str,
     # "free" = ใช้ Groq (ฟรี) เป็นหลักเลย สำหรับร้านที่ยังไม่ได้อัปเกรดแพ็กเกจ AI ฉลาดขึ้น
     tier = cfg.get("ai_tier", "smart")
     raw_reply = ai_guard.call(client, prompt, max_tokens=700, smart=True, tier=tier,
-                              notify_fn=notify_fn, line_user_id=line_user_id)
+                              notify_fn=notify_fn, line_user_id=line_user_id, slug=slug)
     reply, booking = _parse_booking_tag(raw_reply)
     reply, promo_choices = _parse_promo_tag(reply)
     # อัปเดตความจำ (เก็บข้อความสะอาด ไม่มีแท็ก กันแท็กเก่าหลุดเข้าประวัติแล้ว AI เลียนแบบซ้ำ)
@@ -434,7 +435,7 @@ def handle_line(data: dict, client, channel_token: str, slug: str = "lullabell",
             continue
         try:
             reply, _promo_choices = generate_reply(client, cfg, history_key, user_text,
-                                    notify_fn=notify_fn, line_user_id=line_user_id)
+                                    notify_fn=notify_fn, line_user_id=line_user_id, slug=slug)
             send_line_reply(channel_token, reply_token, reply)
             result["replied"] += 1
         except Exception:
@@ -500,7 +501,7 @@ def handle(data: dict, client, page_token: str, slug: str = "lullabell",
                     result["replied"] += 1
                     continue
                 reply, promo_choices = generate_reply(client, cfg, sender, user_text,
-                                       notify_fn=notify_fn, line_user_id=line_user_id)
+                                       notify_fn=notify_fn, line_user_id=line_user_id, slug=slug)
                 qr = _build_promo_quick_replies(promo_choices) if promo_choices else default_qr
                 _send_with_quick_replies(page_token, sender, reply, quick_replies=qr)
                 result["replied"] += 1

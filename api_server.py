@@ -191,8 +191,9 @@ def analyze_with_ai(pair: str, price_data: dict) -> dict:
 }}"""
 
     # ผ่าน ai_guard → AI ตายเมื่อไหร่ เด้ง LINE ทันที ไม่ตายเงียบอีก
+    # slug="forex" กันการแจ้งเตือน/cooldown ชนกับบอทลูกค้าเจ้าอื่น (เช่น Lullabell)
     text = ai_guard.call(client, prompt, max_tokens=600, smart=True,
-                         notify_fn=_push_line, line_user_id=LINE_USER_ID)
+                         notify_fn=_push_line, line_user_id=LINE_USER_ID, slug="forex")
     s, e = text.find("{"), text.rfind("}") + 1
     return json.loads(text[s:e])
 
@@ -1398,7 +1399,7 @@ def demo_chat_api(slug):
         client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
         cfg = meta_bot.load_cfg(slug)
         reply, promo_choices = meta_bot.generate_reply(client, cfg, f"demo:{slug}:{session_id}", user_text,
-                                        notify_fn=_push_line, line_user_id=LINE_USER_ID)
+                                        notify_fn=_push_line, line_user_id=LINE_USER_ID, slug=slug)
         return jsonify({"success": True, "reply": reply, "promo_choices": promo_choices or []})
     except Exception as e:
         traceback.print_exc()
@@ -1547,8 +1548,16 @@ def daily_summary():
 
 @app.route("/api/ai-health")
 def api_ai_health():
-    """AI ยังหายใจอยู่ไหม — ใช้ดูบน Monitor + ให้ cron เช็คได้"""
-    h = ai_guard.health()
+    """AI ยังหายใจอยู่ไหม — ใช้ดูบน Monitor + ให้ cron เช็คได้
+    ?slug=lullabell = ดูเฉพาะร้านนั้น | ?all=1 = ดูแยกทุกร้าน {slug: health} | ไม่ใส่ = สรุปรวมทุกร้าน (ของเดิม)"""
+    if request.args.get("all"):
+        out = ai_guard.health_all()
+        out["has_key"] = bool(ANTHROPIC_API_KEY)
+        out["model_smart"] = ai_guard.MODEL_SMART
+        out["model_cheap"] = ai_guard.MODEL_CHEAP
+        return jsonify(out)
+    slug = request.args.get("slug") or None
+    h = ai_guard.health(slug)
     h["has_key"] = bool(ANTHROPIC_API_KEY)
     h["model_smart"] = ai_guard.MODEL_SMART
     h["model_cheap"] = ai_guard.MODEL_CHEAP

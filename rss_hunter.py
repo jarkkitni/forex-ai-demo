@@ -140,7 +140,7 @@ n8n automation, Forex AI Signal Bot, Web Dashboard, Python, Supabase
   "proposal": "<ร่างข้อความเสนอตัว ~100 คำ สุภาพ ตรงประเด็น>"
 }}"""
     raw = ai_guard.call(client, prompt, max_tokens=900, smart=True,
-                        notify_fn=notify_fn, line_user_id=uid)
+                        notify_fn=notify_fn, line_user_id=uid, slug="rss_hunter")
     if raw.startswith("```"):
         raw = raw.split("```")[1].lstrip("json").strip()
     return _json.loads(raw)

@@ -134,7 +134,7 @@ def _triage(client, job: dict, matched: list, notify_fn=None, uid: str = "") -> 
 ตอบคำเดียว: YES ถ้าพอทำได้ / NO ถ้าคนละสายเลย (เช่น กราฟิก ยิงแอด เขียนบทความ แปลภาษา)"""
     try:
         ans = ai_guard.call(client, prompt, max_tokens=5, smart=False,
-                            notify_fn=notify_fn, line_user_id=uid)
+                            notify_fn=notify_fn, line_user_id=uid, slug="job_hunter")
         return "YES" in ans.upper()
     except Exception as e:
         print(f"[Hunter] triage ล้มเหลว ปล่อยผ่าน: {e}", flush=True)
@@ -170,7 +170,7 @@ n8n automation, Web Dashboard, Python, Supabase
 }}"""
 
     raw = ai_guard.call(client, prompt, max_tokens=1000, smart=True,
-                        notify_fn=notify_fn, line_user_id=uid)
+                        notify_fn=notify_fn, line_user_id=uid, slug="job_hunter")
     # ตัด markdown fence ถ้ามี
     if raw.startswith("```"):
         raw = raw.split("```")[1].lstrip("json").strip()
