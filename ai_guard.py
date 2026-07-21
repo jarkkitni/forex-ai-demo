@@ -30,9 +30,15 @@ GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 # rate limit พร้อมกันวันเดียว ทำให้ทั้ง 2 ทางตันพร้อมกัน) คนละ provider คนละโควต้ากับทั้งคู่
 # เลยไม่น่าจะล่มพร้อมกันด้วย — สมัคร key ฟรีที่ aistudio.google.com
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 # หมายเหตุ 21 ก.ค. 2026: "gemini-2.0-flash" โควต้า free tier ของโปรเจกต์นี้คือ 0/0 (ไม่ได้รับเลย)
-# ต้องใช้ "gemini-2.5-flash" ถึงจะมีโควต้าจริง (5 ครั้ง/นาที, 20 ครั้ง/วัน ต่อโปรเจกต์ — แชร์กับ key อื่นในโปรเจกต์เดียวกันด้วย)
+# ต้องใช้ "gemini-2.5-flash" ถึงจะมีโควต้าจริง — ตอนนี้เปิด billing (Tier 1) แล้วด้วย โควต้าสูงมาก
+# 21 ก.ค. 2026 (รอบ 2): ลองยิงจริงหลังเปิด billing เจอ gemini-2.0-flash 404 Not Found (Google เลิกรองรับ
+# ชื่อโมเดลนี้ไปแล้ว) — เปลี่ยนเป็น "ลองหลายโมเดลเรียงกัน" กันเคสแบบนี้ซ้ำ ถ้าตัวหลักโดนเลิกรองรับ/เปลี่ยนชื่อ
+# อีกในอนาคต ระบบลองตัวถัดไปเองอัตโนมัติ ไม่ต้องรอแก้โค้ด+push+deploy ใหม่ทุกครั้ง
+# ตั้ง env var GEMINI_MODEL เป็น comma-separated list เพื่อ override ลำดับ/รายชื่อได้ (ตัวแรกในลิสต์ = ลองก่อน)
+GEMINI_MODELS = [m.strip() for m in
+                 os.environ.get("GEMINI_MODEL", "gemini-2.5-flash,gemini-2.0-flash").split(",")
+                 if m.strip()]
 GEMINI_URL_TMPL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
 # ---- สถานะ AI แยกต่อโปรเจกต์ (slug) — กันบั๊ก 20 ก.ค.: เดิม _health เป็น dict ก้อนเดียวใช้ร่วมกันทุกบอท
@@ -139,27 +145,41 @@ def _call_groq(prompt: str, max_tokens: int = 1000) -> str:
 
 def _call_gemini(prompt: str, max_tokens: int = 1000) -> str:
     """เรียก Gemini API ตรงๆผ่าน requests (ไม่เพิ่ม dependency ใหม่ แพทเทิร์นเดียวกับ Groq)
-    ใช้เป็นชั้นสำรองที่ 3 หลัง Claude+Groq ล่มทั้งคู่ — คนละ provider คนละโควต้า ลดโอกาสตายพร้อมกันทั้งหมด"""
+    ใช้เป็นชั้นสำรองที่ 3 หลัง Claude+Groq ล่มทั้งคู่ — คนละ provider คนละโควต้า ลดโอกาสตายพร้อมกันทั้งหมด
+
+    ลองไล่ทีละโมเดลใน GEMINI_MODELS (ตัวแรกก่อน) — กันเคส 21 ก.ค. 2026 ที่ gemini-2.0-flash โดน Google
+    เลิกรองรับกะทันหันจน 404 ทั้งที่ key/billing ปกติดี ถ้าตัวหลักใช้ไม่ได้ไม่ว่าเหตุผลอะไร (404 เลิกรองรับ,
+    429 โควต้าเต็มเฉพาะโมเดลนั้น, ฯลฯ) ลองตัวถัดไปในลิสต์ต่อทันทีก่อนจะยอมแพ้จริงๆ"""
     if not GEMINI_API_KEY:
         raise RuntimeError("GEMINI_API_KEY ยังไม่ได้ตั้ง — สร้างที่ aistudio.google.com แล้วใส่ค่าใน Render")
-    url = GEMINI_URL_TMPL.format(model=GEMINI_MODEL)
-    r = requests.post(
-        url,
-        params={"key": GEMINI_API_KEY},
-        json={
-            "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {"maxOutputTokens": max_tokens},
-        },
-        timeout=30,
-    )
-    r.raise_for_status()
-    data = r.json()
-    try:
-        return data["candidates"][0]["content"]["parts"][0]["text"].strip()
-    except (KeyError, IndexError) as e:
-        # Gemini ตอบ 200 มาได้แต่ไม่มีคำตอบที่ใช้ได้จริง (เช่น โดน safety filter บล็อก) —
-        # ต้อง raise ให้ cascade รู้ว่าตัวนี้ใช้ไม่ได้จริง ไม่ใช่ถือว่าสำเร็จทั้งที่ไม่มีข้อความตอบ
-        raise RuntimeError(f"Gemini ตอบไม่มี candidates ที่ใช้ได้: {str(data)[:200]}") from e
+    last_exc: Exception | None = None
+    for model in GEMINI_MODELS:
+        url = GEMINI_URL_TMPL.format(model=model)
+        try:
+            r = requests.post(
+                url,
+                params={"key": GEMINI_API_KEY},
+                json={
+                    "contents": [{"parts": [{"text": prompt}]}],
+                    "generationConfig": {"maxOutputTokens": max_tokens},
+                },
+                timeout=30,
+            )
+            r.raise_for_status()
+            data = r.json()
+            try:
+                return data["candidates"][0]["content"]["parts"][0]["text"].strip()
+            except (KeyError, IndexError) as e:
+                # Gemini ตอบ 200 มาได้แต่ไม่มีคำตอบที่ใช้ได้จริง (เช่น โดน safety filter บล็อก) —
+                # ต้องถือว่าโมเดลนี้ใช้ไม่ได้ ไม่ใช่ถือว่าสำเร็จทั้งที่ไม่มีข้อความตอบ
+                raise RuntimeError(f"Gemini ({model}) ตอบไม่มี candidates ที่ใช้ได้: {str(data)[:200]}") from e
+        except Exception as e:
+            print(f"[ai_guard] Gemini model '{model}' ใช้ไม่ได้ ({e}) — ลองโมเดลถัดไปในลิสต์", flush=True)
+            last_exc = e
+            continue
+    raise RuntimeError(
+        f"Gemini ทุกโมเดลใช้ไม่ได้หมด ({', '.join(GEMINI_MODELS)}): {last_exc}"
+    ) from last_exc
 
 
 def _alert(slug: str, err: str, notify_fn, line_user_id: str, degraded: bool = False,
