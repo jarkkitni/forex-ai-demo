@@ -1718,6 +1718,9 @@ def api_admin_warm_attachment():
     # platform=instagram → อัปโหลดแยกสำหรับ IG โดยเฉพาะ (attachment_id ปกติ/ไม่ระบุ platform ผูกกับ FB
     # เท่านั้น IG resolve ไม่ได้ — เจอจริง 21 ก.ค. รูปขึ้น FB แต่ไม่ขึ้น IG)
     platform = request.args.get("platform", "")
+    # multi-tenant (21 ก.ค. 2026): ร้านใหม่ที่ไม่ใช่ Lullabell ต้อง warm ด้วย page_token ของร้านตัวเอง
+    # ไม่ใช่ META_PAGE_TOKEN — ถ้าไม่ใส่ ?page_token= มา ใช้ META_PAGE_TOKEN เดิม (พฤติกรรมเดิมเป๊ะ)
+    override_token = request.args.get("page_token", "") or META_PAGE_TOKEN
     try:
         cfg = meta_bot.load_cfg(slug)
         image_url = override_url or cfg.get("contact", {}).get("map_image", "")
@@ -1735,7 +1738,7 @@ def api_admin_warm_attachment():
         except Exception as e:
             self_fetch = {"error": str(e)[:200]}
 
-        status, resp = meta_bot.upload_reusable_attachment(META_PAGE_TOKEN, image_url, platform=platform)
+        status, resp = meta_bot.upload_reusable_attachment(override_token, image_url, platform=platform)
         ok = status == 200
         attachment_id = None
         if ok:
@@ -1759,13 +1762,62 @@ def api_admin_token_info():
     token = request.args.get("token", "")
     if not token or token != META_VERIFY_TOKEN or not META_VERIFY_TOKEN:
         return jsonify({"ok": False, "error": "unauthorized"}), 403
+    # multi-tenant (21 ก.ค. 2026): เช็ค token ของร้านอื่นได้ด้วย ?page_token= override (ไม่ใส่ = META_PAGE_TOKEN เดิม)
+    check_token = request.args.get("page_token", "") or META_PAGE_TOKEN
     try:
         r = requests.get(f"{meta_bot.GRAPH}/debug_token",
-                          params={"input_token": META_PAGE_TOKEN, "access_token": META_PAGE_TOKEN},
+                          params={"input_token": check_token, "access_token": check_token},
                           timeout=15)
         return jsonify({"status": r.status_code, "data": r.json()})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)[:300]}), 500
+
+
+@app.route("/api/admin/add-shop-page", methods=["POST"])
+def api_admin_add_shop_page():
+    """ลงทะเบียน page_id ใหม่ -> slug/page_token ในตาราง shop_pages (multi-tenant routing,
+    นกน้อยพิมพ์รัง เฟส 2 — 21 ก.ค. 2026) ทำให้รับร้านใหม่ = แค่เพิ่มแถวข้อมูล ไม่ต้อง deploy
+    service ใหม่/ตั้ง env var ชุดใหม่ต่อร้านอีกต่อไป (แต่ configs/{slug}.json ยังต้อง commit เข้า repo
+    เหมือนเดิม — ยังไม่ได้ย้าย config เข้า DB รอบนี้)
+    ป้องกันด้วย META_VERIFY_TOKEN เดิม (ของที่มีอยู่แล้ว ไม่ต้องเพิ่ม secret ใหม่)
+    body: {"token": "...", "page_id": "...", "slug": "...", "page_token": "...",
+           "platform": "facebook|instagram" (ไม่บังคับ), "note": "..." (ไม่บังคับ)}"""
+    body = request.get_json(silent=True) or {}
+    token = request.args.get("token", "") or body.get("token", "")
+    if not token or token != META_VERIFY_TOKEN or not META_VERIFY_TOKEN:
+        return jsonify({"ok": False, "error": "unauthorized"}), 403
+    page_id = (body.get("page_id") or "").strip()
+    slug = (body.get("slug") or "").strip()
+    page_token = (body.get("page_token") or "").strip()
+    if not (page_id and slug and page_token):
+        return jsonify({"ok": False, "error": "need page_id, slug, page_token"}), 400
+    ok, err = meta_bot.upsert_page_mapping(
+        page_id, slug, page_token,
+        platform=body.get("platform", ""), note=body.get("note", ""))
+    return jsonify({"ok": ok, "error": err or None})
+
+
+@app.route("/api/admin/list-shop-pages")
+def api_admin_list_shop_pages():
+    """ดู mapping page_id -> slug ปัจจุบันทั้งหมดใน shop_pages — ไว้เช็คตอนตั้งค่า/ดีบัก
+    ป้องกันด้วย META_VERIFY_TOKEN เดิม (ตัด page_token จริงออกจาก response กันหลุด แสดงแค่ 8 ตัวท้าย)"""
+    token = request.args.get("token", "")
+    if not token or token != META_VERIFY_TOKEN or not META_VERIFY_TOKEN:
+        return jsonify({"ok": False, "error": "unauthorized"}), 403
+    rows = meta_bot.list_page_mappings()
+    safe_rows = [{**r, "page_token": f"...{(r.get('page_token') or '')[-8:]}"} for r in rows]
+    return jsonify({"ok": True, "count": len(safe_rows), "shops": safe_rows})
+
+
+@app.route("/api/admin/reload-page-map", methods=["POST"])
+def api_admin_reload_page_map():
+    """บังคับรีเฟรช cache ในแรมของ page map ทันที (ข้าม TTL 5 นาที) — เรียกทันทีหลัง add-shop-page
+    ตอนตั้งค่าร้านใหม่ จะได้ไม่ต้องรอ ป้องกันด้วย META_VERIFY_TOKEN เดิม"""
+    token = request.args.get("token", "")
+    if not token or token != META_VERIFY_TOKEN or not META_VERIFY_TOKEN:
+        return jsonify({"ok": False, "error": "unauthorized"}), 403
+    meta_bot._load_page_map(force=True)
+    return jsonify({"ok": True, "loaded": len(meta_bot._page_map)})
 
 
 @app.route("/webhook/line/lullabell", methods=["POST"])
