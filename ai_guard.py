@@ -26,6 +26,13 @@ GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
+# ---- Gemini — ชั้นสำรองที่ 3 (เพิ่ม 21 ก.ค. 2026 หลังเจอเคสจริง Claude หมดเครดิต + Groq โดน
+# rate limit พร้อมกันวันเดียว ทำให้ทั้ง 2 ทางตันพร้อมกัน) คนละ provider คนละโควต้ากับทั้งคู่
+# เลยไม่น่าจะล่มพร้อมกันด้วย — สมัคร key ฟรีที่ aistudio.google.com
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+GEMINI_URL_TMPL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+
 # ---- สถานะ AI แยกต่อโปรเจกต์ (slug) — กันบั๊ก 20 ก.ค.: เดิม _health เป็น dict ก้อนเดียวใช้ร่วมกันทุกบอท
 # ทำให้ถ้าร้าน A ชน AI ล่มจนแจ้งเตือนไปแล้ว ระบบจะเงียบไม่แจ้งร้าน B อีก 6 ชม. แม้ร้าน B ล่มคนละเวลาคนละสาเหตุ
 # → ต้องแยกสถานะ+cooldown ต่อ slug กันเดี๋ยวรับงานลูกค้าหลายเจ้าพร้อมกันแล้วเจ้าหนึ่งบังอีกเจ้า
@@ -54,11 +61,13 @@ def health(slug: str = None) -> dict:
         b.pop("alerted_at", None)
         b["slug"] = slug
         b["groq_configured"] = bool(GROQ_API_KEY)
+        b["gemini_configured"] = bool(GEMINI_API_KEY)
         return b
 
     if not _health_by_slug:
         return {"ok": True, "last_ok": None, "last_error": None, "last_error_at": None,
-                "last_provider": None, "calls": 0, "fails": 0, "groq_configured": bool(GROQ_API_KEY)}
+                "last_provider": None, "calls": 0, "fails": 0,
+                "groq_configured": bool(GROQ_API_KEY), "gemini_configured": bool(GEMINI_API_KEY)}
 
     buckets = _health_by_slug.items()
     all_ok = all(b["ok"] for b in _health_by_slug.values())
@@ -81,6 +90,7 @@ def health(slug: str = None) -> dict:
         "calls": total_calls,
         "fails": total_fails,
         "groq_configured": bool(GROQ_API_KEY),
+        "gemini_configured": bool(GEMINI_API_KEY),
     }
 
 
@@ -125,8 +135,34 @@ def _call_groq(prompt: str, max_tokens: int = 1000) -> str:
         return r.json()["choices"][0]["message"]["content"].strip()
 
 
+def _call_gemini(prompt: str, max_tokens: int = 1000) -> str:
+    """เรียก Gemini API ตรงๆผ่าน requests (ไม่เพิ่ม dependency ใหม่ แพทเทิร์นเดียวกับ Groq)
+    ใช้เป็นชั้นสำรองที่ 3 หลัง Claude+Groq ล่มทั้งคู่ — คนละ provider คนละโควต้า ลดโอกาสตายพร้อมกันทั้งหมด"""
+    if not GEMINI_API_KEY:
+        raise RuntimeError("GEMINI_API_KEY ยังไม่ได้ตั้ง — สร้างที่ aistudio.google.com แล้วใส่ค่าใน Render")
+    url = GEMINI_URL_TMPL.format(model=GEMINI_MODEL)
+    r = requests.post(
+        url,
+        params={"key": GEMINI_API_KEY},
+        json={
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {"maxOutputTokens": max_tokens},
+        },
+        timeout=30,
+    )
+    r.raise_for_status()
+    data = r.json()
+    try:
+        return data["candidates"][0]["content"]["parts"][0]["text"].strip()
+    except (KeyError, IndexError) as e:
+        # Gemini ตอบ 200 มาได้แต่ไม่มีคำตอบที่ใช้ได้จริง (เช่น โดน safety filter บล็อก) —
+        # ต้อง raise ให้ cascade รู้ว่าตัวนี้ใช้ไม่ได้จริง ไม่ใช่ถือว่าสำเร็จทั้งที่ไม่มีข้อความตอบ
+        raise RuntimeError(f"Gemini ตอบไม่มี candidates ที่ใช้ได้: {str(data)[:200]}") from e
+
+
 def _alert(slug: str, err: str, notify_fn, line_user_id: str, degraded: bool = False,
-           failed_provider: str = "Claude", fallback_provider: str = "Groq") -> None:
+           failed_provider: str = "Claude", fallback_provider: str = "Groq",
+           all_dead_providers: str = "Claude, Groq, Gemini") -> None:
     """AI มีปัญหา — degraded=True หมายถึงตัวหลักล่มแต่ fallback ไปตัวสำรองได้ (ลูกค้ายังได้คำตอบ แค่คุณภาพลดลงชั่วคราว)
     degraded=False หมายถึงทุกทางตันหมด ต้องรู้เดี๋ยวนี้
     failed_provider/fallback_provider: ระบุทิศทางจริงที่เกิดขึ้น (Claude→Groq หรือ Groq→Claude Haiku) กันข้อความแจ้งเตือนผิดทิศ
@@ -160,7 +196,7 @@ def _alert(slug: str, err: str, notify_fn, line_user_id: str, degraded: bool = F
             ))
         else:
             notify_fn(line_user_id, (
-                f"{label}🚨 AI เรียกไม่ได้ทั้ง Claude และ Groq — ระบบหยุดทำงาน!\n"
+                f"{label}🚨 AI เรียกไม่ได้ทั้ง {all_dead_providers} — ระบบหยุดทำงาน!\n"
                 "━━━━━━━━━━━━\n"
                 "กระทบ (ถ้าเป็น key/เครดิตหมดร่วมกัน จะกระทบทุกอย่างที่ใช้ AI):\n"
                 "• บอทลูกค้า (Lullabell) — ตอบลูกค้าจริงไม่ได้ 😱 ลูกค้าจะได้ข้อความ fallback แทน\n"
@@ -221,8 +257,23 @@ def call(client, prompt: str, max_tokens: int = 1000, smart: bool = True,
                     # แต่ไม่มีทาง debug จาก Render logs ได้เลยว่า Haiku ล้มเพราะอะไรจริงๆ
                     print(f"[ai_guard] Claude Haiku fallback ก็ล้มด้วย (slug={slug}): {e2}", flush=True)
                     traceback.print_exc()
+            # Groq + Claude Haiku ล่มทั้งคู่ → ลอง Gemini (ชั้นสำรองที่ 3 คนละ provider คนละโควต้า) ก่อนยอมแพ้จริงๆ
+            # (เพิ่ม 21 ก.ค. 2026 — เคสจริง Claude หมดเครดิต + Groq โดน rate limit พร้อมกันวันเดียว)
+            if GEMINI_API_KEY:
+                try:
+                    text = _call_gemini(prompt, max_tokens)
+                    b["ok"] = True
+                    b["last_provider"] = "gemini (fallback)"
+                    b["last_ok"] = datetime.now(timezone.utc).isoformat()
+                    _alert(slug, str(e), notify_fn, line_user_id, degraded=True,
+                           failed_provider="Groq + Claude Haiku", fallback_provider="Gemini")
+                    return text
+                except Exception as e3:
+                    print(f"[ai_guard] Gemini fallback ก็ล้มด้วย (slug={slug}): {e3}", flush=True)
+                    traceback.print_exc()
             b["ok"] = False
-            _alert(slug, str(e), notify_fn, line_user_id, degraded=False)
+            _alert(slug, str(e), notify_fn, line_user_id, degraded=False,
+                   all_dead_providers="Groq, Claude Haiku, Gemini")
             raise
 
     try:
@@ -252,6 +303,21 @@ def call(client, prompt: str, max_tokens: int = 1000, smart: bool = True,
                 # เดิม except เปล่าไม่ log อะไรเลย — จุดคู่กับ fallback Claude Haiku ด้านบน
                 # (เคส Claude ล่มก่อน แล้ว fallback ไป Groq ก็ล้มด้วย) log ไว้กันหาสาเหตุไม่ได้เหมือนกัน
                 print(f"[ai_guard] Groq fallback ก็ล้มด้วย (slug={slug}): {e2}", flush=True)
+                traceback.print_exc()
+        # Claude + Groq ล่มทั้งคู่ → ลอง Gemini (ชั้นสำรองที่ 3 คนละ provider คนละโควต้า) ก่อนยอมแพ้จริงๆ
+        # (เพิ่ม 21 ก.ค. 2026 — เคสจริง Claude หมดเครดิต + Groq โดน rate limit พร้อมกันวันเดียว ทำให้ทาง
+        # ตันพร้อมกันทั้งคู่ ลูกค้าโดน fallback message ล้วนๆ ทั้งที่ยังมี AI ตัวที่ 3 ใช้ได้อยู่)
+        if GEMINI_API_KEY:
+            try:
+                text = _call_gemini(prompt, max_tokens)
+                b["ok"] = True
+                b["last_provider"] = "gemini (fallback)"
+                b["last_ok"] = datetime.now(timezone.utc).isoformat()
+                _alert(slug, str(e), notify_fn, line_user_id, degraded=True,
+                       failed_provider="Claude + Groq", fallback_provider="Gemini")
+                return text
+            except Exception as e3:
+                print(f"[ai_guard] Gemini fallback ก็ล้มด้วย (slug={slug}): {e3}", flush=True)
                 traceback.print_exc()
         b["ok"] = False
         _alert(slug, str(e), notify_fn, line_user_id, degraded=False)
