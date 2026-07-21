@@ -11,6 +11,7 @@ ENV ที่ใช้:
 PAPER-SAFE: ไม่มีการเงิน ไม่มีลบข้อมูล — แค่รับ/ตอบข้อความ
 """
 import os, json, hmac, hashlib, time, re, traceback
+from datetime import datetime, timezone
 import requests
 import seo_tracker  # ใช้ SUPABASE_URL / SUPABASE_KEY ร่วมกัน (multi-tenant page routing, เหมือน fastwork_hunter)
 
@@ -191,10 +192,89 @@ def _build_promo_quick_replies(names: list) -> list:
     return [{"content_type": "text", "title": n, "payload": f"PROMO_{i}"} for i, n in enumerate(names)]
 
 
-def load_cfg(slug: str = "lullabell") -> dict:
+# ---- Config store: DB-first + file fallback + TTL cache (นกน้อยพิมพ์รัง ชั้น 2 — 21 ก.ค. 2026) ----
+# เดิม config ของร้านอ่านจากไฟล์ configs/{slug}.json อย่างเดียว → ร้านใหม่ต้อง commit ไฟล์ทุกครั้ง
+# ทำให้ฟอร์มเว็บ (รันบน Render ดิสก์ ephemeral) สร้างร้านใหม่เองไม่ได้
+# ย้ายมาอ่านจากตาราง shop_configs (Supabase) ก่อน — ฟอร์มเขียน row ใหม่ได้เลย ไม่ต้อง deploy
+# หาใน DB ไม่เจอ = fallback อ่านไฟล์เดิม (Lullabell/ร้านที่ยังเป็นไฟล์รอดเสมอ แม้ตาราง shop_configs
+# จะยังไม่มี/ยังไม่มี row) — วินัย fallback-first เหมือน resolve_page()
+_cfg_cache: dict = {}          # slug -> {"cfg": dict, "at": float}
+_CFG_TTL = 60                  # cache config ในแรม 60 วิ กัน DB ถูกยิงทุกข้อความที่ลูกค้าทัก
+
+
+def _load_cfg_from_db(slug: str):
+    """คืน dict config จาก shop_configs ถ้ามี (active=true) — ไม่มี/พลาด/DB ปิด = None (ให้ fallback ไฟล์)"""
+    if not (seo_tracker.SUPABASE_URL and seo_tracker.SUPABASE_KEY):
+        return None
+    try:
+        r = requests.get(
+            f"{seo_tracker.SUPABASE_URL}/rest/v1/shop_configs"
+            f"?slug=eq.{slug}&active=eq.true&select=config&limit=1",
+            headers=_sb_headers(), timeout=15)
+        if r.ok:
+            rows = r.json()
+            if rows:
+                return rows[0].get("config")
+    except Exception as e:
+        print(f"[meta_bot] load cfg from DB fail slug={slug}: {e}", flush=True)
+    return None
+
+
+def _load_cfg_from_file(slug: str) -> dict:
     base = os.path.dirname(__file__)
     with open(os.path.join(base, "configs", f"{slug}.json"), encoding="utf-8") as f:
         return json.load(f)
+
+
+def load_cfg(slug: str = "lullabell") -> dict:
+    """อ่าน config ของร้าน: cache แรม → shop_configs (DB) → ไฟล์ configs/{slug}.json (fallback)
+    raise ถ้าหาไม่เจอทั้ง DB และไฟล์ (พฤติกรรม raise เดิมคงไว้ — ผู้เรียกจับ except อยู่แล้ว)"""
+    now = time.time()
+    hit = _cfg_cache.get(slug)
+    if hit and (now - hit["at"]) < _CFG_TTL:
+        return hit["cfg"]
+    cfg = _load_cfg_from_db(slug)
+    if cfg is None:
+        cfg = _load_cfg_from_file(slug)   # raise FileNotFoundError ถ้าไม่มีไฟล์ด้วย = ไม่รู้จักร้านนี้จริงๆ
+    _cfg_cache[slug] = {"cfg": cfg, "at": now}
+    return cfg
+
+
+def invalidate_cfg_cache(slug: str = None) -> None:
+    """ล้าง cache config (เรียกหลังบันทึก config ใหม่ผ่านฟอร์ม เพื่อให้ preview เห็นทันทีไม่ต้องรอ TTL)"""
+    if slug:
+        _cfg_cache.pop(slug, None)
+    else:
+        _cfg_cache.clear()
+
+
+def cfg_exists(slug: str) -> bool:
+    """มี config ของ slug นี้ไหม (DB หรือไฟล์) — ใช้แทน os.path.exists() เป็น 404 guard"""
+    try:
+        load_cfg(slug)
+        return True
+    except Exception:
+        return False
+
+
+def save_config(slug: str, cfg: dict) -> tuple:
+    """upsert config ร้านลง shop_configs (ผ่าน service key) — เรียกจากฟอร์ม /api/botkit/provision
+    คืน (True, "") ถ้าสำเร็จ, (False, error) ถ้าพลาด และล้าง cache ให้เห็นผลทันที"""
+    if not (seo_tracker.SUPABASE_URL and seo_tracker.SUPABASE_KEY):
+        return False, "SUPABASE_URL/SUPABASE_SERVICE_KEY ยังไม่ได้ตั้งบน Render"
+    try:
+        payload = {"slug": slug, "config": cfg, "active": True,
+                   "updated_at": datetime.now(timezone.utc).isoformat()}
+        r = requests.post(
+            f"{seo_tracker.SUPABASE_URL}/rest/v1/shop_configs?on_conflict=slug",
+            headers={**_sb_headers(), "Prefer": "resolution=merge-duplicates"},
+            data=json.dumps(payload), timeout=15)
+        if r.ok:
+            invalidate_cfg_cache(slug)
+            return True, ""
+        return False, r.text[:300]
+    except Exception as e:
+        return False, str(e)[:300]
 
 
 # ---- Multi-tenant page routing (นกน้อยพิมพ์รัง เฟส 2 — 21 ก.ค. 2026) ----

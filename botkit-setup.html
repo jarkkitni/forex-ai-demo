@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#060a16">
+<title>สร้างบอทร้านคุณเอง | กรอกข้อมูลแล้วดูตัวอย่างได้เลย</title>
+<meta name="robots" content="noindex">
+<style>
+  :root{ --bg:#060a16; --card:#0e1526; --line:#1e2a44; --ink:#eaf0ff; --mut:#8ea2c9;
+         --accent:#06C755; --accent2:#3b82f6; --danger:#ff5c7a; --radius:14px; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Sarabun",sans-serif;line-height:1.6}
+  .wrap{max-width:720px;margin:0 auto;padding:20px 16px 80px}
+  header{text-align:center;padding:24px 0 8px}
+  header h1{font-size:1.5rem;margin:0 0 6px}
+  header p{color:var(--mut);margin:0}
+  .step{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+        padding:18px;margin:16px 0}
+  .step h2{font-size:1.05rem;margin:0 0 4px;display:flex;align-items:center;gap:8px}
+  .step .hint{color:var(--mut);font-size:.85rem;margin:0 0 14px}
+  label{display:block;font-size:.85rem;color:var(--mut);margin:10px 0 4px}
+  input,textarea,select{width:100%;background:#0a1120;border:1px solid var(--line);color:var(--ink);
+        border-radius:10px;padding:11px 12px;font-size:.95rem;font-family:inherit}
+  input:focus,textarea:focus{outline:none;border-color:var(--accent2)}
+  textarea{resize:vertical;min-height:72px}
+  .row{display:flex;gap:10px}.row>*{flex:1}
+  .req{color:var(--danger)}
+  .cat{border:1px dashed var(--line);border-radius:12px;padding:14px;margin:12px 0;background:#0a1120}
+  .cat-head{display:flex;gap:10px;align-items:center}
+  .cat-head input[type=text]{flex:1}
+  .promo-toggle{display:flex;align-items:center;gap:8px;margin:10px 0;font-size:.9rem;color:var(--ink)}
+  .promo-toggle input{width:auto}
+  .item-row{display:flex;gap:8px;margin:6px 0}
+  .item-row input:nth-child(1){flex:2}.item-row input:nth-child(2){flex:1}
+  .btn{border:none;border-radius:10px;padding:11px 16px;font-size:.95rem;font-weight:600;
+       cursor:pointer;font-family:inherit}
+  .btn-ghost{background:transparent;border:1px solid var(--line);color:var(--mut)}
+  .btn-sm{padding:7px 12px;font-size:.85rem}
+  .btn-x{background:transparent;border:none;color:var(--danger);cursor:pointer;font-size:1.1rem;padding:0 6px}
+  .btn-main{background:linear-gradient(135deg,var(--accent),#04a548);color:#fff;width:100%;
+            padding:15px;font-size:1.05rem;margin-top:8px}
+  .btn-main:disabled{opacity:.5;cursor:not-allowed}
+  #msg{margin-top:14px;padding:12px;border-radius:10px;font-size:.9rem;display:none}
+  #msg.ok{display:block;background:#0c2a1a;border:1px solid #1c6b42;color:#9be8c0}
+  #msg.err{display:block;background:#2a0c14;border:1px solid #6b1c30;color:#ffb3c4}
+  #msg a{color:#9be8c0;font-weight:700}
+  .mini{font-size:.78rem;color:var(--mut);margin-top:4px}
+  .add-link{color:var(--accent2);background:none;border:none;cursor:pointer;font-size:.88rem;
+            padding:6px 0;font-family:inherit}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🐣 สร้างบอทร้านคุณเอง</h1>
+    <p>กรอกข้อมูลร้าน แล้วกดสร้าง — ดูตัวอย่างบอทตอบจริงได้ทันที</p>
+  </header>
+
+  <form id="f" onsubmit="return submitForm(event)">
+
+    <div class="step">
+      <h2>1️⃣ ข้อมูลร้าน</h2>
+      <p class="hint">ชื่อโค้ดร้าน (slug) ใช้เป็นลิงก์ดูตัวอย่าง เช่น goodhair → /demo/chat/goodhair</p>
+      <label>ชื่อโค้ดร้าน (slug) <span class="req">*</span></label>
+      <input name="slug" required placeholder="เช่น goodhair (a-z 0-9 ขีดกลาง)" pattern="[a-z0-9\-]{2,30}">
+      <div class="mini">ตัวพิมพ์เล็กภาษาอังกฤษ ตัวเลข และขีดกลางเท่านั้น</div>
+      <div class="row">
+        <div><label>ชื่อร้าน (สั้น) <span class="req">*</span></label>
+          <input name="biz_name" required placeholder="GoodHair"></div>
+        <div><label>อีโมจิร้าน</label>
+          <input name="emoji" placeholder="💇" maxlength="4"></div>
+      </div>
+      <label>ชื่อร้านเต็ม (ไทย)</label>
+      <input name="biz_full" placeholder="กู้ดแฮร์ ซาลอน">
+      <label>สโลแกน (ถ้ามี)</label>
+      <input name="tagline" placeholder="สวยครบจบในที่เดียว">
+    </div>
+
+    <div class="step">
+      <h2>2️⃣ ตัวตน AI + คำทักทาย</h2>
+      <p class="hint">AI จะแทนตัวเองด้วยชื่อนี้ และทักลูกค้าด้วยข้อความนี้ทุกครั้ง</p>
+      <div class="row">
+        <div><label>ชื่อที่ AI แทนตัวเอง</label><input name="ai_name" placeholder="น้องแฮร์"></div>
+        <div><label>โทนการพูด</label>
+          <select name="tone">
+            <option value="เป็นกันเอง">เป็นกันเอง</option>
+            <option value="สุภาพทางการ">สุภาพทางการ</option>
+            <option value="สนุกน่ารัก">สนุกน่ารัก</option>
+          </select></div>
+      </div>
+      <label>ข้อความทักทายแรก <span class="req">*</span></label>
+      <textarea name="greeting" required placeholder="สวัสดีค่ะ น้องแฮร์ยินดีให้บริการค่ะ 💇 อยากทำผมทรงไหนสอบถามได้เลยนะคะ"></textarea>
+    </div>
+
+    <div class="step">
+      <h2>3️⃣ เมนู / บริการ + ราคา</h2>
+      <p class="hint">ใส่เป็นหมวด เช่น "ทำผม" "ทำเล็บ" — ติ๊ก 🔥 หมวดไหนคือโปรโมชั่น (บอทจะดึงไปตอบเวลาลูกค้าถามหาโปร)</p>
+      <div id="cats"></div>
+      <button type="button" class="add-link" onclick="addCat()">+ เพิ่มหมวดบริการ</button>
+    </div>
+
+    <div class="step">
+      <h2>4️⃣ ช่องทางติดต่อ + ที่อยู่</h2>
+      <div class="row">
+        <div><label>LINE OA ID</label><input name="c_line" placeholder="@goodhair"></div>
+        <div><label>เบอร์โทร</label><input name="c_phone" placeholder="08x-xxx-xxxx"></div>
+      </div>
+      <div class="row">
+        <div><label>เพจ Facebook</label><input name="c_fb" placeholder="GoodHair Salon"></div>
+        <div><label>Instagram</label><input name="c_ig" placeholder="@goodhair"></div>
+      </div>
+      <label>ที่อยู่ร้าน</label>
+      <input name="c_address" placeholder="123 ถ.สุขุมวิท ...">
+      <div class="row">
+        <div><label>ลิงก์ Google Maps</label><input name="c_map" placeholder="https://maps.app..."></div>
+        <div><label>ที่จอดรถ</label><input name="c_parking" placeholder="มีที่จอด 5 คัน"></div>
+      </div>
+      <label>จุดสังเกตใกล้ร้าน (คั่นด้วยเครื่องหมายจุลภาค ,)</label>
+      <input name="c_landmarks" placeholder="ตรงข้าม 7-11, ข้างธนาคารกสิกร">
+    </div>
+
+    <div class="step">
+      <h2>5️⃣ โปรโมชั่น / ของแถม (ถ้ามี)</h2>
+      <label>ของแถม/สิทธิพิเศษลูกค้าใหม่</label>
+      <input name="gift" placeholder="ลูกค้าใหม่ลด 10% ครั้งแรก">
+      <label>สิทธิพิเศษทุกครั้งที่มาใช้บริการ</label>
+      <input name="perks" placeholder="สะสมครบ 5 ครั้ง ฟรี 1 ครั้ง">
+      <label>โปรชวนเพื่อน</label>
+      <input name="friend_promo" placeholder="พาเพื่อนมา ลดคนละ 50 บาท">
+    </div>
+
+    <div class="step">
+      <h2>6️⃣ เคสที่ต้องส่งต่อแอดมินจริง</h2>
+      <p class="hint">เงื่อนไขที่ห้าม AI ตอบเอง ให้ส่งต่อคนจริงเสมอ</p>
+      <label>เคสอ่อนไหว (คั่นด้วย ,)</label>
+      <input name="handoff_cases" placeholder="แพ้สารเคมี, ตั้งครรภ์, ร้องเรียน">
+    </div>
+
+    <div class="step">
+      <h2>7️⃣ ผู้ติดต่อ (สำหรับเราติดต่อกลับ)</h2>
+      <div class="row">
+        <div><label>ชื่อผู้ติดต่อ</label><input name="contact_name" placeholder="ชื่อเล่นก็ได้"></div>
+        <div><label>เบอร์/LINE ติดต่อกลับ</label><input name="contact_phone" placeholder="08x-xxx-xxxx"></div>
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-main" id="sbtn">🚀 สร้างบอท + ดูตัวอย่าง</button>
+    <div id="msg"></div>
+    <p class="mini" style="text-align:center;margin-top:14px">
+      สร้างแล้วบอทยังไม่เชื่อมเพจจริงทันที — ทีมงานจะต่อ Facebook/LINE ให้อีกขั้นก่อนเปิดใช้จริง
+    </p>
+  </form>
+</div>
+
+<script>
+// ---------- state เมนู (in-memory) ----------
+let cats = [];
+let cid = 0;
+
+function addCat(){
+  const id = ++cid;
+  cats.push({ id, name:'', emoji:'', isPromo:false, items:[{n:'',p:''}] });
+  render();
+}
+function delCat(id){ cats = cats.filter(c=>c.id!==id); render(); }
+function addItem(id){ const c=cats.find(x=>x.id===id); c.items.push({n:'',p:''}); render(); }
+function delItem(id,i){ const c=cats.find(x=>x.id===id); c.items.splice(i,1); if(!c.items.length)c.items.push({n:'',p:''}); render(); }
+
+function render(){
+  const box = document.getElementById('cats');
+  box.innerHTML = '';
+  cats.forEach(c=>{
+    const el = document.createElement('div');
+    el.className = 'cat';
+    el.innerHTML = `
+      <div class="cat-head">
+        <input type="text" placeholder="ชื่อหมวด เช่น ทำผม" value="${esc(c.name)}"
+               oninput="upd(${c.id},'name',this.value)">
+        <input type="text" placeholder="😊" maxlength="4" style="max-width:70px"
+               value="${esc(c.emoji)}" oninput="upd(${c.id},'emoji',this.value)">
+        <button type="button" class="btn-x" title="ลบหมวด" onclick="delCat(${c.id})">✕</button>
+      </div>
+      <label class="promo-toggle">
+        <input type="checkbox" ${c.isPromo?'checked':''} onchange="upd(${c.id},'isPromo',this.checked)">
+        🔥 หมวดนี้คือโปรโมชั่น (ให้บอทดึงไปตอบเวลาลูกค้าถามหาโปร)
+      </label>
+      <div id="items-${c.id}"></div>
+      <button type="button" class="add-link" onclick="addItem(${c.id})">+ เพิ่มรายการ</button>
+    `;
+    box.appendChild(el);
+    const ib = el.querySelector('#items-'+c.id);
+    c.items.forEach((it,i)=>{
+      const r = document.createElement('div');
+      r.className = 'item-row';
+      r.innerHTML = `
+        <input type="text" placeholder="ชื่อบริการ" value="${esc(it.n)}"
+               oninput="updItem(${c.id},${i},'n',this.value)">
+        <input type="text" placeholder="ราคา เช่น 450.-" value="${esc(it.p)}"
+               oninput="updItem(${c.id},${i},'p',this.value)">
+        <button type="button" class="btn-x" onclick="delItem(${c.id},${i})">✕</button>`;
+      ib.appendChild(r);
+    });
+  });
+}
+function upd(id,k,v){ const c=cats.find(x=>x.id===id); c[k]=v; }
+function updItem(id,i,k,v){ const c=cats.find(x=>x.id===id); c.items[i][k]=v; }
+function esc(s){ return (s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+// เริ่มด้วย 1 หมวด
+addCat();
+
+// ---------- submit ----------
+async function submitForm(e){
+  e.preventDefault();
+  const f = e.target;
+  const g = n => (f[n] ? f[n].value.trim() : '');
+
+  // ประกอบเมนูให้ตรงโครง server: แต่ละหมวด = 1 group (hot ถ้าติ๊กโปร)
+  const categories = cats.map(c=>({
+    name: c.name, emoji: c.emoji,
+    groups: [{
+      name: c.isPromo ? '🔥 โปรโมชั่นช่วงนี้' : (c.name || 'บริการ'),
+      hot: !!c.isPromo,
+      items: c.items.filter(it=>it.n.trim()).map(it=>({n:it.n.trim(), p:it.p.trim()}))
+    }]
+  })).filter(c => c.groups[0].items.length);
+
+  if(!categories.length){ return showMsg('err','กรุณาใส่เมนู/บริการอย่างน้อย 1 รายการ'); }
+
+  const payload = {
+    slug: g('slug').toLowerCase(),
+    biz_name: g('biz_name'), biz_full: g('biz_full'),
+    emoji: g('emoji'), tagline: g('tagline'),
+    ai_name: g('ai_name'), greeting: g('greeting'),
+    _client: g('biz_name') + ' — จากฟอร์ม self-serve',
+    contact: {
+      line: g('c_line'), phone: g('c_phone'), fb: g('c_fb'), ig: g('c_ig'),
+      address: g('c_address'), map_link: g('c_map'), parking: g('c_parking'),
+      landmarks: g('c_landmarks').split(',').map(s=>s.trim()).filter(Boolean)
+    },
+    gift: g('gift'), perks: g('perks'), friend_promo: g('friend_promo'),
+    handoff_cases: g('handoff_cases'),
+    categories,
+    contact_name: g('contact_name'), contact_phone: g('contact_phone')
+  };
+
+  const btn = document.getElementById('sbtn');
+  btn.disabled = true; btn.textContent = 'กำลังสร้าง...';
+  try{
+    const r = await fetch('/api/botkit/provision', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const d = await r.json();
+    if(d.success){
+      showMsg('ok', '✅ สร้างบอทเรียบร้อย! ดูตัวอย่างบอทตอบจริงได้เลย:<br>'
+        + '<a href="'+d.chat_url+'" target="_blank">👉 เปิดตัวอย่างบอท ('+d.slug+')</a>');
+      btn.textContent = '✅ สร้างแล้ว';
+    }else{
+      showMsg('err', '❌ ' + (d.error||'เกิดข้อผิดพลาด'));
+      btn.disabled = false; btn.textContent = '🚀 สร้างบอท + ดูตัวอย่าง';
+    }
+  }catch(err){
+    showMsg('err', '❌ เชื่อมต่อไม่สำเร็จ ลองใหม่อีกครั้ง');
+    btn.disabled = false; btn.textContent = '🚀 สร้างบอท + ดูตัวอย่าง';
+  }
+  return false;
+}
+function showMsg(cls, html){
+  const m = document.getElementById('msg');
+  m.className = cls; m.innerHTML = html;
+  m.scrollIntoView({behavior:'smooth', block:'center'});
+}
+</script>
+</body>
+</html>
