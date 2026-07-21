@@ -129,6 +129,19 @@ def _is_price_query(text: str) -> bool:
     return bool(_PRICE_QUERY_RE.search(text or ""))
 
 
+# คำว่า "โปร"/"promo" เป๊ะๆ — เข้มกว่า _PRICE_QUERY_RE ด้านบนเจตนา (ซึ่งครอบคลุมกว้างกว่ารวม "ราคา"/"เมนู"/
+# "บริการอะไร" ด้วย) ตัวนี้ใช้เฉพาะกรณีต้องการันตีคำตอบ 100% ไม่ผ่าน AI เลย (21 ก.ค. 2026 ตามคำขอ sIRImeta
+# "ห้ามเงียบ/ปล่อยว่าง/ตอบแค่รอสักครู่ ตอนลูกค้าถามโปรโมชั่น") ต้องแคบกว่าเดิมเพื่อไม่ไปครอบคำถามราคาเฉพาะ
+# บริการที่ควรให้ AI ตอบตามบริบท (เช่น "ทำสีราคาเท่าไหร่" ไม่มีคำว่า "โปร" เลย จะไม่โดนจับ ยังไป AI เหมือนเดิม)
+_PROMO_QUERY_RE = re.compile(r'โปร|\bpromo\w*', re.I)
+
+
+def _is_promo_query(text: str) -> bool:
+    """เดาว่าลูกค้าถามหา "โปรโมชั่น" ตรงๆ ไหม (คำว่า โปร/โปรโมชั่น/promo/promotion) — ใช้เป็น fast-path
+    การันตีคำตอบ 100% เสมอ ไม่ว่า AI จะปกติ/ล่ม/ตอบห้วน ไม่ใช่แค่ตอน AI ล่มสนิทเหมือน _is_price_query"""
+    return bool(_PROMO_QUERY_RE.search(text or ""))
+
+
 _BOLD_DIGIT_MAP = str.maketrans("0123456789", "𝟎𝟏𝟐𝟑𝟒𝟓𝟔𝟕𝟖𝟗")
 
 
@@ -629,6 +642,14 @@ def handle_line(data: dict, client, channel_token: str, slug: str = "lullabell",
         if not _rate_ok(history_key):
             result["skipped"] += 1
             continue
+        # ถามโปรโมชั่นตรงๆ (เช่น "มีโปรอะไรบ้างคะ", "ขอทราบโปรโมชั่น") — ตอบจาก template ตรงจาก config
+        # เลย ไม่ผ่าน AI เช่นเดียวกับ handle() (FB/IG) การันตีคำตอบ 100% ไม่มีวันเงียบ/ตอบห้วน (21 ก.ค. 2026)
+        if _is_promo_query(user_text) and _is_thai(user_text):
+            reply = _render_promo_list(cfg)
+            _remember_turn(history_key, user_text, reply)
+            send_line_reply(channel_token, reply_token, reply)
+            result["replied"] += 1
+            continue
         try:
             reply, _promo_choices = generate_reply(client, cfg, history_key, user_text,
                                     notify_fn=notify_fn, line_user_id=line_user_id, slug=slug)
@@ -734,10 +755,13 @@ def handle(data: dict, client, page_token: str, slug: str = "lullabell",
             # เลือกชุดปุ่มลัดให้ตรงภาษาที่ลูกค้าใช้ล่าสุด (ไทย/อังกฤษ) — ปุ่มเลือกโปร dynamic มาก่อนเสมอถ้ามี
             default_qr = QUICK_REPLIES if _is_thai(user_text) else QUICK_REPLIES_EN
             try:
-                # ปุ่ม "ดูราคา/โปรโมชั่น" (IB_PRICE) — ตอบจาก template ตรงจาก config เลย ไม่ผ่าน AI
-                # การันตีราคาไม่มีวันเพี้ยนไม่ว่า Claude/Groq หรือ AI ล่มก็ตาม และไม่เสีย token แม้แต่บาทเดียว
-                # (คำถามราคาที่พิมพ์เองแบบเจาะจง เช่น "ทำสีราคาเท่าไหร่" ยังให้ AI ตอบตามเดิม เพราะต้องใช้ความเข้าใจบริบท)
-                if effective_payload == "IB_PRICE" and _is_thai(user_text):
+                # ปุ่ม "ดูราคา/โปรโมชั่น" (IB_PRICE) หรือพิมพ์ถามโปรโมชั่นเองตรงๆ (เช่น "มีโปรอะไรบ้างคะ",
+                # "ขอทราบโปรโมชั่น", "ขอทราบโปรทั้งหมด") — ตอบจาก template ตรงจาก config เลย ไม่ผ่าน AI
+                # การันตีคำตอบ 100% ไม่มีวันเงียบ/ปล่อยว่าง/ตอบแค่รอสักครู่ ไม่ว่า Claude/Groq/Gemini จะปกติ/ล่ม/
+                # ตอบห้วนแค่ไหนก็ตาม (21 ก.ค. 2026 ตามคำขอ sIRImeta หลังเจอเคส AI ตอบห้วนไม่ครบ) และไม่เสีย
+                # token แม้แต่บาทเดียว (คำถามราคาที่พิมพ์เองแบบเจาะจง เช่น "ทำสีราคาเท่าไหร่" ไม่มีคำว่า "โปร"
+                # เลย ไม่โดนจับ ยังให้ AI ตอบตามเดิม เพราะต้องใช้ความเข้าใจบริบท)
+                if (effective_payload == "IB_PRICE" or _is_promo_query(user_text)) and _is_thai(user_text):
                     reply = _render_promo_list(cfg)
                     _remember_turn(sender, user_text, reply)
                     _send_with_quick_replies(page_token, sender, reply, quick_replies=default_qr)
