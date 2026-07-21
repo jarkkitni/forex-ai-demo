@@ -484,7 +484,11 @@ def send_message(page_token: str, recipient_id: str, text: str, quick_replies: l
     if not page_token:
         return 0, "no page token"
     url = f"{GRAPH}/me/messages"
-    message = {"text": text[:1900]}
+    # เดิม slice ที่ 1900 ตัวอักษร (คิดผิดว่า limit ของ Meta คือ ~2000) แต่ตัวจริงคือ 1,000 ตัวอักษรเป๊ะๆ
+    # (error #100/25 ถ้าเกิน) เจอเคสจริง 21 ก.ค. 2026 — ข้อความยาว 1,599 ตัว ไม่โดน slice เลย ส่งเต็มแล้ว
+    # Meta reject เงียบๆ ลูกค้าไม่ได้อะไรเลย ทางแก้จริงคือแบ่งส่งหลายก้อนที่ _send_with_quick_replies()
+    # (กันเนื้อหาขาด) — slice 990 ตรงนี้เป็นแค่ตาข่ายกันชั้นสุดท้ายเผื่อมี caller อื่นเรียกตรงไม่ผ่าน chunk
+    message = {"text": text[:990]}
     if quick_replies:
         message["quick_replies"] = quick_replies
     try:
@@ -797,23 +801,67 @@ def handle(data: dict, client, page_token: str, slug: str = "lullabell",
     return result
 
 
+def _chunk_text(text: str, limit: int = 950) -> list:
+    """แบ่งข้อความยาวเป็นหลายก้อน ก้อนละไม่เกิน limit ตัวอักษร — Meta (FB/IG) จำกัดข้อความเดียวไว้แค่
+    1,000 ตัวอักษรเป๊ะๆ (error #100/25 ถ้าเกิน) เผื่อ margin ไว้ที่ 950 กันขอบเคส เจอจริง 21 ก.ค. 2026:
+    ข้อความโปรโมชั่นจริงของ Lullabell ยาว 1,599 ตัวอักษร โค้ดเดิมมี safety slice text[:1900] (คิดผิดว่า
+    limit คือ ~2000) เลยไม่ตัดอะไรเลย ส่งเต็มยาวเกิน 1,000 → Meta reject ทั้งรอบมีปุ่มและรอบ retry ไม่มีปุ่ม
+    (เพราะตัวข้อความเองก็ยาวเกินอยู่แล้ว ไม่เกี่ยวกับปุ่มเลย) ลูกค้าเลยไม่ได้อะไรเลยแม้แต่ตัวเดียว
+    ห้ามตัดทิ้งเนื้อหา (ลูกค้าต้องได้ข้อมูลโปรครบทุกตัว) เลยต้อง "แบ่งส่งหลายข้อความ" แทน "ตัดทิ้ง"
+    เลือกจุดตัดที่ปลอดภัยที่สุดก่อนเสมอ: 1) บรรทัดว่างคั่น (\\n\\n) ระหว่างแต่ละรายการโปร/หมวดหมู่
+    2) ขึ้นบรรทัดใหม่เดี่ยว (\\n) ถ้าก้อนนั้นไม่มีบรรทัดว่างเลย 3) ตัดเป๊ะตรง limit เป็นทางเลือกสุดท้ายจริงๆ"""
+    text = (text or "").strip()
+    if len(text) <= limit:
+        return [text] if text else []
+    chunks = []
+    remaining = text
+    while len(remaining) > limit:
+        window = remaining[:limit]
+        cut = window.rfind("\n\n")
+        if cut == -1:
+            cut = window.rfind("\n")
+        if cut < limit * 0.3:  # จุดตัดอยู่ต้นๆ เกินไป (หรือหาไม่เจอเลย) จะได้ก้อนสั้นจิ๋วเกินไป ใช้ hard cut แทน
+            cut = limit
+        chunk = remaining[:cut].strip()
+        if chunk:
+            chunks.append(chunk)
+        remaining = remaining[cut:].strip()
+    if remaining:
+        chunks.append(remaining)
+    return chunks
+
+
 def _send_with_quick_replies(page_token: str, sender: str, text: str, quick_replies: list = None,
                               fallback_names: list = None) -> None:
-    """ส่งข้อความพร้อม Quick Replies — ถ้า Meta ปฏิเสธ (เช่น payload ผิดสเปก) ให้ log ไว้ดูใน Render logs
-    แล้วลองส่งใหม่แบบไม่มีปุ่ม กันลูกค้าไม่ได้รับข้อความเลยเพราะปุ่มพัง
+    """ส่งข้อความพร้อม Quick Replies — แบ่งเป็นหลายก้อนอัตโนมัติถ้ายาวเกิน 950 ตัวอักษร (กันชนลิมิต 1,000
+    ตัวอักษรของ Meta) ปุ่ม quick_replies แนบเฉพาะก้อนสุดท้ายเท่านั้น ก้อนก่อนหน้าส่งเปล่าๆ ไม่มีปุ่ม
+    ถ้า Meta ปฏิเสธก้อนไหน (เช่น ก้อนสุดท้าย+ปุ่ม ยังรวมกันเกิน 1,000) log ไว้ดูใน Render logs แล้วลองส่ง
+    ก้อนนั้นใหม่แบบไม่มีปุ่ม (ตัวข้อความเดี่ยวๆ การันตีอยู่ใต้ limit อยู่แล้วเพราะ chunk ไว้ที่ 950)
+    กันลูกค้าไม่ได้รับข้อความเลยเพราะปุ่มพัง — และเช็ค/log ผลของรอบ retry ด้วย (เดิมไม่เช็คเลย ทำให้ถ้า
+    retry ล้มเหลวซ้ำ ลูกค้าจะเงียบสนิทโดยไม่มี log อะไรให้ debug ได้เลย — เจอเคสจริง 21 ก.ค. 2026)
     quick_replies: ถ้าไม่ใส่ (None) จะใช้ปุ่ม Ice Breaker เริ่มต้น (QUICK_REPLIES) — ใส่มาเองได้เมื่อ AI แนะนำโปรหลายอย่าง
 
     fallback_names: รายชื่อโปร (ถ้ามี) ที่ปุ่ม quick_replies กำลังจะแสดง — เจอเคสจริง 21 ก.ค. 2026 (IG):
     ปุ่มเลือกโปรหลายอันรวมกับข้อความภาษาไทย (นับไบต์ UTF-8 มากกว่าอังกฤษ) ดันเกินลิมิต 1,000 ตัวอักษรของ Meta
-    ตอนแนบ quick_replies พอปุ่มถูกปฏิเสธ โค้ดเดิม retry ด้วยข้อความเกริ่นสั้นๆ ตัวเดิมเฉยๆ ไม่มีทั้งปุ่มไม่มีทั้ง
-    รายชื่อโปร ลูกค้าเลยได้แค่ "มีโปรน่าสนใจรวบรวมมาให้แล้วค่ะ" ลอยๆ ไม่รู้จะพิมพ์อะไรต่อ (เจอจริงจากแชท IG จริง)
-    ถ้าใส่ fallback_names มา ตอน retry จะแปะรายชื่อเป็น bullet list ต่อท้ายข้อความแทน ให้ลูกค้าพิมพ์ชื่อกลับมา
-    เลือกได้เองแทนกดปุ่ม — การันตีลูกค้าไม่มีวันได้ข้อความเปล่าๆ ไม่มีข้อมูลอะไรให้ทำต่อ"""
-    status, resp_text = send_message(page_token, sender, text, quick_replies=quick_replies or QUICK_REPLIES)
-    if not status or status >= 400:
-        print(f"[meta_bot] send_message with quick_replies failed ({status}): {resp_text} — retry without buttons")
-        retry_text = text
-        if fallback_names:
-            bullets = "\n".join(f"• {n}" for n in fallback_names)
-            retry_text = f"{text}\n\n{bullets}\n\n(พิมพ์ชื่อโปรที่สนใจกลับมาได้เลยค่ะ)"
-        send_message(page_token, sender, retry_text)
+    ตอนแนบ quick_replies พอปุ่มถูกปฏิเสธ ตอน retry จะแปะรายชื่อเป็น bullet list ต่อท้ายก้อนสุดท้ายแทน
+    ให้ลูกค้าพิมพ์ชื่อกลับมาเลือกได้เองแทนกดปุ่ม — การันตีลูกค้าไม่มีวันได้ข้อความเปล่าๆ ไม่มีข้อมูลอะไรให้ทำต่อ"""
+    qr = quick_replies or QUICK_REPLIES
+    chunks = _chunk_text(text, limit=950)
+    if not chunks:
+        return
+    last_idx = len(chunks) - 1
+    for i, chunk in enumerate(chunks):
+        is_last = i == last_idx
+        chunk_qr = qr if is_last else None
+        status, resp_text = send_message(page_token, sender, chunk, quick_replies=chunk_qr)
+        if not status or status >= 400:
+            print(f"[meta_bot] send_message chunk {i + 1}/{len(chunks)} (quick_replies={bool(chunk_qr)}) "
+                  f"failed ({status}): {resp_text} — retry without buttons", flush=True)
+            retry_chunk = chunk
+            if is_last and fallback_names:
+                bullets = "\n".join(f"• {n}" for n in fallback_names)
+                retry_chunk = f"{chunk}\n\n{bullets}\n\n(พิมพ์ชื่อโปรที่สนใจกลับมาได้เลยค่ะ)"
+            r_status, r_resp = send_message(page_token, sender, retry_chunk)
+            if not r_status or r_status >= 400:
+                print(f"[meta_bot] retry-without-buttons ALSO failed chunk {i + 1}/{len(chunks)} "
+                      f"({r_status}): {r_resp}", flush=True)
