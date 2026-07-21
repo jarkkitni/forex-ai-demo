@@ -1715,6 +1715,9 @@ def api_admin_warm_attachment():
         return jsonify({"ok": False, "error": "unauthorized"}), 403
     slug = request.args.get("slug", "lullabell")
     override_url = request.args.get("image_url", "")
+    # platform=instagram → อัปโหลดแยกสำหรับ IG โดยเฉพาะ (attachment_id ปกติ/ไม่ระบุ platform ผูกกับ FB
+    # เท่านั้น IG resolve ไม่ได้ — เจอจริง 21 ก.ค. รูปขึ้น FB แต่ไม่ขึ้น IG)
+    platform = request.args.get("platform", "")
     try:
         cfg = meta_bot.load_cfg(slug)
         image_url = override_url or cfg.get("contact", {}).get("map_image", "")
@@ -1732,7 +1735,7 @@ def api_admin_warm_attachment():
         except Exception as e:
             self_fetch = {"error": str(e)[:200]}
 
-        status, resp = meta_bot.upload_reusable_attachment(META_PAGE_TOKEN, image_url)
+        status, resp = meta_bot.upload_reusable_attachment(META_PAGE_TOKEN, image_url, platform=platform)
         ok = status == 200
         attachment_id = None
         if ok:

@@ -446,7 +446,7 @@ def send_image_message(page_token: str, recipient_id: str, image_url: str = "", 
         return 0, str(e)[:200]
 
 
-def upload_reusable_attachment(page_token: str, image_url: str) -> tuple:
+def upload_reusable_attachment(page_token: str, image_url: str, platform: str = "") -> tuple:
     """อัปโหลดรูปแบบ reusable ผ่าน Meta Attachment Upload API ครั้งเดียว → ได้ attachment_id เอาไปใช้ส่งซ้ำได้ตลอดไป
     ไม่ต้องเรียกทุกครั้งที่แชท — เรียกครั้งเดียวตอนตั้งค่า แล้วเก็บ attachment_id ไว้ใน config ถาวร
 
@@ -455,7 +455,11 @@ def upload_reusable_attachment(page_token: str, image_url: str) -> tuple:
     ทุก url แม้ url ภายนอกที่รู้ว่าใช้ได้แน่ (ตัดปัจจัย hosting/cold-start/token scope ของเราทิ้งหมดแล้ว
     20 ก.ค.) ตรงกับที่นักพัฒนาคนอื่นเจอปัญหาเดียวกันจำนวนมากใน Meta developer community —
     เป็นบั๊กที่รู้กันแพร่หลายฝั่ง Meta เอง (error #100 / 2018007 หรือ 2018047 "Upload failed")
-    วิธี filedata ตัด Meta ไม่ต้องมา fetch url เราเลย จึงเลี่ยงบั๊กนี้ได้"""
+    วิธี filedata ตัด Meta ไม่ต้องมา fetch url เราเลย จึงเลี่ยงบั๊กนี้ได้
+
+    platform: ใส่ "instagram" เพื่ออัปโหลด attachment ที่ใช้กับ IG DM ได้ (21 ก.ค. — เจอว่า attachment_id
+    ที่อัปโหลดแบบไม่ระบุ platform จะผูกกับ FB เท่านั้น IG resolve ไม่ได้ ตามเอกสาร Meta ต้องระบุ
+    platform=instagram ตอนอัปโหลดถึงจะได้ ID ที่ใช้กับ IG ได้ — ไม่ใส่ = ค่าเดิม (FB-only) เหมือนเดิมทุกอย่าง"""
     if not page_token or not image_url:
         return 0, "no page token / image url"
     try:
@@ -467,11 +471,14 @@ def upload_reusable_attachment(page_token: str, image_url: str) -> tuple:
         return 0, f"fetch image error: {str(e)[:200]}"
 
     url = f"{GRAPH}/me/message_attachments"
+    data_payload = {"message": json.dumps({"attachment": {"type": "image", "payload": {"is_reusable": True}}})}
+    if platform:
+        data_payload["platform"] = platform
     try:
         r = requests.post(
             url,
             params={"access_token": page_token},
-            data={"message": json.dumps({"attachment": {"type": "image", "payload": {"is_reusable": True}}})},
+            data=data_payload,
             files={"filedata": ("image.jpg", img_r.content, content_type)},
             timeout=30,
         )
@@ -628,10 +635,13 @@ def handle(data: dict, client, page_token: str, slug: str = "lullabell",
                 # best-effort ล้วนๆ — ถ้าส่งรูปพลาด ไม่ทำให้คำตอบหลักที่ส่งไปแล้วเสียหาย
                 if effective_payload == "IB_LOCATION" or _is_location_query(user_text):
                     map_img = cfg.get("contact", {}).get("map_image", "")
-                    # attachment_id ที่มีอยู่ตอนนี้อัปโหลดแบบ FB-only (ไม่ได้ระบุ platform=instagram ตอนอัป)
-                    # IG resolve ID นี้ไม่ได้ — ฝั่ง IG เลยส่งด้วย url ตรงๆ แทนเสมอ (ใช้ได้จริงตามสเปก Meta,
-                    # Meta จะ fetch+cache รูปจาก url ให้เอง ไม่ต้องมี attachment_id ก็ได้)
-                    map_attach_id = "" if is_ig else cfg.get("contact", {}).get("map_attachment_id", "")
+                    # attachment_id เดิม (map_attachment_id) อัปโหลดแบบ FB-only (ไม่ได้ระบุ platform=instagram
+                    # ตอนอัป) IG resolve ไม่ได้ — ต้องมี attachment_id แยกที่อัปโหลดระบุ platform=instagram
+                    # โดยเฉพาะ (map_attachment_id_ig) ถึงจะใช้กับ IG ได้จริง
+                    # ไม่ใช้ url ส่งตรงๆ กับ IG เพราะโค้ดเดิมพิสูจน์แล้วว่าวิธีนี้พังกับ FB มาก่อน (Meta fetch url
+                    # แบบ async แล้วพังเงียบไม่มี error กลับมาเลย — เจอจริง 21 ก.ค. ตอนลองกับ IG ก็เงียบเหมือนกัน)
+                    map_attach_id = (cfg.get("contact", {}).get("map_attachment_id_ig", "") if is_ig
+                                      else cfg.get("contact", {}).get("map_attachment_id", ""))
                     if map_img or map_attach_id:
                         try:
                             img_status, img_resp = send_image_message(page_token, sender, image_url=map_img, attachment_id=map_attach_id)
