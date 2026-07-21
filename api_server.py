@@ -36,6 +36,11 @@ META_APP_SECRET     = os.environ.get("META_APP_SECRET", "")
 META_SLUG           = os.environ.get("META_SLUG", "lullabell")
 META_PAGE_ID        = os.environ.get("META_PAGE_ID", "783393614867196")  # เพจ Lullabell
 N8N_POST_SECRET     = os.environ.get("N8N_POST_SECRET", "")  # กัน endpoint โพสต์ FB ถูกยิงมั่ว
+# ---- Lullabell แยกดีพลอย (21 ก.ค. 2026) — forward event ของเพจนี้ไปยัง service เดี่ยวแทนที่จะ
+# handle เองที่นี่ (ปลอดภัยขึ้น: secret/deploy lifecycle ของลูกค้าจริงไม่ผูกกับฟีเจอร์ทดลองอื่น)
+# Callback URL ที่ตั้งไว้กับ Meta ยังเป็นของ service นี้เหมือนเดิม (Messenger รองรับแค่ 1 URL ต่อ 1 App) ----
+LULLABELL_PAGE_ID    = os.environ.get("LULLABELL_PAGE_ID", "783393614867196")  # เพจ Lullabell (ค่าเดียวกับ META_PAGE_ID เดิม)
+LULLABELL_FORWARD_URL = os.environ.get("LULLABELL_FORWARD_URL", "")  # เช่น https://lullabell-bot.onrender.com/webhook/meta
 # ---- LINE OA ของ "ร้านลูกค้า" (เช่น @lullabell) — คนละตัวกับ LINE_TOKEN/LINE_CHANNEL_SECRET ด้านบนซึ่งเป็นของ ForexAI Pro เอง ----
 LULLABELL_LINE_CHANNEL_SECRET = os.environ.get("LULLABELL_LINE_CHANNEL_SECRET", "")
 LULLABELL_LINE_CHANNEL_TOKEN  = os.environ.get("LULLABELL_LINE_CHANNEL_TOKEN", "")
@@ -1687,6 +1692,22 @@ def meta_webhook():
         data = json.loads(body or b"{}")
     except Exception:
         return "bad json", 400
+
+    # ---- Lullabell แยกดีพลอยแล้ว (21 ก.ค. 2026): ถ้า event นี้มาจากเพจ Lullabell ให้ forward
+    # raw body + signature ไปยัง service เดี่ยวแทน ไม่ handle เองที่นี่ (กันตอบซ้ำ 2 รอบ)
+    # ลายเซ็นยัง valid ที่ปลายทางเพราะ META_APP_SECRET เป็นค่าเดียวกัน (App เดียวกัน)
+    if LULLABELL_FORWARD_URL:
+        entry_ids = {str(e.get("id", "")) for e in data.get("entry", [])}
+        if LULLABELL_PAGE_ID in entry_ids:
+            try:
+                requests.post(LULLABELL_FORWARD_URL, data=body,
+                              headers={"X-Hub-Signature-256": sig,
+                                       "Content-Type": request.headers.get("Content-Type", "application/json")},
+                              timeout=8)
+            except Exception as e:
+                traceback.print_exc()
+                print("[meta_webhook] forward to lullabell-bot failed:", str(e)[:200])
+            return "EVENT_RECEIVED", 200
 
     # ตอบเฉพาะ object ที่เกี่ยวกับข้อความ (page = Messenger, instagram = IG DM)
     if data.get("object") in ("page", "instagram"):
