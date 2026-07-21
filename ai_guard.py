@@ -30,7 +30,9 @@ GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 # rate limit พร้อมกันวันเดียว ทำให้ทั้ง 2 ทางตันพร้อมกัน) คนละ provider คนละโควต้ากับทั้งคู่
 # เลยไม่น่าจะล่มพร้อมกันด้วย — สมัคร key ฟรีที่ aistudio.google.com
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+# หมายเหตุ 21 ก.ค. 2026: "gemini-2.0-flash" โควต้า free tier ของโปรเจกต์นี้คือ 0/0 (ไม่ได้รับเลย)
+# ต้องใช้ "gemini-2.5-flash" ถึงจะมีโควต้าจริง (5 ครั้ง/นาที, 20 ครั้ง/วัน ต่อโปรเจกต์ — แชร์กับ key อื่นในโปรเจกต์เดียวกันด้วย)
 GEMINI_URL_TMPL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
 # ---- สถานะ AI แยกต่อโปรเจกต์ (slug) — กันบั๊ก 20 ก.ค.: เดิม _health เป็น dict ก้อนเดียวใช้ร่วมกันทุกบอท
