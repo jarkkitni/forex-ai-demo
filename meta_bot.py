@@ -704,7 +704,8 @@ def handle(data: dict, client, page_token: str, slug: str = "lullabell",
                 reply, promo_choices = generate_reply(client, cfg, sender, user_text,
                                        notify_fn=notify_fn, line_user_id=line_user_id, slug=slug)
                 qr = _build_promo_quick_replies(promo_choices) if promo_choices else default_qr
-                _send_with_quick_replies(page_token, sender, reply, quick_replies=qr)
+                _send_with_quick_replies(page_token, sender, reply, quick_replies=qr,
+                                          fallback_names=promo_choices)
                 result["replied"] += 1
                 # ลูกค้าถามที่อยู่/แผนที่ (กดปุ่ม IB_LOCATION หรือพิมพ์เอง) → แนบรูปการ์ดแผนที่ตามหลังข้อความ
                 if effective_payload == "IB_LOCATION" or _is_location_query(user_text):
@@ -730,11 +731,23 @@ def handle(data: dict, client, page_token: str, slug: str = "lullabell",
     return result
 
 
-def _send_with_quick_replies(page_token: str, sender: str, text: str, quick_replies: list = None) -> None:
+def _send_with_quick_replies(page_token: str, sender: str, text: str, quick_replies: list = None,
+                              fallback_names: list = None) -> None:
     """ส่งข้อความพร้อม Quick Replies — ถ้า Meta ปฏิเสธ (เช่น payload ผิดสเปก) ให้ log ไว้ดูใน Render logs
     แล้วลองส่งใหม่แบบไม่มีปุ่ม กันลูกค้าไม่ได้รับข้อความเลยเพราะปุ่มพัง
-    quick_replies: ถ้าไม่ใส่ (None) จะใช้ปุ่ม Ice Breaker เริ่มต้น (QUICK_REPLIES) — ใส่มาเองได้เมื่อ AI แนะนำโปรหลายอย่าง"""
+    quick_replies: ถ้าไม่ใส่ (None) จะใช้ปุ่ม Ice Breaker เริ่มต้น (QUICK_REPLIES) — ใส่มาเองได้เมื่อ AI แนะนำโปรหลายอย่าง
+
+    fallback_names: รายชื่อโปร (ถ้ามี) ที่ปุ่ม quick_replies กำลังจะแสดง — เจอเคสจริง 21 ก.ค. 2026 (IG):
+    ปุ่มเลือกโปรหลายอันรวมกับข้อความภาษาไทย (นับไบต์ UTF-8 มากกว่าอังกฤษ) ดันเกินลิมิต 1,000 ตัวอักษรของ Meta
+    ตอนแนบ quick_replies พอปุ่มถูกปฏิเสธ โค้ดเดิม retry ด้วยข้อความเกริ่นสั้นๆ ตัวเดิมเฉยๆ ไม่มีทั้งปุ่มไม่มีทั้ง
+    รายชื่อโปร ลูกค้าเลยได้แค่ "มีโปรน่าสนใจรวบรวมมาให้แล้วค่ะ" ลอยๆ ไม่รู้จะพิมพ์อะไรต่อ (เจอจริงจากแชท IG จริง)
+    ถ้าใส่ fallback_names มา ตอน retry จะแปะรายชื่อเป็น bullet list ต่อท้ายข้อความแทน ให้ลูกค้าพิมพ์ชื่อกลับมา
+    เลือกได้เองแทนกดปุ่ม — การันตีลูกค้าไม่มีวันได้ข้อความเปล่าๆ ไม่มีข้อมูลอะไรให้ทำต่อ"""
     status, resp_text = send_message(page_token, sender, text, quick_replies=quick_replies or QUICK_REPLIES)
     if not status or status >= 400:
         print(f"[meta_bot] send_message with quick_replies failed ({status}): {resp_text} — retry without buttons")
-        send_message(page_token, sender, text)
+        retry_text = text
+        if fallback_names:
+            bullets = "\n".join(f"• {n}" for n in fallback_names)
+            retry_text = f"{text}\n\n{bullets}\n\n(พิมพ์ชื่อโปรที่สนใจกลับมาได้เลยค่ะ)"
+        send_message(page_token, sender, retry_text)
