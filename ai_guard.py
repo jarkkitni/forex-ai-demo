@@ -149,7 +149,16 @@ def _call_gemini(prompt: str, max_tokens: int = 1000) -> str:
 
     ลองไล่ทีละโมเดลใน GEMINI_MODELS (ตัวแรกก่อน) — กันเคส 21 ก.ค. 2026 ที่ gemini-2.0-flash โดน Google
     เลิกรองรับกะทันหันจน 404 ทั้งที่ key/billing ปกติดี ถ้าตัวหลักใช้ไม่ได้ไม่ว่าเหตุผลอะไร (404 เลิกรองรับ,
-    429 โควต้าเต็มเฉพาะโมเดลนั้น, ฯลฯ) ลองตัวถัดไปในลิสต์ต่อทันทีก่อนจะยอมแพ้จริงๆ"""
+    429 โควต้าเต็มเฉพาะโมเดลนั้น, ฯลฯ) ลองตัวถัดไปในลิสต์ต่อทันทีก่อนจะยอมแพ้จริงๆ
+
+    thinkingConfig.thinkingBudget=0: ปิด "thinking" mode ของ gemini-2.5-flash (เปิดเป็นค่า default ถ้าไม่สั่งปิด)
+    เจอจริง 21 ก.ค. 2026 (รอบ 3) หลังสลับให้ Gemini เป็นตัวหลัก — ลูกค้าถามขอดูโปรทั้งหมดพร้อมราคา แต่บอทตอบ
+    สั้นห้วนแค่ประโยคเดียว ไม่มีรายชื่อโปร/ราคาเลย ทั้งที่ system prompt สั่งไว้ชัดเจน ตรวจ Render logs ไม่เจอ
+    error อะไรเลย (ok=true, fails=0) แปลว่า Gemini ตอบสำเร็จแต่เนื้อหาห้วนเอง — สาเหตุคือ "thinking" tokens
+    (การให้โมเดลคิดในใจก่อนตอบ) นับรวมอยู่ใน maxOutputTokens เดียวกับคำตอบจริง พอ thinking กินโควต้าไปเยอะ
+    เหลือโควต้าให้คำตอบจริงน้อยจนถูกตัดจบก่อนจะทันเขียนรายการโปรครบ ปิด thinking ไปเลยเพราะงานนี้เป็นแชทบอท
+    ตอบไว ไม่ต้องการ multi-step reasoning อยู่แล้ว (คำสั่งอยู่ครบใน system prompt แล้ว) — ปลอดภัยสำหรับ
+    gemini-2.0-flash ด้วยเพราะโมเดลนี้ไม่รองรับ thinking อยู่แล้ว ใส่ param นี้ไปจะถูกเมิน ไม่พัง"""
     if not GEMINI_API_KEY:
         raise RuntimeError("GEMINI_API_KEY ยังไม่ได้ตั้ง — สร้างที่ aistudio.google.com แล้วใส่ค่าใน Render")
     last_exc: Exception | None = None
@@ -161,7 +170,10 @@ def _call_gemini(prompt: str, max_tokens: int = 1000) -> str:
                 params={"key": GEMINI_API_KEY},
                 json={
                     "contents": [{"parts": [{"text": prompt}]}],
-                    "generationConfig": {"maxOutputTokens": max_tokens},
+                    "generationConfig": {
+                        "maxOutputTokens": max_tokens,
+                        "thinkingConfig": {"thinkingBudget": 0},
+                    },
                 },
                 timeout=30,
             )
