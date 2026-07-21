@@ -184,10 +184,15 @@ def _call_gemini(prompt: str, max_tokens: int = 1000) -> str:
 
 def _alert(slug: str, err: str, notify_fn, line_user_id: str, degraded: bool = False,
            failed_provider: str = "Claude", fallback_provider: str = "Groq",
+           next_fallback: str = None,
            all_dead_providers: str = "Claude, Groq, Gemini") -> None:
     """AI มีปัญหา — degraded=True หมายถึงตัวหลักล่มแต่ fallback ไปตัวสำรองได้ (ลูกค้ายังได้คำตอบ แค่คุณภาพลดลงชั่วคราว)
     degraded=False หมายถึงทุกทางตันหมด ต้องรู้เดี๋ยวนี้
-    failed_provider/fallback_provider: ระบุทิศทางจริงที่เกิดขึ้น (Claude→Groq หรือ Groq→Claude Haiku) กันข้อความแจ้งเตือนผิดทิศ
+    failed_provider/fallback_provider: ระบุทิศทางจริงที่เกิดขึ้น กันข้อความแจ้งเตือนผิดทิศ
+    next_fallback: ชื่อชั้นสำรองถัดไปที่ยังเหลืออยู่จริง (ถ้ามี) — ใส่ให้ตรงเป๊ะตามลำดับ cascade จริงของแต่ละ tier
+    ณ ตอนนี้ (21 ก.ค. 2026 รอบ 3) แทนที่จะเดาจากชื่อ provider (เคยฮาร์ดโค้ดว่า fallback_provider=="Gemini"
+    คือชั้นสุดท้ายเสมอ ซึ่งพังทันทีที่สลับลำดับ cascade รอบนี้ — Gemini กลายเป็นตัวหลัก ไม่ใช่ชั้นสุดท้ายอีกแล้ว)
+    ผู้เรียกต้องระบุ next_fallback ตรงๆ ให้ตรงกับ cascade จริงที่ใช้อยู่
     slug: กัน cooldown ของโปรเจกต์หนึ่งไปบังการแจ้งเตือนของอีกโปรเจกต์ — แต่ละ slug มี cooldown ของตัวเอง"""
     b = _bucket(slug)
     now = time.time()
@@ -207,12 +212,10 @@ def _alert(slug: str, err: str, notify_fn, line_user_id: str, degraded: bool = F
 
     try:
         if degraded:
-            # บอกด้วยว่ายังเหลือชั้นสำรองอะไรอีก ถ้าตัวที่เพิ่งสลับไปก็ล่มด้วย — เดิมข้อความไม่เคยพูดถึง
-            # Gemini เลยแม้จะมีอยู่ในระบบแล้ว ทำให้เข้าใจผิดว่าเหลือแค่ 2 ชั้น (เจอจริง 21 ก.ค. sIRImeta ทักท้วง)
-            if fallback_provider == "Gemini":
-                safety_net = "🛡️ ถ้า Gemini ก็ล่มด้วย ลูกค้าจะได้คำตอบราคา/ที่อยู่จาก template อัตโนมัติแทน (นกน้อยทำลัง) ไม่เงียบแน่นอน"
+            if next_fallback:
+                safety_net = f"🛡️ ถ้า {fallback_provider} ก็ล่มด้วย ระบบจะลอง {next_fallback} เป็นชั้นสำรองถัดไปอัตโนมัติ"
             else:
-                safety_net = f"🛡️ ถ้า {fallback_provider} ก็ล่มด้วย ระบบจะลอง Gemini เป็นชั้นสำรองถัดไปอัตโนมัติ"
+                safety_net = f"🛡️ ถ้า {fallback_provider} ก็ล่มด้วย ลูกค้าจะได้คำตอบราคา/ที่อยู่จาก template อัตโนมัติแทน (นกน้อยทำลัง) ไม่เงียบแน่นอน"
             notify_fn(line_user_id, (
                 f"{label}⚠️ {failed_provider} ใช้งานไม่ได้ชั่วคราว — สลับไปใช้ {fallback_provider} แทนอัตโนมัติแล้ว\n"
                 "━━━━━━━━━━━━\n"
@@ -247,8 +250,13 @@ def call(client, prompt: str, max_tokens: int = 1000, smart: bool = True,
     เรียก AI แบบมีเกราะ — คืน text ดิบ
     tier="smart" (ค่าเริ่มต้น) → ใช้ Claude (smart=True→Sonnet, False→Haiku) เป็นหลัก
                                   ถ้า Claude ล่ม (เครดิตหมด/quota/key พัง) จะ fallback ไป Groq (ฟรี) อัตโนมัติ กันบอทลูกค้าเงียบ
-    tier="free"  → ใช้ Groq (ฟรี) เป็นหลักเลย ไม่แตะเครดิต Claude ตามปกติ — ใช้กับบอทลูกค้าที่ยังไม่ได้อัปเกรดเป็นแพ็กเกจ AI ฉลาดขึ้น
-                                  ถ้า Groq ล่ม (rate limit/API ปัญหา) จะ fallback ไป Claude Haiku (ถูก) อัตโนมัติเช่นกัน กันบอทเงียบสนิท
+    tier="free"  → ใช้ Gemini เป็นหลักเลย — ใช้กับบอทลูกค้าที่ยังไม่ได้อัปเกรดเป็นแพ็กเกจ AI ฉลาดขึ้น
+                                  ถ้า Gemini ล่ม (ทุกโมเดลในลิสต์พังหมด/quota เต็ม) จะ fallback ไป Groq (ฟรี) อัตโนมัติ กันบอทเงียบสนิท
+                                  ไม่แตะ Claude เลยตอนนี้
+                                  (21 ก.ค. 2026 รอบ 3: sIRImeta ขอเปลี่ยนให้ Gemini เป็นตัวหลักแทน Groq — เพิ่งเปิด billing
+                                  Gemini แล้วโควต้าสูงมาก + คุณภาพคำตอบดีกว่า Groq ส่วน Groq เก็บไว้เป็นสำรองชั้นเดียว (ฟรี กันเผื่อ
+                                  Gemini โดน quota/rate limit ชั่วครู่) ตัด Claude Haiku ออกจากคิวนี้ไปแล้วด้วย เพราะเครดิตหมด
+                                  เรียกกี่ครั้งก็พังทุกครั้งแน่ๆ เก็บไว้มีแต่เสียเวลาฟรี ยิ่งช้ายิ่งเสี่ยง Meta ส่ง webhook ซ้ำ)
     slug: ชื่อโปรเจกต์/ร้าน (เช่น "lullabell", "job_hunter", "forex") — แยกสถานะ+cooldown แจ้งเตือนต่อร้าน
           กันร้าน A ล่มจนแจ้งเตือนไปแล้ว บังไม่ให้ร้าน B ได้รับแจ้งเตือนอีก 6 ชม. ทั้งที่คนละปัญหาคนละเวลา
           ไม่ใส่ = ใช้ bucket "default" ร่วมกัน (ของเก่าที่ยังไม่ได้ migrate)
@@ -258,51 +266,31 @@ def call(client, prompt: str, max_tokens: int = 1000, smart: bool = True,
 
     if tier == "free":
         try:
-            text = _call_groq(prompt, max_tokens)
+            text = _call_gemini(prompt, max_tokens)
             b["ok"] = True
-            b["last_provider"] = "groq"
+            b["last_provider"] = "gemini"
             b["last_ok"] = datetime.now(timezone.utc).isoformat()
             return text
         except Exception as e:
             b["fails"] += 1
-            b["last_error"] = f"[groq] {str(e)[:190]}"
+            b["last_error"] = f"[gemini] {str(e)[:190]}"
             b["last_error_at"] = datetime.now(timezone.utc).isoformat()
-            # Groq ล่ม → ลอง fallback ไป Claude Haiku (ถูกสุด) ก่อนยอมแพ้ กันบอทลูกค้าเงียบไปเลย
-            if client:
+            # Gemini ล่ม → ลอง fallback ไป Groq (ฟรี) ก่อนยอมแพ้ กันบอทลูกค้าเงียบไปเลย — ไม่แตะ Claude เลย
+            if GROQ_API_KEY:
                 try:
-                    msg = client.messages.create(
-                        model=MODEL_CHEAP, max_tokens=max_tokens,
-                        messages=[{"role": "user", "content": prompt}],
-                    )
+                    text = _call_groq(prompt, max_tokens)
                     b["ok"] = True
-                    b["last_provider"] = "claude-haiku (fallback)"
+                    b["last_provider"] = "groq (fallback)"
                     b["last_ok"] = datetime.now(timezone.utc).isoformat()
                     _alert(slug, str(e), notify_fn, line_user_id, degraded=True,
-                           failed_provider="Groq", fallback_provider="Claude Haiku")
-                    return msg.content[0].text.strip()
-                except Exception as e2:
-                    # เดิม except เปล่าไม่ log อะไรเลย — เจอเคสจริง 20 ก.ค. ตอน Groq โดน rate limit
-                    # (429) แล้ว fallback Claude Haiku ก็ล้มด้วย (คาดว่าเพราะ unpaid balance บล็อก API)
-                    # แต่ไม่มีทาง debug จาก Render logs ได้เลยว่า Haiku ล้มเพราะอะไรจริงๆ
-                    print(f"[ai_guard] Claude Haiku fallback ก็ล้มด้วย (slug={slug}): {e2}", flush=True)
-                    traceback.print_exc()
-            # Groq + Claude Haiku ล่มทั้งคู่ → ลอง Gemini (ชั้นสำรองที่ 3 คนละ provider คนละโควต้า) ก่อนยอมแพ้จริงๆ
-            # (เพิ่ม 21 ก.ค. 2026 — เคสจริง Claude หมดเครดิต + Groq โดน rate limit พร้อมกันวันเดียว)
-            if GEMINI_API_KEY:
-                try:
-                    text = _call_gemini(prompt, max_tokens)
-                    b["ok"] = True
-                    b["last_provider"] = "gemini (fallback)"
-                    b["last_ok"] = datetime.now(timezone.utc).isoformat()
-                    _alert(slug, str(e), notify_fn, line_user_id, degraded=True,
-                           failed_provider="Groq + Claude Haiku", fallback_provider="Gemini")
+                           failed_provider="Gemini", fallback_provider="Groq")
                     return text
-                except Exception as e3:
-                    print(f"[ai_guard] Gemini fallback ก็ล้มด้วย (slug={slug}): {e3}", flush=True)
+                except Exception as e2:
+                    print(f"[ai_guard] Groq fallback ก็ล้มด้วย (slug={slug}): {e2}", flush=True)
                     traceback.print_exc()
             b["ok"] = False
             _alert(slug, str(e), notify_fn, line_user_id, degraded=False,
-                   all_dead_providers="Groq, Claude Haiku, Gemini")
+                   all_dead_providers="Gemini, Groq")
             raise
 
     try:
@@ -326,7 +314,7 @@ def call(client, prompt: str, max_tokens: int = 1000, smart: bool = True,
                 b["ok"] = True
                 b["last_provider"] = "groq (fallback)"
                 b["last_ok"] = datetime.now(timezone.utc).isoformat()
-                _alert(slug, str(e), notify_fn, line_user_id, degraded=True)
+                _alert(slug, str(e), notify_fn, line_user_id, degraded=True, next_fallback="Gemini")
                 return text
             except Exception as e2:
                 # เดิม except เปล่าไม่ log อะไรเลย — จุดคู่กับ fallback Claude Haiku ด้านบน
