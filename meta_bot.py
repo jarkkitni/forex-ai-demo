@@ -92,7 +92,7 @@ def _is_location_query(text: str) -> bool:
 
 
 _PRICE_QUERY_RE = re.compile(
-    r'ราคา|โปรโมชั่น|โปรโมชัน|เท่าไหร่|เท่าไร|กี่บาท|เมนู|บริการอะไร|มีอะไรบ้าง|'
+    r'ราคา|โปร|เท่าไหร่|เท่าไร|กี่บาท|เมนู|บริการอะไร|มีอะไรบ้าง|มีบริการ|ทำอะไรได้บ้าง|'
     r'\bprice\b|\bpromotion\b|\bpromo\b|\bcost\b|how much|\bmenu\b', re.I
 )
 
