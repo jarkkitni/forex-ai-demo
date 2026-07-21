@@ -1,14 +1,21 @@
 {
   "_readme": "แก้ไฟล์นี้แล้ว push = การ์ด 💰 เงินเข้า-ออก + ✅ งานค้าง บน /monitor เปลี่ยนตาม",
-  "updated": "2026-07-18",
+  "updated": "2026-07-21",
 
   "deals": [
     {
       "name": "🏆 Lullabell Beauty Salon — ลูกค้าคนแรก!",
       "amount": 1551,
       "state": "won",
-      "note": "จ่ายแล้ว 18 ก.ค. · บอท Meta Messenger ทำงานจริงแล้ว! (dev mode) น้องเบลล์ตอบพร้อมราคา",
-      "action": "ค้าง: token ถาวร + App Review (เปิดลูกค้าทั่วไป) + Instagram"
+      "note": "จ่ายแล้ว 18 ก.ค. · บอทเผยแพร่แล้ว 19 ก.ค. + token ถาวรตั้งเสร็จ + เพิ่ม Quick Replies 4 ปุ่มติดทุกข้อความแล้ว 19 ก.ค. — เหลือทดสอบด้วยแอคนอก role",
+      "action": "ค้าง: ทดสอบทักจริง (แอคนอก role) + เปิด Instagram"
+    },
+    {
+      "name": "🎉 ร้านเสริมสวยงานแรก (FastWork #49XOM4U4 — คุณ Eye)",
+      "amount": 1500,
+      "state": "won",
+      "note": "จ่ายครบ ฿1,500 แล้ว · แก้บั๊กสำคัญ 21 ก.ค. (ข้อความโปรยาวเกิน limit Meta ส่งไม่ออก) เสร็จ + ส่งข้อความปิดงานให้คุณ Eye แล้ว",
+      "action": "รอคุณ Eye กดตรวจรับงานที่ปุ่ม \"ดูงานที่ส่ง\" บน FastWork"
     },
     {
       "name": "Forex Auto-Execution",
@@ -35,7 +42,10 @@
   ],
 
   "pending": [
-    { "t": "🏆 Lullabell: บอท Meta ทำงานแล้ว! ค้าง token ถาวร (ตัวนี้หมด ~1ชม.) + App Review + IG", "who": "รอเรา", "urgent": true },
+    { "t": "🔴 n8n→FB โพสต์ตรง (บายพาส Postiz bug): โค้ด+ทดสอบเสร็จ, commit local แล้ว — ค้าง 2 อย่าง: (1) git push origin main ในโฟลเดอร์ forex-ai-demo (2) ตั้ง N8N_POST_SECRET บน Render env ค่า sp1T2o-tgBeJGd1pox5B7NpjqctmcS97", "who": "รอเรา (ทำเมื่อกลับมา)" },
+    { "t": "🏆 Lullabell: publish + token ถาวร + Quick Replies 4 ปุ่มเสร็จ 19 ก.ค. — เหลือทดสอบทักจริง + เปิด Instagram", "who": "รอเรา" },
+    { "t": "🎉 ร้านเสริมสวยงานแรก ฿1,500 (คุณ Eye) — แก้บั๊กเสร็จ + ส่งข้อความปิดงานแล้ว 21 ก.ค.", "who": "รอลูกค้า" },
+    { "t": "🍳 Chef & Restaurant: เตรียม Blueprint + คู่มือรีโมทพร้อมแล้ว — รอนัดวันรีโมทเข้าติดตั้ง", "who": "รอลูกค้า" },
     { "t": "ลูกค้า Forex เงียบ — รอ paper mode มีผล 3-5 วัน", "who": "รอเรา" },
     { "t": "Garuda วิเคราะห์ตลาด Forex 7 ข้อ (เน้นกฎหมาย ก.ล.ต.)", "who": "รอ Garuda" },
     { "t": "Listing #5 Forex AI Bot รออนุมัติ", "who": "รอ FastWork" },
