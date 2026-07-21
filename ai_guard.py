@@ -185,10 +185,17 @@ def _alert(slug: str, err: str, notify_fn, line_user_id: str, degraded: bool = F
 
     try:
         if degraded:
+            # บอกด้วยว่ายังเหลือชั้นสำรองอะไรอีก ถ้าตัวที่เพิ่งสลับไปก็ล่มด้วย — เดิมข้อความไม่เคยพูดถึง
+            # Gemini เลยแม้จะมีอยู่ในระบบแล้ว ทำให้เข้าใจผิดว่าเหลือแค่ 2 ชั้น (เจอจริง 21 ก.ค. sIRImeta ทักท้วง)
+            if fallback_provider == "Gemini":
+                safety_net = "🛡️ ถ้า Gemini ก็ล่มด้วย ลูกค้าจะได้คำตอบราคา/ที่อยู่จาก template อัตโนมัติแทน (นกน้อยทำลัง) ไม่เงียบแน่นอน"
+            else:
+                safety_net = f"🛡️ ถ้า {fallback_provider} ก็ล่มด้วย ระบบจะลอง Gemini เป็นชั้นสำรองถัดไปอัตโนมัติ"
             notify_fn(line_user_id, (
                 f"{label}⚠️ {failed_provider} ใช้งานไม่ได้ชั่วคราว — สลับไปใช้ {fallback_provider} แทนอัตโนมัติแล้ว\n"
                 "━━━━━━━━━━━━\n"
                 "บอทลูกค้ายังตอบได้ปกติ แค่คุณภาพคำตอบอาจลดลงเล็กน้อยชั่วคราว\n"
+                f"{safety_net}\n"
                 "━━━━━━━━━━━━\n"
                 f"❌ {err[:150]}\n\n"
                 f"🔧 {hint}\n"
@@ -199,7 +206,7 @@ def _alert(slug: str, err: str, notify_fn, line_user_id: str, degraded: bool = F
                 f"{label}🚨 AI เรียกไม่ได้ทั้ง {all_dead_providers} — ระบบหยุดทำงาน!\n"
                 "━━━━━━━━━━━━\n"
                 "กระทบ (ถ้าเป็น key/เครดิตหมดร่วมกัน จะกระทบทุกอย่างที่ใช้ AI):\n"
-                "• บอทลูกค้า (Lullabell) — ตอบลูกค้าจริงไม่ได้ 😱 ลูกค้าจะได้ข้อความ fallback แทน\n"
+                "• บอทลูกค้า (Lullabell) — ตอบเองไม่ได้ 😱 แต่ถ้าลูกค้าถามราคา/ที่อยู่ จะได้คำตอบจริงจาก template อัตโนมัติแทน (นกน้อยทำลัง) คำถามอื่นจะได้ข้อความรอสักครู่\n"
                 "• Job Hunter — ดักงานไม่ได้ 🔥\n"
                 "• Forex analyze — วิเคราะห์ไม่ได้\n"
                 "• Auto-Execution — เทรดกระดาษไม่ได้\n"
