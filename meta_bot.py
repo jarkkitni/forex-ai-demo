@@ -619,6 +619,30 @@ def handle_line(data: dict, client, channel_token: str, slug: str = "lullabell",
     return result
 
 
+def _send_map_image(page_token: str, sender: str, cfg: dict, is_ig: bool) -> None:
+    """แนบรูปการ์ดแผนที่ร้าน — แยกเป็นฟังก์ชันกลาง ใช้ทั้งตอน AI ตอบสำเร็จปกติ และตอน AI ล่มสนิท
+    (offline fallback) กันลูกค้าที่ถามที่อยู่ไม่ได้รูปแผนที่แค่เพราะ AI ดันล่มพอดีตอนนั้น
+    best-effort ล้วนๆ — ถ้าส่งรูปพลาด ไม่ทำให้คำตอบข้อความหลักที่ส่งไปแล้วเสียหาย"""
+    map_img = cfg.get("contact", {}).get("map_image", "")
+    # attachment_id เดิม (map_attachment_id) อัปโหลดแบบ FB-only (ไม่ได้ระบุ platform=instagram
+    # ตอนอัป) IG resolve ไม่ได้ — ต้องมี attachment_id แยกที่อัปโหลดระบุ platform=instagram
+    # โดยเฉพาะ (map_attachment_id_ig) ถึงจะใช้กับ IG ได้จริง
+    # ไม่ใช้ url ส่งตรงๆ กับ IG เพราะโค้ดเดิมพิสูจน์แล้วว่าวิธีนี้พังกับ FB มาก่อน (Meta fetch url
+    # แบบ async แล้วพังเงียบไม่มี error กลับมาเลย — เจอจริง 21 ก.ค. ตอนลองกับ IG ก็เงียบเหมือนกัน)
+    map_attach_id = (cfg.get("contact", {}).get("map_attachment_id_ig", "") if is_ig
+                      else cfg.get("contact", {}).get("map_attachment_id", ""))
+    if not (map_img or map_attach_id):
+        return
+    try:
+        img_status, img_resp = send_image_message(page_token, sender, image_url=map_img, attachment_id=map_attach_id)
+        # send_image_message ไม่ raise ตอน Meta ตอบ error (แค่คืน status code) — เดิมไม่เช็คค่านี้เลย
+        # ทำให้ส่งรูปพลาดแบบเงียบสนิท ไม่มีทาง debug ได้จาก Render logs (บั๊กที่เจอ 20 ก.ค.)
+        if not img_status or img_status >= 400:
+            print(f"[meta_bot] ส่งรูปแผนที่ล้มเหลว sender={sender} status={img_status}: {img_resp}", flush=True)
+    except Exception as e:
+        print(f"[meta_bot] ส่งรูปแผนที่ error: {e}", flush=True)
+
+
 def handle(data: dict, client, page_token: str, slug: str = "lullabell",
            notify_fn=None, line_user_id: str = "") -> dict:
     """
@@ -683,25 +707,8 @@ def handle(data: dict, client, page_token: str, slug: str = "lullabell",
                 _send_with_quick_replies(page_token, sender, reply, quick_replies=qr)
                 result["replied"] += 1
                 # ลูกค้าถามที่อยู่/แผนที่ (กดปุ่ม IB_LOCATION หรือพิมพ์เอง) → แนบรูปการ์ดแผนที่ตามหลังข้อความ
-                # best-effort ล้วนๆ — ถ้าส่งรูปพลาด ไม่ทำให้คำตอบหลักที่ส่งไปแล้วเสียหาย
                 if effective_payload == "IB_LOCATION" or _is_location_query(user_text):
-                    map_img = cfg.get("contact", {}).get("map_image", "")
-                    # attachment_id เดิม (map_attachment_id) อัปโหลดแบบ FB-only (ไม่ได้ระบุ platform=instagram
-                    # ตอนอัป) IG resolve ไม่ได้ — ต้องมี attachment_id แยกที่อัปโหลดระบุ platform=instagram
-                    # โดยเฉพาะ (map_attachment_id_ig) ถึงจะใช้กับ IG ได้จริง
-                    # ไม่ใช้ url ส่งตรงๆ กับ IG เพราะโค้ดเดิมพิสูจน์แล้วว่าวิธีนี้พังกับ FB มาก่อน (Meta fetch url
-                    # แบบ async แล้วพังเงียบไม่มี error กลับมาเลย — เจอจริง 21 ก.ค. ตอนลองกับ IG ก็เงียบเหมือนกัน)
-                    map_attach_id = (cfg.get("contact", {}).get("map_attachment_id_ig", "") if is_ig
-                                      else cfg.get("contact", {}).get("map_attachment_id", ""))
-                    if map_img or map_attach_id:
-                        try:
-                            img_status, img_resp = send_image_message(page_token, sender, image_url=map_img, attachment_id=map_attach_id)
-                            # send_image_message ไม่ raise ตอน Meta ตอบ error (แค่คืน status code) — เดิมไม่เช็คค่านี้เลย
-                            # ทำให้ส่งรูปพลาดแบบเงียบสนิท ไม่มีทาง debug ได้จาก Render logs (บั๊กที่เจอ 20 ก.ค.)
-                            if not img_status or img_status >= 400:
-                                print(f"[meta_bot] ส่งรูปแผนที่ล้มเหลว sender={sender} status={img_status}: {img_resp}", flush=True)
-                        except Exception as e:
-                            print(f"[meta_bot] ส่งรูปแผนที่ error: {e}", flush=True)
+                    _send_map_image(page_token, sender, cfg, is_ig)
             except Exception as e:
                 # AI ตาย ai_guard เด้ง LINE ให้แล้ว (ถ้าเป็นสาเหตุ) — ส่งข้อความ fallback ให้ลูกค้าไม่เงียบ
                 # เดิม except เปล่าไม่ log อะไรเลย — เจอเคสจริง 20 ก.ค. ลูกค้าโดน fallback ซ้ำๆ ตอนกดปุ่ม
@@ -715,6 +722,10 @@ def handle(data: dict, client, page_token: str, slug: str = "lullabell",
                 fb = (_offline_fallback_answer(cfg, user_text)
                       or cfg.get("advisor", {}).get("retry_msg", "รบกวนรอสักครู่นะคะ น้องเบลล์กำลังดูให้อยู่ค่ะ 🤍"))
                 _send_with_quick_replies(page_token, sender, fb, quick_replies=default_qr)
+                # AI ล่มสนิทแต่ลูกค้าถามที่อยู่ → แนบรูปการ์ดแผนที่ให้เหมือนตอน AI ตอบได้ปกติ (เพิ่ม 21 ก.ค. ตามคำขอ
+                # sIRImeta) กันลูกค้าที่ถามที่อยู่พลาดรูปแผนที่สวยๆ ไปแค่เพราะ AI ดันล่มพอดีตอนนั้น
+                if effective_payload == "IB_LOCATION" or _is_location_query(user_text):
+                    _send_map_image(page_token, sender, cfg, is_ig)
                 result["skipped"] += 1
     return result
 
