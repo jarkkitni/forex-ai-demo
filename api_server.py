@@ -42,6 +42,12 @@ N8N_POST_SECRET     = os.environ.get("N8N_POST_SECRET", "")  # กัน endpoin
 # hybrid: ตั้ง LULLABELL_FORWARD_URL = แบบ A (แยก service); เว้นว่าง = แบบ B (ตอบในนี้ผ่าน multi-tenant) ----
 LULLABELL_PAGE_ID    = os.environ.get("LULLABELL_PAGE_ID", "783393614867196")  # เพจ Lullabell (ค่าเดียวกับ META_PAGE_ID เดิม)
 LULLABELL_FORWARD_URL = os.environ.get("LULLABELL_FORWARD_URL", "")  # เช่น https://lullabell-bot.onrender.com/webhook/meta
+# ---- คิลสวิตช์ Hunter/RSS/autotrade (21 ก.ค. 2026) — งานเบื้องหลังพวกนี้เรียก Claude ทุก 30 นาที
+# เผาเครดิต Anthropic จนหมด ทำให้บอทร้านลูกค้า (Lullabell) ที่ใช้ AI ตัวเดียวกันพลอยสะดุดไปด้วย
+# default = ปิด (กันเผาเครดิต) — เปิดคืนภายหลังได้โดยตั้ง HUNTERS_ENABLED=1 บน Render ไม่ต้องแก้โค้ด ----
+HUNTERS_ENABLED = os.environ.get("HUNTERS_ENABLED", "").strip().lower() in ("1", "true", "yes", "on")
+_HUNTERS_OFF_MSG = {"success": False, "disabled": True,
+                    "error": "Hunter/autotrade ปิดชั่วคราว กันเผาเครดิต Claude — ตั้ง HUNTERS_ENABLED=1 บน Render เพื่อเปิดคืน"}
 # ---- LINE OA ของ "ร้านลูกค้า" (เช่น @lullabell) — คนละตัวกับ LINE_TOKEN/LINE_CHANNEL_SECRET ด้านบนซึ่งเป็นของ ForexAI Pro เอง ----
 LULLABELL_LINE_CHANNEL_SECRET = os.environ.get("LULLABELL_LINE_CHANNEL_SECRET", "")
 LULLABELL_LINE_CHANNEL_TOKEN  = os.environ.get("LULLABELL_LINE_CHANNEL_TOKEN", "")
@@ -459,6 +465,8 @@ def health():
 def hunter_check():
     """ดักจับงาน FastWork ที่ตรงสกิล → AI วิเคราะห์ + ร่างข้อเสนอ → LINE
     เรียกจาก cron ภายนอก (cron-job.org) ทุก 30 นาที"""
+    if not HUNTERS_ENABLED:
+        return jsonify(_HUNTERS_OFF_MSG), 200   # ปิดกันเผาเครดิต Claude (21 ก.ค. 2026)
     if not ANTHROPIC_API_KEY or not LINE_TOKEN or not LINE_USER_ID:
         return jsonify({"success": False, "error": "missing env keys"}), 500
     try:
@@ -520,6 +528,8 @@ def hunter_log():
 @app.route("/api/hunter/rss", methods=["GET", "POST"])
 def hunter_rss():
     """ดักงานจากทั้งเน็ตผ่าน Google Alerts RSS (cron ยิงทุก 30 นาที)"""
+    if not HUNTERS_ENABLED:
+        return jsonify(_HUNTERS_OFF_MSG), 200   # ปิดกันเผาเครดิต Claude (21 ก.ค. 2026)
     if not rss_hunter.is_configured():
         return jsonify({"success": False, "error": "ยังไม่ได้ตั้ง RSS_FEEDS"}), 503
     if not ANTHROPIC_API_KEY or not LINE_TOKEN or not LINE_USER_ID:
@@ -1275,6 +1285,8 @@ def autotrade_tick():
     cron ยิงมาทุก 15-30 นาที → เดิน 1 รอบ
     ⚠️ PAPER เท่านั้น — Executor ตกกลับเป็น PaperBroker เองถ้าไม่ปลดล็อกครบ 3 ชั้น
     """
+    if not HUNTERS_ENABLED:
+        return jsonify(_HUNTERS_OFF_MSG), 200   # ปิดกันเผาเครดิต Claude (analyze_with_ai) (21 ก.ค. 2026)
     from auto_execution import runner
     try:
         return jsonify({"success": True, **runner.tick(
