@@ -91,6 +91,19 @@ def _is_location_query(text: str) -> bool:
     return bool(_LOCATION_RE.search(text or ""))
 
 
+_PRICE_QUERY_RE = re.compile(
+    r'ราคา|โปรโมชั่น|โปรโมชัน|เท่าไหร่|เท่าไร|กี่บาท|เมนู|บริการอะไร|มีอะไรบ้าง|'
+    r'\bprice\b|\bpromotion\b|\bpromo\b|\bcost\b|how much|\bmenu\b', re.I
+)
+
+
+def _is_price_query(text: str) -> bool:
+    """เดาว่าลูกค้ากำลังถามราคา/โปรโมชั่น/เมนูไหม — ใช้เฉพาะตอน AI ล่มสนิท (ทั้ง Claude และ Groq ตายพร้อมกัน)
+    เพื่อเลือกตอบจาก template ราคาจริงแทนข้อความ "รอสักครู่" เฉยๆ คำตอบพลาด (false positive) ไม่ร้ายแรง
+    แค่ได้ราคาแถมมาเกินคำถามจริง ไม่ใช่เรื่องใหญ่"""
+    return bool(_PRICE_QUERY_RE.search(text or ""))
+
+
 _BOLD_DIGIT_MAP = str.maketrans("0123456789", "𝟎𝟏𝟐𝟑𝟒𝟓𝟔𝟕𝟖𝟗")
 
 
@@ -242,6 +255,42 @@ def _render_promo_list(cfg: dict) -> str:
         lines.append(f"📌 {hair_note}")
     text = "\n".join(lines).strip()
     return text or "ตอนนี้ยังไม่มีโปรโมชั่นพิเศษค่ะ สอบถามราคาปกติได้เลยนะคะ 🤍"
+
+
+def _render_location_text(cfg: dict) -> str:
+    """ข้อความที่อยู่ร้าน + จุดสังเกต + ลิงก์แผนที่ แบบ template ตรงจาก config ล้วนๆ ไม่ผ่าน AI เลย
+    ใช้ตอน AI ล่มสนิทเวลาลูกค้าถามที่อยู่ กันบอทเงียบ/ตอบแค่ "รอสักครู่" ทั้งที่ตอบได้จริงจากข้อมูลที่มีอยู่แล้ว"""
+    c = cfg.get("contact", {})
+    lines = [f"📍 ที่อยู่ร้าน {cfg.get('biz_name', '')}".strip()]
+    if c.get("address"):
+        lines.append(c["address"])
+    landmarks = c.get("landmarks", [])
+    if isinstance(landmarks, list) and landmarks:
+        lines.append("จุดสังเกต: " + " / ".join(landmarks))
+    if c.get("parking"):
+        lines.append(c["parking"])
+    map_link = _map_link(cfg)
+    if map_link:
+        lines.append(map_link)
+    if c.get("phone") or c.get("line"):
+        lines.append(f"โทร {c.get('phone', '')} · LINE {c.get('line', '')}".strip(" ·"))
+    return "\n".join(lines)
+
+
+def _offline_fallback_answer(cfg: dict, user_text: str) -> str:
+    """ตอบแบบ deterministic ล้วนๆ (ไม่ผ่าน AI ตัวไหนเลย) ใช้เฉพาะตอนทั้ง Claude และ Groq ล่มพร้อมกัน
+    (เคสจริง 21 ก.ค. 2026 — Anthropic หมดเครดิต + Groq โดน rate limit พร้อมกัน ทำให้บอทตอบได้แค่ "รอสักครู่"
+    ทั้งที่คำถามพื้นฐานอย่างราคา/ที่อยู่ ตอบได้ถูกต้อง 100% จากข้อมูลใน config โดยไม่ต้องพึ่ง AI เลย)
+    ตรวจแล้วว่าราคาในนี้ตรงกับเมนูจริงที่ลูกค้าส่งมาทุกตัว (21 ก.ค. 2026) ใช้เป็นฐานอ้างอิงได้เต็มที่
+    คืนข้อความสำเร็จรูปถ้าเดาเจตนาได้ ไม่งั้นคืน None ให้ผู้เรียกใช้ retry_msg เดิมแทน (เช่น คำถามซับซ้อน/นอกเมนู)"""
+    apology = "🤖 ขออภัยค่ะ ขณะนี้ระบบ AI ของร้านขัดข้องชั่วคราว น้องเบลล์ขอตอบข้อมูลเบื้องต้นให้ก่อนนะคะ 🤍\n\n"
+    contact = cfg.get("contact", {})
+    tail = f"\n\nหากต้องการสอบถามเพิ่มเติมหรือจองคิว ทักแอดมินตรงได้ที่ LINE {contact.get('line', '')} หรือโทร {contact.get('phone', '')} ค่ะ"
+    if _is_price_query(user_text):
+        return apology + _render_promo_list(cfg) + tail
+    if _is_location_query(user_text):
+        return apology + _render_location_text(cfg) + tail
+    return None
 
 
 def _today_th() -> str:
@@ -561,8 +610,10 @@ def handle_line(data: dict, client, channel_token: str, slug: str = "lullabell",
             traceback.print_exc()
             # ใช้ retry_msg (ไม่ใช่ handoff_msg) — กรณีนี้คือ AI ดีเลย์/สะดุดชั่วคราว ไม่ใช่เคสที่ต้องส่งต่อแอดมินจริงๆ
             # ลูกค้าทักท้วง 20 ก.ค. ว่าข้อความ "ส่งต่อให้แอดมิน" ทำให้เข้าใจผิดว่าเป็นเรื่องใหญ่ ทั้งที่แค่รอสักครู่ก็ตอบได้แล้ว
-            fb = cfg.get("advisor", {}).get("retry_msg",
-                 "รบกวนรอสักครู่นะคะ น้องเบลล์กำลังดูให้อยู่ค่ะ 🤍")
+            # ก่อนใช้ retry_msg เฉยๆ ลองเดาเจตนาก่อน — ถ้าถามราคา/ที่อยู่ ตอบจาก template จริงได้เลยไม่ต้องพึ่ง AI
+            # (เพิ่ม 21 ก.ค. — เคส Claude+Groq ล่มพร้อมกัน กันลูกค้าเจอแค่ "รอสักครู่" ทั้งที่ตอบได้จริง)
+            fb = (_offline_fallback_answer(cfg, user_text)
+                  or cfg.get("advisor", {}).get("retry_msg", "รบกวนรอสักครู่นะคะ น้องเบลล์กำลังดูให้อยู่ค่ะ 🤍"))
             send_line_reply(channel_token, reply_token, fb)
             result["skipped"] += 1
     return result
@@ -659,8 +710,10 @@ def handle(data: dict, client, page_token: str, slug: str = "lullabell",
                 traceback.print_exc()
                 # ใช้ retry_msg (ไม่ใช่ handoff_msg) — กรณีนี้คือ AI ดีเลย์/สะดุดชั่วคราว ไม่ใช่เคสที่ต้องส่งต่อแอดมินจริงๆ
                 # ลูกค้าทักท้วง 20 ก.ค. ว่าข้อความ "ส่งต่อให้แอดมิน" ทำให้เข้าใจผิดว่าเป็นเรื่องใหญ่ ทั้งที่แค่รอสักครู่ก็ตอบได้แล้ว
-                fb = cfg.get("advisor", {}).get("retry_msg",
-                     "รบกวนรอสักครู่นะคะ น้องเบลล์กำลังดูให้อยู่ค่ะ 🤍")
+                # ก่อนใช้ retry_msg เฉยๆ ลองเดาเจตนาก่อน — ถ้าถามราคา/ที่อยู่ ตอบจาก template จริงได้เลยไม่ต้องพึ่ง AI
+                # (เพิ่ม 21 ก.ค. — เคส Claude+Groq ล่มพร้อมกัน กันลูกค้าเจอแค่ "รอสักครู่" ทั้งที่ตอบได้จริง)
+                fb = (_offline_fallback_answer(cfg, user_text)
+                      or cfg.get("advisor", {}).get("retry_msg", "รบกวนรอสักครู่นะคะ น้องเบลล์กำลังดูให้อยู่ค่ะ 🤍"))
                 _send_with_quick_replies(page_token, sender, fb, quick_replies=default_qr)
                 result["skipped"] += 1
     return result
