@@ -118,6 +118,22 @@
   .demo-tag{color:var(--dim);font-size:11px;margin-top:2px;line-height:1.4}
   .demo-go{color:var(--dm-c,var(--green));font-size:11px;font-weight:700;margin-top:8px}
 
+  /* เทคนิคที่ตั้งชื่อไว้ — การ์ดโน้ตกันลืม ล้วนๆ ไม่มี JS/data ดึงจากไหนเลย แค่ตั้งใจให้สวยไว้เตือนความจำ */
+  .neon-card{position:relative;overflow:hidden}
+  .neon-list{display:flex;flex-direction:column;gap:10px}
+  .neon-item{display:flex;flex-direction:column;gap:2px;padding:12px 16px;border-radius:12px;
+             background:#080c18;border:1px solid #131c31;border-left:3px solid var(--n-c,var(--green))}
+  .neon-name{font-size:20px;font-weight:800;letter-spacing:.5px;color:var(--n-c,var(--green));
+             text-shadow:0 0 6px var(--n-c,var(--green)),0 0 16px var(--n-c,var(--green)),
+                         0 0 32px var(--n-c,var(--green));
+             animation:neonFlicker 4.5s infinite ease-in-out;}
+  .neon-desc{font-size:12px;color:var(--dim);margin-top:2px}
+  .neon-red{--n-c:#ff4d6d} .neon-cyan{--n-c:var(--cyan)} .neon-green{--n-c:var(--green)}
+  @keyframes neonFlicker{
+    0%,19%,21%,23%,54%,56%,100%{opacity:1}
+    20%,22%,55%{opacity:.72}
+  }
+
   .job{display:block;background:#0a101f;border:1px solid var(--border);border-radius:12px;
        padding:10px 12px;margin-bottom:8px;text-decoration:none;color:var(--text);transition:.15s;}
   .job:active{transform:scale(.98);}
@@ -141,6 +157,25 @@
   </header>
 
   <div class="grid">
+    <!-- เทคนิคที่ตั้งชื่อไว้ — โน้ตกันลืมล้วนๆ ไม่ดึงข้อมูลจากไหนเลย (ตกลงกันไว้ 21 ก.ค. 2026) -->
+    <div class="card neon-card" style="grid-column:1/-1">
+      <h3>🐦 เทคนิคที่ตั้งชื่อไว้ — กันลืม</h3>
+      <div class="neon-list">
+        <div class="neon-item neon-red">
+          <span class="neon-name">นกสีแดงบินได้</span>
+          <span class="neon-desc">Forex AI Auto-Execution + ดีล ฿35,000</span>
+        </div>
+        <div class="neon-item neon-cyan">
+          <span class="neon-name">นกน้อยโพสต์คลิป</span>
+          <span class="neon-desc">TikTok Content Posting API resubmission (ThaiLineAo)</span>
+        </div>
+        <div class="neon-item neon-green">
+          <span class="neon-name">นกน้อยทำลัง</span>
+          <span class="neon-desc">Offline deterministic fallback ตอน AI ล่มสนิท (Lullabell meta_bot.py)</span>
+        </div>
+      </div>
+    </div>
+
     <!-- Status card (data by Garuda) -->
     <div class="card status-card" id="statusCard" style="display:none">
       <h3>📊 สถานะงานวันนี้</h3>
