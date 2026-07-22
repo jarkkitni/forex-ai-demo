@@ -2,7 +2,7 @@
 FastWork Job Hunter — AI ดักจับงานที่ตรงสกิล
 poll FastWork jobboard → กรอง keyword → Claude วิเคราะห์ + ร่างข้อเสนอ → LINE push
 """
-import os, json, requests
+import os, re, json, requests
 import seo_tracker  # ใช้ SUPABASE_URL / SUPABASE_KEY ร่วมกัน (กันดักซ้ำข้าม restart)
 from datetime import datetime, timezone
 
@@ -31,7 +31,11 @@ SKILL_KEYWORDS = [
 # เกรด B — เฉียดสกิล (แจ้งเตือนแบบสรุปสั้น ให้ตัดสินใจเอง)
 GRADE_B_KEYWORDS = [
     "google sheet", "google sheets", "กูเกิลชีท", "excel", "เอ็กเซล",
-    "ระบบ", "เว็บไซต์", "website", "แอพ", "แอป", "app",
+    # 22 ก.ค. 2026 — ถอด "ระบบ" เดี่ยวๆ ออก (วัดจริงจากกระดาน 50 งาน: จุดชนวน 6 งาน
+    # เกี่ยวข้องจริง 0 งาน — ไปโดน "ระบบไฟฟ้า EV charger", "ระบบ pumps cooling",
+    # "งาน HR อย่างเป็นระบบ", "ข้อมูลลูกค้าในระบบ") ใช้รูปเจาะจงแทน
+    "ทำระบบ", "พัฒนาระบบ", "สร้างระบบ", "ระบบจัดการ", "ระบบอัตโนมัติ",
+    "เว็บไซต์", "website", "แอพ", "แอป", "app",
     "dashboard", "รายงาน", "สรุปข้อมูล", "ดึงข้อมูล", "scraping", "scrape",
     "เก็บข้อมูล", "ฐานข้อมูล", "database", "แจ้งเตือน", "notification",
     "โปรแกรม", "script", "สคริปต์", "เชื่อมต่อ", "integrate",
@@ -101,6 +105,47 @@ def _fetch_jobs() -> list:
     return data.get("data", [])
 
 
+# กับดัก substring ของคำไทย — ภาษาไทยไม่เว้นวรรค ใช้ \b ไม่ได้ ต้องระบุคำที่ห้ามนำหน้าเอง
+# (เจอจริง 22 ก.ค. 2026: "ไลน์" ไปแมตช์ "ออนไลน์" = 9 จาก 16 งานที่ผ่านด่านเป็นงานแอดมิน/
+#  เซลส์/HR ที่แค่เขียนว่า "สื่อออนไลน์" ไม่เกี่ยวกับ LINE เลย)
+_THAI_PREFIX_TRAPS = {
+    "ไลน์": ("ออน",),
+}
+
+_KW_RE_CACHE: dict = {}
+
+
+def _kw_hit(kw: str, text: str) -> bool:
+    """keyword โผล่ใน text แบบ "เป็นคำจริง" ไหม — ไม่ใช่เศษคำที่บังเอิญตัวอักษรตรง
+
+    ทำไมต้องมี (22 ก.ค. 2026): เดิมใช้ `kw in text` ดิบๆ ทำให้
+      'ai'   ไปโดน  n[ai]ve thai / ch[ai]n integration
+      'ไลน์'  ไปโดน  ออน[ไลน์]        ← ตัวการหลัก 9 งาน
+      'ads'  ไปโดน  l[ead]s
+    ผลคือด่านแรกปล่อยขยะเข้ามาเต็ม แล้วไปเผาโควตา AI triage ทิ้งทุกรอบ
+    ซ้ำร้ายงานขยะยังไปกินโควตา max_alerts*2 เบียดงานจริงออกด้วย
+
+    วิธี:
+      - keyword ที่มีอักษรละติน → บังคับขอบคำ (ห้ามมีตัวอักษร/ตัวเลขละตินติดหัวท้าย)
+      - keyword ไทยล้วน → ใช้ substring ตามเดิม (ไทยไม่มีขอบคำ) แต่กรองกับดักที่รู้จัก
+    """
+    if not re.search(r"[a-z0-9]", kw):          # ไทยล้วน
+        if kw not in text:
+            return False
+        for bad_prefix in _THAI_PREFIX_TRAPS.get(kw, ()):
+            # ตัดเฉพาะตำแหน่งที่ติดกับดัก ถ้ายังเหลือที่อื่นถือว่าเจอจริง
+            if all(text[max(0, m.start() - len(bad_prefix)):m.start()] == bad_prefix
+                   for m in re.finditer(re.escape(kw), text)):
+                return False
+        return True
+
+    rx = _KW_RE_CACHE.get(kw)
+    if rx is None:
+        rx = _KW_RE_CACHE[kw] = re.compile(
+            r"(?<![a-z0-9])" + re.escape(kw.strip()) + r"(?![a-z0-9])")
+    return bool(rx.search(text))
+
+
 def _match_skills(job: dict) -> tuple:
     """คืน (grade, matched_keywords) — grade: 'A' / 'B' / None"""
     text = (job.get("description") or "").lower()
@@ -108,14 +153,14 @@ def _match_skills(job: dict) -> tuple:
     full = f"{text} {tag}"
 
     for bad in EXCLUDE_KEYWORDS:
-        if bad in full:
+        if _kw_hit(bad, full):
             return (None, [])
 
-    matched_a = [kw for kw in SKILL_KEYWORDS if kw in full]
+    matched_a = [kw for kw in SKILL_KEYWORDS if _kw_hit(kw, full)]
     if matched_a:
         return ("A", matched_a)
 
-    matched_b = [kw for kw in GRADE_B_KEYWORDS if kw in full]
+    matched_b = [kw for kw in GRADE_B_KEYWORDS if _kw_hit(kw, full)]
     if matched_b:
         return ("B", matched_b)
 
