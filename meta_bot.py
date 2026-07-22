@@ -331,6 +331,87 @@ def resolve_page(page_id: str, fallback_token: str, fallback_slug: str) -> tuple
     return fallback_token, fallback_slug
 
 
+# ---- ล็อก token ไม่ให้เพจแปลกหน้ามาใช้ (22 ก.ค. 2026) ----
+# ปัญหา: resolve_page() ด้านบน ถ้าหา page_id ไม่เจอใน shop_pages จะ fallback ไปใช้ token+config
+# ที่ส่งมาจาก env (= ของร้าน Lullabell) แปลว่าเพจไหนก็ตามที่ยิงเข้า webhook นี้โดยไม่ได้ลงทะเบียน
+# จะได้รับคำตอบด้วย "token ร้านทำผม + เมนู/ราคาร้านทำผม" — อันตรายมากตอนเอาเพจร้านใหม่เข้า
+# Meta App เดิม (เทคนิคนกน้อยพิมพ์รังตั้งใจใช้ App เดียวซ้ำทุกร้าน) แล้วลืมลง shop_pages
+#
+# 2 โหมด สลับด้วย env var เดียว ไม่ต้อง redeploy:
+#   ไม่ตั้ง META_ALLOWED_PAGE_IDS = โหมดเฝ้าดู — พฤติกรรมเดิมเป๊ะ (ตอบตามปกติ) แต่เจอ page แปลกหน้า
+#     เมื่อไหร่เด้ง LINE เตือน + จดไว้ให้ดูที่ /api/page-diag
+#   ตั้งแล้ว = โหมดล็อก — เพจนอกลิสต์ไม่ได้รับคำตอบ ไม่มีการใช้ token เลย + เด้ง LINE
+#
+# ทำไมต้องเฝ้าดูก่อนล็อก: FB กับ IG ส่ง entry['id'] มาคนละค่า ถ้าเดาแล้วใส่แต่ page id ของ FB
+# IG ของร้านเองจะโดนบล็อก — ให้มันจดของจริงมาก่อน แล้วค่อยเอาเลขไปใส่ env (บทเรียน Gemini 22 ก.ค.:
+# อย่าเดา วัดของจริงก่อน)
+META_ALLOWED_PAGE_IDS = {p.strip() for p in
+                         os.environ.get("META_ALLOWED_PAGE_IDS", "").split(",") if p.strip()}
+_seen_page_ids: dict = {}     # page_id -> {first, last, count, known, blocked}
+_page_alerted: dict = {}      # page_id -> ts (cooldown กัน LINE โดนสแปม)
+_PAGE_ALERT_COOLDOWN = 3600 * 6
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def check_page_allowed(page_id: str, default_page_id: str = "",
+                       notify_fn=None, line_user_id: str = "") -> bool:
+    """เพจนี้มีสิทธิ์ให้บอทตอบ (และใช้ token) ไหม — คืน True/False
+
+    รู้จัก = อยู่ใน shop_pages (ลงทะเบียนแล้ว) หรือ META_ALLOWED_PAGE_IDS หรือเป็น default_page_id
+    (เพจหลักที่ตั้งไว้ใน env = ร้านทำผม) · ไม่รู้จัก = แปลกหน้า
+    โหมดล็อก (ตั้ง META_ALLOWED_PAGE_IDS แล้ว) เท่านั้นที่คืน False — โหมดเฝ้าดูคืน True เสมอ"""
+    pid = str(page_id or "")
+    _load_page_map()
+    known = bool(pid) and (
+        pid in _page_map or pid in META_ALLOWED_PAGE_IDS or (default_page_id and pid == str(default_page_id))
+    )
+    locked = bool(META_ALLOWED_PAGE_IDS)
+    blocked = locked and not known
+
+    now = time.time()
+    rec = _seen_page_ids.setdefault(pid or "(ว่าง)", {"first": _now_iso(), "count": 0})
+    rec.update({"last": _now_iso(), "known": known, "blocked": blocked})
+    rec["count"] = rec.get("count", 0) + 1
+
+    if not known and (now - _page_alerted.get(pid, 0)) > _PAGE_ALERT_COOLDOWN:
+        _page_alerted[pid] = now
+        head = "🚫 บล็อกแล้ว" if blocked else "⚠️ เฝ้าดู (ยังตอบอยู่)"
+        msg = (f"{head} — เจอเพจแปลกหน้ายิงเข้า webhook\n"
+               f"page_id: {pid or '(ว่าง)'}\n"
+               f"{'ไม่ได้ตอบและไม่ได้ใช้ token' if blocked else 'ตอนนี้ยังตอบด้วย token+ข้อมูลของเพจหลักอยู่'}\n"
+               f"ดูรายละเอียด: /api/page-diag")
+        print(f"[meta_bot] {msg}", flush=True)
+        if notify_fn and line_user_id:
+            try:
+                notify_fn(line_user_id, msg)
+            except Exception as e:
+                print(f"[meta_bot] แจ้งเตือน page แปลกหน้าไม่สำเร็จ: {str(e)[:120]}", flush=True)
+
+    return not blocked
+
+
+def page_diag(default_page_id: str = "") -> dict:
+    """สรุปว่ามี page_id ไหนยิงเข้ามาบ้างจริงๆ — เอาเลขจากตรงนี้ไปใส่ META_ALLOWED_PAGE_IDS
+    ตอนพร้อมล็อก (ไม่คืน token ออกไป คืนแค่ page_id กับสถิติ)"""
+    _load_page_map()
+    return {
+        "locked": bool(META_ALLOWED_PAGE_IDS),
+        "mode": "ล็อกแล้ว — เพจนอกลิสต์ไม่ได้รับคำตอบ" if META_ALLOWED_PAGE_IDS
+                else "เฝ้าดู — ยังตอบทุกเพจ แต่เจอแปลกหน้าจะเด้ง LINE",
+        "allowed_page_ids":    sorted(META_ALLOWED_PAGE_IDS),
+        "default_page_id":     str(default_page_id or ""),
+        "registered_in_db":    sorted(_page_map.keys()),
+        "seen":                _seen_page_ids,
+        "unknown_seen":        sorted([k for k, v in _seen_page_ids.items() if not v.get("known")]),
+        "hint": ("เอา page_id ทุกตัวที่ถูกต้องจริง (ทั้งของ FB และ IG — คนละเลขกัน) "
+                 "ไปใส่ env META_ALLOWED_PAGE_IDS คั่นด้วยจุลภาค แล้ว restart = ล็อกทันที "
+                 "ไม่ต้อง deploy ใหม่ · ตรวจ unknown_seen ให้ว่างก่อนล็อกเสมอ ไม่งั้น IG ร้านอาจโดนบล็อกเอง"),
+    }
+
+
 def upsert_page_mapping(page_id: str, slug: str, page_token: str,
                          platform: str = "", note: str = "") -> tuple:
     """เพิ่ม/อัปเดต mapping ร้านใหม่ลง shop_pages (ผ่าน service key) — เรียกจาก
@@ -870,10 +951,14 @@ def _send_map_image(page_token: str, sender: str, cfg: dict, is_ig: bool) -> Non
 
 
 def handle(data: dict, client, page_token: str, slug: str = "lullabell",
-           notify_fn=None, line_user_id: str = "") -> dict:
+           notify_fn=None, line_user_id: str = "", default_page_id: str = "") -> dict:
     """
     รับ payload จาก Meta webhook → ตอบทุก message event
     รองรับทั้ง object 'page' (Messenger) และ 'instagram'
+
+    default_page_id (22 ก.ค. 2026) = Page ID ของเพจหลักที่ผูกกับ page_token ใน env (ร้านทำผม)
+    ใช้บอก check_page_allowed() ว่าเลขนี้คือของเราเอง ไม่ใช่เพจแปลกหน้า — ไม่ส่งมาก็ยังทำงานได้
+    (จะถือว่าเพจหลักเป็น "แปลกหน้า" แล้วเด้งเตือน 1 ครั้ง/6 ชม. ในโหมดเฝ้าดู แต่ยังตอบปกติ)
     """
     result = {"replied": 0, "skipped": 0}
     # object เป็น "instagram" เมื่อข้อความมาจาก IG DM, "page" เมื่อมาจาก FB Messenger — Meta ส่งมาให้ในตัวเว็บฮุคอยู่แล้ว
@@ -881,12 +966,27 @@ def handle(data: dict, client, page_token: str, slug: str = "lullabell",
     # แบบที่อัปโหลดไม่ระบุ platform=instagram ไม่ได้ — เจอจริง 21 ก.ค. รูปขึ้น FB แต่ไม่ขึ้น IG)
     is_ig = data.get("object") == "instagram"
 
+    # 22 ก.ค. 2026 — เก็บค่าเริ่มต้นจาก env ไว้ก่อนเข้าลูป แล้วใช้ตัวนี้เป็น fallback ทุกรอบ
+    # บั๊กเดิม: เขียน `page_token, slug = resolve_page(..., page_token, slug)` ทับตัวแปรลูปตรงๆ
+    # ทำให้ถ้า entry แรกเป็นร้าน A (เจอใน shop_pages) พอ entry ถัดไปหาไม่เจอ มันจะ fallback ไปใช้
+    # token/config ของ "ร้าน A" แทนค่าเริ่มต้น = ข้อมูลข้ามร้านกันจริงๆ ใน POST เดียวที่ Meta batch มา
+    base_token, base_slug = page_token, slug
+    base_page_id = default_page_id
+
     for entry in data.get("entry", []):
         # Multi-tenant (21 ก.ค. 2026): entry['id'] คือ Page ID/IG-scoped ID ของร้านที่ event นี้มาจาก
-        # resolve_page() หาว่าตรงร้านไหนใน shop_pages (Supabase) ก่อน ไม่เจอ = ใช้ page_token/slug
-        # เดิมที่รับมาจาก api_server.py (พฤติกรรม Lullabell วันนี้เป๊ะ ไม่ regression) — rebind ต่อ-entry
-        # เผื่อ Meta batch หลาย Page มาใน POST เดียวกัน (เคสหายาก แต่ทำถูกไปเลยตั้งแต่แรกดีกว่า)
-        page_token, slug = resolve_page(entry.get("id", ""), page_token, slug)
+        entry_page_id = entry.get("id", "")
+
+        # ล็อก token (22 ก.ค. 2026): เพจแปลกหน้าห้ามได้คำตอบ/ห้ามใช้ token ของร้านหลัก
+        # โหมดเฝ้าดู (ยังไม่ตั้ง META_ALLOWED_PAGE_IDS) จะคืน True เสมอ = ไม่มี regression
+        if not check_page_allowed(entry_page_id, base_page_id, notify_fn, line_user_id):
+            result["skipped"] = result.get("skipped", 0) + 1
+            continue
+
+        # resolve_page() หาว่าตรงร้านไหนใน shop_pages (Supabase) ก่อน ไม่เจอ = ใช้ค่าเริ่มต้นจาก env
+        # (พฤติกรรม Lullabell วันนี้เป๊ะ ไม่ regression) — resolve ต่อ-entry เผื่อ Meta batch หลาย Page
+        # มาใน POST เดียวกัน (เคสหายาก แต่ทำถูกไปเลยตั้งแต่แรกดีกว่า)
+        page_token, slug = resolve_page(entry_page_id, base_token, base_slug)
         try:
             cfg = load_cfg(slug)
         except Exception as e:

@@ -1966,6 +1966,18 @@ def daily_summary():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+@app.route("/api/page-diag")
+def api_page_diag():
+    """ดูว่ามี page_id ไหนยิงเข้า webhook มาบ้างจริงๆ (22 ก.ค. 2026) — เอาเลขจากตรงนี้ไปใส่
+    env META_ALLOWED_PAGE_IDS ตอนพร้อมล็อก token ให้ตอบเฉพาะเพจร้านทำผม
+    ⚠️ ก่อนล็อก ต้องรอให้ unknown_seen ว่างก่อน ไม่งั้น IG ของร้าน (คนละ id กับ FB) จะโดนบล็อกเอง
+    ไม่คืน token ออกไป คืนแค่ page_id กับสถิติ"""
+    try:
+        return jsonify(meta_bot.page_diag(default_page_id=LULLABELL_PAGE_ID))
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)[:300]}), 500
+
+
 @app.route("/api/gemini-diag")
 def api_gemini_diag():
     """วินิจฉัย Gemini 404 (22 ก.ค. 2026) — ถาม Google ตรงๆ ว่า key นี้ใช้โมเดลไหนได้บ้าง
@@ -2126,14 +2138,38 @@ def meta_webhook():
     if LULLABELL_FORWARD_URL:
         entry_ids = {str(e.get("id", "")) for e in data.get("entry", [])}
         if LULLABELL_PAGE_ID in entry_ids:
-            try:
-                requests.post(LULLABELL_FORWARD_URL, data=body,
-                              headers={"X-Hub-Signature-256": sig,
-                                       "Content-Type": request.headers.get("Content-Type", "application/json")},
-                              timeout=8)
-            except Exception as e:
+            # 22 ก.ค. 2026 — เดิม timeout=8 วิ + กลืน error เงียบ + ตอบ Meta ว่า 200 สำเร็จ
+            # บน Render free tier service ที่หลับอยู่ใช้เวลาตื่น ~50 วิ → ข้อความแรกหลังไม่มีคนทัก
+            # 15 นาที จะ timeout ทุกครั้ง แล้ว Meta ก็ไม่ส่งซ้ำเพราะเราตอบ 200 ไปแล้ว
+            # = ข้อความลูกค้าหายเงียบ ไม่มีใครรู้ (ตระกูลเดียวกับบทเรียน key หมดอายุ 18 ก.ค.)
+            # แก้: timeout ยาวขึ้น + ลองซ้ำ 1 ครั้ง (เผื่อครั้งแรกไปปลุกเครื่องให้ตื่นพอดี) + พลาดจริงเด้ง LINE
+            fwd_headers = {"X-Hub-Signature-256": sig,
+                           "Content-Type": request.headers.get("Content-Type", "application/json")}
+            last_err = ""
+            for attempt in (1, 2):
+                try:
+                    fr = requests.post(LULLABELL_FORWARD_URL, data=body,
+                                       headers=fwd_headers, timeout=25)
+                    if fr.status_code < 400:
+                        last_err = ""
+                        break
+                    last_err = f"HTTP {fr.status_code}: {fr.text[:120]}"
+                except Exception as e:
+                    last_err = f"{type(e).__name__}: {str(e)[:150]}"
+                if attempt == 1:
+                    print(f"[meta_webhook] forward ครั้งที่ 1 พลาด ({last_err}) — ลองใหม่อีกครั้ง",
+                          flush=True)
+            if last_err:
                 traceback.print_exc()
-                print("[meta_webhook] forward to lullabell-bot failed:", str(e)[:200])
+                msg = ("🔴 ข้อความลูกค้าร้านทำผมอาจหาย!\n"
+                       f"forward ไป lullabell-bot ไม่สำเร็จ 2 ครั้ง\n{last_err}\n"
+                       "เช็ค: lullabell-bot.onrender.com/ (อาจหลับอยู่)\n"
+                       "แก้ด่วน: ลบ env LULLABELL_FORWARD_URL ออก = กลับมาตอบที่ service นี้ทันที")
+                print("[meta_webhook]", msg, flush=True)
+                try:
+                    _push_line(LINE_USER_ID, msg)
+                except Exception as e2:
+                    print("[meta_webhook] เตือน LINE ก็ไม่สำเร็จ:", str(e2)[:150], flush=True)
             return "EVENT_RECEIVED", 200
 
     # ตอบเฉพาะ object ที่เกี่ยวกับข้อความ (page = Messenger, instagram = IG DM)
@@ -2142,7 +2178,10 @@ def meta_webhook():
             client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
             meta_bot.handle(data, client, page_token=META_PAGE_TOKEN,
                             slug=META_SLUG, notify_fn=_push_line,
-                            line_user_id=LINE_USER_ID)
+                            line_user_id=LINE_USER_ID,
+                            # 22 ก.ค. 2026: บอกว่าเลขนี้คือเพจหลักของเรา (ร้านทำผม) เพจอื่นที่ไม่ได้
+                            # ลงทะเบียนใน shop_pages = แปลกหน้า → เตือน (หรือบล็อกถ้าตั้ง allowlist แล้ว)
+                            default_page_id=LULLABELL_PAGE_ID)
         except Exception as e:
             traceback.print_exc()
             # ตอบ 200 เสมอ ไม่งั้น Meta จะ retry รัวๆ
