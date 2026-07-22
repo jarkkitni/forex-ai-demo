@@ -264,12 +264,15 @@
         </div>
         <div class="fg">
           <label>ประเภทธุรกิจ *</label>
-          <select name="biz_type" required>
+          <select name="biz_type" id="bizType" required>
             <option value="">— เลือก —</option>
             <option value="beauty">ร้านเสริมสวย / ทำผม / เล็บ</option>
             <option value="clinic">คลินิกความงาม</option>
             <option value="spa">สปา / นวด</option>
             <option value="restaurant">ร้านอาหาร / คาเฟ่</option>
+            <option value="booking">ธุรกิจที่ต้องจองคิว/นัดหมาย</option>
+            <option value="general">ธุรกิจทั่วไป / อยากได้ LINE Bot ตอบแชท</option>
+            <option value="automation">อยากได้ n8n Automation / AI Agent</option>
             <option value="other">อื่นๆ (ระบุด้านล่าง)</option>
           </select>
         </div>
@@ -359,6 +362,18 @@ function pick(p){
   document.getElementById('planSel').value=p;
   document.getElementById('order').scrollIntoView({behavior:'smooth'});
 }
+
+// พรีเซ็ตประเภทธุรกิจจาก query param เมื่อมาจากหน้า SEO เฉพาะทาง เช่น /botkit?biz=booking#order
+(function(){
+  try{
+    const biz=new URLSearchParams(location.search).get('biz');
+    const sel=document.getElementById('bizType');
+    if(biz && sel){
+      const opt=[...sel.options].find(o=>o.value===biz);
+      if(opt) sel.value=biz;
+    }
+  }catch(e){}
+})();
 
 async function submitOrder(e){
   e.preventDefault();
