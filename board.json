@@ -1,7 +1,6 @@
 {
   "_readme": "แก้ไฟล์นี้แล้ว push = การ์ด 💰 เงินเข้า-ออก + ✅ งานค้าง บน /monitor เปลี่ยนตาม",
   "updated": "2026-07-21",
-
   "deals": [
     {
       "name": "🏆 Lullabell Beauty Salon — ลูกค้าคนแรก!",
@@ -18,14 +17,6 @@
       "action": "รอคุณ Eye กดตรวจรับงานที่ปุ่ม \"ดูงานที่ส่ง\" บน FastWork"
     },
     {
-      "name": "Forex Auto-Execution",
-      "amount": 35000,
-      "recurring": 4000,
-      "state": "silent",
-      "note": "เงียบหลังโดนถาม 3 ข้อ — รอ paper mode สะสมผล 3-5 วันค่อยส่งลิงก์",
-      "action": "รอไม้ปิด 5-10 ไม้ → ส่ง /demo/autotrade + ข้อความใหม่ (1 คำถาม)"
-    },
-    {
       "name": "ลูกค้า LINE Bot listing",
       "amount": 0,
       "state": "waiting_reply",
@@ -33,27 +24,73 @@
       "action": "รอตอบ"
     }
   ],
-
   "costs": [
-    { "name": "Anthropic API", "amount": 700, "unit": "เดือน", "note": "เพดาน $20/เดือน · Haiku คัดก่อน Sonnet" },
-    { "name": "Render", "amount": 0, "unit": "เดือน", "note": "free tier" },
-    { "name": "Supabase", "amount": 0, "unit": "เดือน", "note": "free tier" },
-    { "name": "cron-job.org", "amount": 0, "unit": "เดือน", "note": "free" }
+    {
+      "name": "Anthropic API",
+      "amount": 700,
+      "unit": "เดือน",
+      "note": "เพดาน $20/เดือน · Haiku คัดก่อน Sonnet"
+    },
+    {
+      "name": "Render",
+      "amount": 0,
+      "unit": "เดือน",
+      "note": "free tier"
+    },
+    {
+      "name": "Supabase",
+      "amount": 0,
+      "unit": "เดือน",
+      "note": "free tier"
+    },
+    {
+      "name": "cron-job.org",
+      "amount": 0,
+      "unit": "เดือน",
+      "note": "free"
+    }
   ],
-
   "pending": [
-    { "t": "🔴 n8n→FB โพสต์ตรง (บายพาส Postiz bug): โค้ด+ทดสอบเสร็จ, commit local แล้ว — ค้าง 2 อย่าง: (1) git push origin main ในโฟลเดอร์ forex-ai-demo (2) ตั้ง N8N_POST_SECRET บน Render env ค่า sp1T2o-tgBeJGd1pox5B7NpjqctmcS97", "who": "รอเรา (ทำเมื่อกลับมา)" },
-    { "t": "🏆 Lullabell: publish + token ถาวร + Quick Replies เสร็จหมดแล้ว — เช็ค role/IG ครบ 21 ก.ค. ไม่มีอะไรค้าง", "who": "เสร็จแล้ว" },
-    { "t": "🎉 ร้านเสริมสวยงานแรก ฿1,500 (คุณ Eye) — แก้บั๊กเสร็จ + ส่งข้อความปิดงานแล้ว 21 ก.ค.", "who": "รอลูกค้า" },
-    { "t": "🍳 Chef & Restaurant: เตรียม Blueprint + คู่มือรีโมทพร้อมแล้ว — รอนัดวันรีโมทเข้าติดตั้ง", "who": "รอลูกค้า" },
-    { "t": "ลูกค้า Forex เงียบ — รอ paper mode มีผล 3-5 วัน", "who": "รอเรา" },
-    { "t": "Garuda วิเคราะห์ตลาด Forex 7 ข้อ (เน้นกฎหมาย ก.ล.ต.)", "who": "รอ Garuda" },
-    { "t": "Listing #5 Forex AI Bot รออนุมัติ", "who": "รอ FastWork" },
-    { "t": "Listing #6 n8n Automation รออนุมัติ", "who": "รอ FastWork" },
-    { "t": "Listing #7 Dialysis/Clinic รออนุมัติ", "who": "รอ FastWork" },
-    { "t": "ลิสติ้ง SEO — รอ dashboard มีตัวเลขจริง 1-2 สัปดาห์ค่อยโพสต์", "who": "รอเวลา" },
-    { "t": "หน้า SEO ยังบาง 4 หน้า (ร้านอาหาร/คลินิก/จองคิว/n8n)", "who": "รอเรา" },
-    { "t": "⚠️ patients/visits มี RLS policy authenticated=true (แก้/ลบ/เพิ่มได้หมด) — ข้อมูลคนไข้ ควรรัดกุมขึ้น", "who": "รอเรา", "urgent": true },
-    { "t": "พี่หมอ/พยาบาลรีวิว /demo/dialysis (PIN 371134)", "who": "รอลูกค้า" }
+    {
+      "t": "🔴 n8n→FB โพสต์ตรง (บายพาส Postiz bug): โค้ด+ทดสอบเสร็จ, commit local แล้ว — ค้าง 2 อย่าง: (1) git push origin main ในโฟลเดอร์ forex-ai-demo (2) ตั้ง N8N_POST_SECRET บน Render env ค่า sp1T2o-tgBeJGd1pox5B7NpjqctmcS97",
+      "who": "รอเรา (ทำเมื่อกลับมา)"
+    },
+    {
+      "t": "🏆 Lullabell: publish + token ถาวร + Quick Replies เสร็จหมดแล้ว — เช็ค role/IG ครบ 21 ก.ค. ไม่มีอะไรค้าง",
+      "who": "เสร็จแล้ว"
+    },
+    {
+      "t": "🎉 ร้านเสริมสวยงานแรก ฿1,500 (คุณ Eye) — แก้บั๊กเสร็จ + ส่งข้อความปิดงานแล้ว 21 ก.ค.",
+      "who": "รอลูกค้า"
+    },
+    {
+      "t": "🍳 Chef & Restaurant: เตรียม Blueprint + คู่มือรีโมทพร้อมแล้ว — รอนัดวันรีโมทเข้าติดตั้ง",
+      "who": "รอลูกค้า"
+    },
+    {
+      "t": "Listing #6 n8n Automation รออนุมัติ",
+      "who": "รอ FastWork"
+    },
+    {
+      "t": "Listing #7 Dialysis/Clinic รออนุมัติ",
+      "who": "รอ FastWork"
+    },
+    {
+      "t": "ลิสติ้ง SEO — รอ dashboard มีตัวเลขจริง 1-2 สัปดาห์ค่อยโพสต์",
+      "who": "รอเวลา"
+    },
+    {
+      "t": "หน้า SEO ยังบาง 4 หน้า (ร้านอาหาร/คลินิก/จองคิว/n8n)",
+      "who": "รอเรา"
+    },
+    {
+      "t": "⚠️ patients/visits มี RLS policy authenticated=true (แก้/ลบ/เพิ่มได้หมด) — ข้อมูลคนไข้ ควรรัดกุมขึ้น",
+      "who": "รอเรา",
+      "urgent": true
+    },
+    {
+      "t": "พี่หมอ/พยาบาลรีวิว /demo/dialysis (PIN 371134)",
+      "who": "รอลูกค้า"
+    }
   ]
 }

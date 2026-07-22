@@ -1,22 +1,46 @@
 {
   "date": "2026-07-17",
   "generated_by": "Garuda",
-  "progress": { "done": 6, "total": 7, "percent": 86 },
+  "progress": {
+    "done": 6,
+    "total": 7,
+    "percent": 86
+  },
   "extra_done_today": [
     "สร้าง FastWork Job Hunter (AI ดักงานทุก 30 นาที + วิเคราะห์เกรด A/B)",
-    "ส่ง FastWork Listing ใหม่ 2 ตัว: Forex AI Bot, n8n Automation (รอ FastWork ตรวจ)",
     "สร้าง NEXUS Monitor (widget PC + PWA แท็บเล็ต)",
     "ตั้งระบบข้ามเครื่อง (GitHub repo + Google Drive ร่วม)",
     "ร่าง Sales Script ร้าน Beauty ครบ 7 ส่วน (รอเติมข้อมูลจริง)",
     "ทดสอบระบบอ่าน/ส่งงานข้ามเซสชัน Garuda ⇄ SiriAriyaMate ผ่าน Drive (ผ่านทั้งหมด)"
   ],
   "pending": [
-    { "title": "ลูกค้า Beauty ยังไม่ชำระเงิน", "note": "฿1,500 ส่งบิลแล้ว", "status": "urgent", "deadline": "2026-07-18T16:13:00" },
-    { "title": "รอข้อมูลร้าน Beauty เพื่อเติมสคริปต์", "note": "ราคาจริง / เวลาทำการ / ที่อยู่ / โปรโมชั่น", "status": "waiting" },
-    { "title": "ตั้งค่า Meta Auto Reply (FB/IG)", "status": "todo" },
-    { "title": "ทดสอบ Flow จองคิวจริง", "status": "todo" },
-    { "title": "เขียนคู่มือแอดมิน (ภาษาไทย)", "status": "todo" },
-    { "title": "ลูกค้ารายที่ 2 (LINE Bot listing)", "note": "ส่งคำถาม 3 ข้อ + demo แล้ว รอตอบ", "status": "waiting" },
-    { "title": "Listing #5 Forex AI Bot, #6 n8n Automation", "note": "ส่งตรวจแล้ว 17 ก.ค.", "status": "waiting" }
+    {
+      "title": "ลูกค้า Beauty ยังไม่ชำระเงิน",
+      "note": "฿1,500 ส่งบิลแล้ว",
+      "status": "urgent",
+      "deadline": "2026-07-18T16:13:00"
+    },
+    {
+      "title": "รอข้อมูลร้าน Beauty เพื่อเติมสคริปต์",
+      "note": "ราคาจริง / เวลาทำการ / ที่อยู่ / โปรโมชั่น",
+      "status": "waiting"
+    },
+    {
+      "title": "ตั้งค่า Meta Auto Reply (FB/IG)",
+      "status": "todo"
+    },
+    {
+      "title": "ทดสอบ Flow จองคิวจริง",
+      "status": "todo"
+    },
+    {
+      "title": "เขียนคู่มือแอดมิน (ภาษาไทย)",
+      "status": "todo"
+    },
+    {
+      "title": "ลูกค้ารายที่ 2 (LINE Bot listing)",
+      "note": "ส่งคำถาม 3 ข้อ + demo แล้ว รอตอบ",
+      "status": "waiting"
+    }
   ]
 }

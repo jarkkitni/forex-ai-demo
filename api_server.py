@@ -1,6 +1,9 @@
 """
-ForexAI Pro — API Server
-เชื่อม AI วิเคราะห์ + ราคา Forex/Crypto + LINE Notification
+NEXUS — API Server
+LINE/Meta Bot สำหรับร้านค้า + BotKit (หน้าขาย/เดโม) + Job Hunter ดักงานฟรีแลนซ์
+
+⚠️ 22 ก.ค. 2026 — ถอดฟีเจอร์ Forex/สัญญาณเทรดออกทั้งหมด (ความเสี่ยง ก.ล.ต.:
+   ให้คำแนะนำการลงทุนต่อสาธารณะโดยไม่มีใบอนุญาต) ห้ามเพิ่มกลับเข้ามาอีก
 """
 import os, re, json, requests, traceback, hmac, hashlib, base64
 from datetime import datetime
@@ -55,7 +58,6 @@ LULLABELL_LINE_CHANNEL_TOKEN  = os.environ.get("LULLABELL_LINE_CHANNEL_TOKEN", "
 EC_ADMIN_PIN        = os.environ.get("EC_ADMIN_PIN", "")
 # ========================
 
-signal_history   = []  # in-memory สัญญาณ (เก็บ 20 ล่าสุด)
 registered_users = []  # userId ที่ลงทะเบียนผ่าน /webhook — cache ในแรม + sync กับ Supabase (กันหายเวลา restart)
 
 
@@ -132,108 +134,7 @@ def _track_visit():
         print(f"[SEO] log fail: {e}", flush=True)
 
 
-# ---------- Price Helpers ----------
-
-def fetch_forex(base: str, quote: str) -> dict:
-    """ราคา Forex จาก frankfurter.app (ฟรี ไม่ต้อง key)"""
-    r = requests.get(
-        f"https://api.frankfurter.app/latest?from={base}&to={quote}", timeout=5
-    )
-    r.raise_for_status()
-    d = r.json()
-    price = d["rates"][quote]
-    return {"price": price, "change_pct": 0.05, "base": base, "quote": quote}
-
-
-def fetch_kraken(pair: str, result_key: str) -> dict:
-    """ราคา Crypto จาก Kraken (ฟรีแท้ ไม่ต้อง key ไม่ block cloud)"""
-    r = requests.get(
-        f"https://api.kraken.com/0/public/Ticker?pair={pair}",
-        timeout=10,
-        headers={"Accept": "application/json"},
-    )
-    r.raise_for_status()
-    d = r.json()
-    if d.get("error"):
-        raise Exception(f"Kraken error: {d['error']}")
-    ticker     = d["result"][result_key]
-    price      = float(ticker["c"][0])
-    open_p     = float(ticker["o"])
-    change_pct = ((price - open_p) / open_p) * 100 if open_p else 0.0
-    volume     = float(ticker["v"][1])
-    return {
-        "price":      price,
-        "change_pct": round(change_pct, 2),
-        "high":       float(ticker["h"][1]),
-        "low":        float(ticker["l"][1]),
-        "volume":     volume,
-    }
-
-
-def fetch_btc() -> dict:
-    return fetch_kraken("XBTUSD", "XXBTZUSD")
-
-
-def fetch_eth() -> dict:
-    return fetch_kraken("ETHUSD", "XETHZUSD")
-
-
-# ---------- AI Analysis ----------
-
-def analyze_with_ai(pair: str, price_data: dict) -> dict:
-    client    = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-    price_str = json.dumps(price_data, ensure_ascii=False, indent=2)
-    prompt = f"""คุณเป็น AI วิเคราะห์ Forex และ Crypto มืออาชีพระดับ Institutional Trader
-
-ข้อมูลตลาดปัจจุบัน ({pair}):
-{price_str}
-
-วิเคราะห์สถานการณ์ตลาดอย่างละเอียด แล้วให้สัญญาณการเทรด
-ตอบเป็น JSON เท่านั้น (ไม่ต้องมีข้อความอื่น):
-{{
-  "signal": "BUY" หรือ "SELL" หรือ "HOLD",
-  "confidence": ตัวเลข 0-100,
-  "entry_price": ราคาเข้าที่แนะนำ (ตัวเลข),
-  "stop_loss": ราคา stop loss (ตัวเลข),
-  "take_profit": ราคา take profit (ตัวเลข),
-  "risk_level": "LOW" หรือ "MEDIUM" หรือ "HIGH",
-  "reasoning": "อธิบายเหตุผล 2-3 ประโยคภาษาไทย",
-  "key_factors": ["ปัจจัย 1", "ปัจจัย 2", "ปัจจัย 3"],
-  "market_sentiment": "BULLISH" หรือ "BEARISH" หรือ "NEUTRAL"
-}}"""
-
-    # ผ่าน ai_guard → AI ตายเมื่อไหร่ เด้ง LINE ทันที ไม่ตายเงียบอีก
-    # slug="forex" กันการแจ้งเตือน/cooldown ชนกับบอทลูกค้าเจ้าอื่น (เช่น Lullabell)
-    text = ai_guard.call(client, prompt, max_tokens=600, smart=True,
-                         notify_fn=_push_line, line_user_id=LINE_USER_ID, slug="forex")
-    s, e = text.find("{"), text.rfind("}") + 1
-    return json.loads(text[s:e])
-
-
 # ---------- LINE Helpers ----------
-
-def _build_signal_message(sig: dict) -> str:
-    emoji   = {"BUY": "🟢", "SELL": "🔴", "HOLD": "🟡"}.get(sig.get("signal", ""), "⚪")
-    sent_th = {
-        "BULLISH": "กระทิง 📈",
-        "BEARISH": "หมี 📉",
-        "NEUTRAL": "ทรงตัว ➡️",
-    }.get(sig.get("market_sentiment", ""), "")
-    factors = "\n".join(f"  • {f}" for f in sig.get("key_factors", []))
-    return (
-        f"{emoji} ForexAI Pro — Signal Alert\n\n"
-        f"📊 คู่: {sig.get('pair','')}  |  ⚡ {sig.get('signal','')}\n"
-        f"🎯 ความมั่นใจ: {sig.get('confidence','')}%  |  ⚠️ ความเสี่ยง: {sig.get('risk_level','')}\n"
-        f"📈 Sentiment: {sent_th}\n\n"
-        f"💰 Entry:        {sig.get('entry_price','')}\n"
-        f"🛑 Stop Loss:  {sig.get('stop_loss','')}\n"
-        f"✅ Take Profit:  {sig.get('take_profit','')}\n\n"
-        f"🔑 ปัจจัยหลัก:\n{factors}\n\n"
-        f"💡 {sig.get('reasoning','')}\n\n"
-        f"🤖 Analyzed by Claude AI  |  ⏰ {sig.get('timestamp','')}\n"
-        f"━━━━━━━━━━━━━━━━━"
-    )
-
 
 def _push_line(user_id: str, text: str) -> bool:
     """Push message ไปยัง user_id"""
@@ -270,102 +171,8 @@ def _reply_line(reply_token: str, text: str):
 
 
 # ---------- API Routes ----------
-
-@app.route("/api/prices", methods=["GET"])
-def get_all_prices():
-    """ดึงราคาทั้งหมดในครั้งเดียว"""
-    try:
-        data = {
-            "EURUSD":    fetch_forex("EUR", "USD"),
-            "GBPUSD":    fetch_forex("GBP", "USD"),
-            "USDJPY":    fetch_forex("USD", "JPY"),
-            "BTCUSD":    fetch_btc(),
-            "ETHUSD":    fetch_eth(),
-            "timestamp": datetime.now().strftime("%H:%M:%S"),
-        }
-        return jsonify({"success": True, "data": data})
-    except Exception as e:
-        tb = traceback.format_exc()
-        print(f"[ERROR] /api/prices: {e}\n{tb}", flush=True)
-        return jsonify({"success": False, "error": str(e), "traceback": tb}), 500
-
-
-@app.route("/api/analyze", methods=["POST"])
-def analyze():
-    """
-    วิเคราะห์ด้วย AI
-    ⚠️ endpoint นี้เปิดสาธารณะ = ทุกครั้งที่ถูกเรียก เราจ่ายเงิน
-       ต้องมี rate limit เสมอ ไม่งั้นคนเดียวยิงรัวคืนเดียวเงินหมด
-    """
-    body       = request.get_json()
-    pair       = body.get("pair", "EURUSD")
-    price_data = body.get("price_data", {})
-
-    if not ANTHROPIC_API_KEY:
-        return jsonify({"success": False, "error": "ไม่ได้ตั้ง ANTHROPIC_API_KEY"}), 400
-
-    ok, left = ai_guard.rate_limit(ai_guard.client_ip(request),
-                                   limit=int(os.environ.get("ANALYZE_LIMIT", "5")))
-    if not ok:
-        return jsonify({
-            "success": False,
-            "error": "วันนี้วิเคราะห์ครบโควตาแล้วครับ (5 ครั้ง/วัน) — พรุ่งนี้มาใหม่ได้เลย 😊 "
-                     "อยากใช้แบบไม่จำกัด ทักมาคุยได้ครับ",
-            "rate_limited": True,
-        }), 429
-
-    try:
-        result              = analyze_with_ai(pair, price_data)
-        result["quota_left"] = left
-        result["pair"]      = pair
-        result["timestamp"] = datetime.now().strftime("%H:%M:%S")
-
-        signal_history.insert(0, result.copy())
-        if len(signal_history) > 20:
-            signal_history.pop()
-
-        return jsonify({"success": True, "signal": result})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
-
-@app.route("/api/history", methods=["GET"])
-def get_history():
-    return jsonify({"success": True, "history": signal_history[:10]})
-
-
-@app.route("/api/send-line", methods=["POST"])
-def send_line():
-    """Broadcast Signal ไปยังทุก LINE userId ที่ลงทะเบียน"""
-    # รวบรวม targets: env var + registered users
-    targets: list[str] = []
-    if LINE_USER_ID and LINE_USER_ID not in targets:
-        targets.append(LINE_USER_ID)
-    for uid in registered_users:
-        if uid not in targets:
-            targets.append(uid)
-
-    if not targets:
-        return jsonify({
-            "success": False,
-            "error":   "ไม่มี LINE User ID — Add OA แล้วพิมพ์ /start ก่อน",
-        }), 400
-
-    if not LINE_TOKEN:
-        return jsonify({"success": False, "error": "ไม่ได้ตั้ง LINE_TOKEN"}), 400
-
-    sig     = request.get_json().get("signal", {})
-    msg     = _build_signal_message(sig)
-    results = [{"uid": uid[:8] + "...", "ok": _push_line(uid, msg)} for uid in targets]
-    ok_cnt  = sum(1 for r in results if r["ok"])
-
-    return jsonify({
-        "success": ok_cnt > 0,
-        "sent":    ok_cnt,
-        "total":   len(targets),
-        "results": results,
-    })
-
+# หมายเหตุ 22 ก.ค. 2026: /api/prices, /api/analyze, /api/history, /api/send-line
+# ถูกลบออกพร้อมฟีเจอร์ Forex ทั้งหมด (ความเสี่ยง ก.ล.ต.) — ห้ามเพิ่มกลับ
 
 @app.route("/webhook", methods=["POST"])
 def line_webhook():
@@ -454,7 +261,6 @@ def health():
         "line_channel_secret": bool(LINE_CHANNEL_SECRET),
         "lullabell_line_ready": bool(LULLABELL_LINE_CHANNEL_SECRET and LULLABELL_LINE_CHANNEL_TOKEN),
         "registered_users":    len(registered_users),
-        "signal_count":        len(signal_history),
         "hunter_log_count":    len(fastwork_hunter.get_hunter_log()),
     })
 
@@ -552,7 +358,6 @@ def get_stats():
         "unique_visitors":  len(visit_stats["unique_ips"]),
         "last_visit":       visit_stats["last_visit"],
         "line_users":       len(registered_users) + (1 if LINE_USER_ID else 0),
-        "signal_count":     len(signal_history),
         "hunter_checked":   len(fastwork_hunter.get_hunter_log()),
         "hunter_alerts":    sum(1 for e in fastwork_hunter.get_hunter_log() if e.get("alerted")),
     })
@@ -1633,7 +1438,8 @@ def seo_landing(slug):
 
 @app.route("/sitemap.xml")
 def sitemap():
-    urls = ["/", "/botkit"] + [f"/{k}" for k in SEO_PAGES] + \
+    # "/botkit" ไม่อยู่ในนี้แล้ว — มัน 301 มา "/" ซึ่งมีอยู่แล้ว (กัน duplicate content)
+    urls = ["/"] + [f"/{k}" for k in SEO_PAGES] + \
            [f"/demo/{k}" for k in _load_demo_configs()]
     today = datetime.now().strftime("%Y-%m-%d")
     items = "".join(
@@ -1666,62 +1472,9 @@ def _stamp_source(resp):
     return resp
 
 
-# ---------- Auto-Execution (PAPER MODE เท่านั้น) ----------
-
-_PAIR_FETCH = {
-    "BTC/USD": fetch_btc,
-    "ETH/USD": fetch_eth,
-    "EUR/USD": lambda: fetch_forex("EUR", "USD"),
-    "GBP/USD": lambda: fetch_forex("GBP", "USD"),
-    "USD/JPY": lambda: fetch_forex("USD", "JPY"),
-}
-
-
-def _autotrade_price(pair: str) -> dict:
-    fn = _PAIR_FETCH.get(pair.upper())
-    if not fn:
-        raise ValueError(f"ยังไม่รองรับคู่ {pair}")
-    return fn()
-
-
-@app.route("/api/autotrade/tick", methods=["GET", "POST"])
-def autotrade_tick():
-    """
-    cron ยิงมาทุก 15-30 นาที → เดิน 1 รอบ
-    ⚠️ PAPER เท่านั้น — Executor ตกกลับเป็น PaperBroker เองถ้าไม่ปลดล็อกครบ 3 ชั้น
-    """
-    if not HUNTERS_ENABLED:
-        return jsonify(_HUNTERS_OFF_MSG), 200   # ปิดกันเผาเครดิต Claude (analyze_with_ai) (21 ก.ค. 2026)
-    from auto_execution import runner
-    try:
-        return jsonify({"success": True, **runner.tick(
-            fetch_price_fn=_autotrade_price,
-            analyze_fn=analyze_with_ai,
-            notify_fn=_push_line,
-            line_user_id=LINE_USER_ID,
-        )})
-    except Exception as e:
-        traceback.print_exc()
-        return jsonify({"success": False, "error": str(e)[:300]}), 200
-
-
-@app.route("/api/autotrade/state")
-def autotrade_state():
-    """ผลเทรดกระดาษทั้งหมด — ใช้โดยหน้า /demo/autotrade"""
-    from auto_execution import runner
-    try:
-        return jsonify(runner.state())
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)[:200]}), 200
-
-
-@app.route("/demo/autotrade")
-def demo_autotrade():
-    """หน้าให้ลูกค้าเปิดดูผลเทรดกระดาษแบบสด"""
-    _track_visit()
-    p = os.path.join(os.path.dirname(__file__), "demo_autotrade.html")
-    with open(p, "r", encoding="utf-8") as f:
-        return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+# ---------- Auto-Execution: ลบออกแล้ว 22 ก.ค. 2026 ----------
+# /api/autotrade/tick, /api/autotrade/state, /demo/autotrade และโฟลเดอร์ auto_execution/
+# ถูกลบพร้อมฟีเจอร์ Forex ทั้งหมด (ความเสี่ยง ก.ล.ต.) — ห้ามเพิ่มกลับ
 
 
 # ---------- Demo ลูกค้าจริง (config แยกร้าน) ----------
@@ -1868,18 +1621,7 @@ def api_pulse():
         "fix": "https://platform.claude.com/settings/billing",
     })
 
-    # 2) Auto-Execution เดินอยู่ไหม
-    try:
-        from auto_execution import runner
-        s = runner.state()
-        out["checks"].append({
-            "name": "Auto-Execution", "ok": bool(s.get("ok")),
-            "detail": f"PAPER · เปิด {s.get('open_count',0)} ไม้ · ปิดแล้ว {s.get('total_closed',0)}",
-        })
-    except Exception as e:
-        out["checks"].append({"name": "Auto-Execution", "ok": False, "detail": str(e)[:60]})
-
-    # 3) SEO ถึงขั้นไหน
+    # 2) SEO ถึงขั้นไหน
     try:
         s = seo_tracker.summary()
         out["checks"].append({
@@ -2691,11 +2433,9 @@ def posttoday_publish_submit():
 
 @app.route("/botkit")
 def botkit_page():
-    """หน้าขาย BotKit (self-serve เฟส 1)"""
-    _track_visit()
-    p = os.path.join(os.path.dirname(__file__), "botkit.html")
-    with open(p, "r", encoding="utf-8") as f:
-        return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+    """เนื้อหาย้ายไปเป็นหน้าแรกแล้ว (22 ก.ค. 2026) — 301 กัน duplicate content
+    ลิงก์เก่าที่ส่งลูกค้าไปแล้ว + footer ของ landing SEO ทั้ง 6 หน้ายังใช้ได้ปกติ"""
+    return redirect("/", code=301)
 
 
 @app.route("/api/botkit/order", methods=["POST"])
@@ -2928,9 +2668,12 @@ def beauty_demo():
 
 @app.route("/")
 def index():
+    """หน้าแรก = หน้าขาย BotKit (22 ก.ค. 2026)
+    เดิมเป็น dashboard.html "ForexAI Pro" ที่แจกสัญญาณเทรด — ถูกลบทั้งไฟล์เพราะความเสี่ยง ก.ล.ต.
+    หน้านี้กับ /botkit เป็นเนื้อหาเดียวกัน จึงให้ /botkit 301 มาที่นี่ กัน duplicate content"""
     _track_visit()
-    html_path = os.path.join(os.path.dirname(__file__), "dashboard.html")
-    with open(html_path, "r", encoding="utf-8") as f:
+    p = os.path.join(os.path.dirname(__file__), "botkit.html")
+    with open(p, "r", encoding="utf-8") as f:
         return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
 
 

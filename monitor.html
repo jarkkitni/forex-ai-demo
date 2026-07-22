@@ -161,10 +161,6 @@
     <div class="card neon-card" style="grid-column:1/-1">
       <h3>🐦 เทคนิคที่ตั้งชื่อไว้ — กันลืม</h3>
       <div class="neon-list">
-        <div class="neon-item neon-red">
-          <span class="neon-name">นกสีแดงบินได้</span>
-          <span class="neon-desc">Forex AI Auto-Execution + ดีล ฿35,000</span>
-        </div>
         <div class="neon-item neon-cyan">
           <span class="neon-name">นกน้อยโพสต์คลิป</span>
           <span class="neon-desc">TikTok Content Posting API resubmission (ThaiLineAo)</span>
@@ -223,15 +219,6 @@
            style="color:var(--cyan);font-size:11px;text-decoration:none;font-weight:600">ดูเครดิต ▸</a>
       </h3>
       <div id="pulse"><div class="empty">กำลังเช็ค...</div></div>
-    </div>
-
-    <!-- Auto-Execution -->
-    <div class="card" id="atCard" style="grid-column:1/-1">
-      <h3>🤖 Auto-Execution — บอทเทรด (PAPER)
-        <a href="/demo/autotrade" target="_blank"
-           style="color:var(--cyan);font-size:11px;text-decoration:none;font-weight:600">เปิดกระดาน ▸</a>
-      </h3>
-      <div id="at"><div class="empty">กำลังโหลด...</div></div>
     </div>
 
     <!-- Visitors -->
@@ -685,36 +672,6 @@ async function loadPulse(){
   }catch(e){ $('pulse').innerHTML='<div class="empty">เช็คไม่ได้</div>'; }
 }
 
-// ---------- 🤖 Auto-Execution ----------
-async function loadAuto(){
-  try{
-    const d = await (await fetch('/api/autotrade/state')).json();
-    if(!d.ok){ $('at').innerHTML=`<div class="empty">${d.error||'ยังไม่พร้อม'}</div>`; return; }
-    const up = d.pnl >= 0, col = up?'var(--green)':'#ff4d6d';
-    const box = (v,l,c)=>`<div style="flex:1;min-width:105px;background:var(--bg);
-      border:1px solid var(--border);border-radius:10px;padding:11px">
-      <div style="font-size:21px;font-weight:800;color:${c||'var(--text)'}">${v}</div>
-      <div style="font-size:10.5px;color:var(--dim)">${l}</div></div>`;
-
-    $('at').innerHTML = `
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
-        ${box((d.pnl>=0?'+':'')+d.pnl.toFixed(2), 'กำไร/ขาดทุน (USD)', col)}
-        ${box(d.win_rate+'%', `ชนะ ${d.wins} · แพ้ ${d.losses}`)}
-        ${box(d.total_closed, 'ไม้ที่ปิดแล้ว')}
-        ${box(d.open_count, 'เปิดอยู่', 'var(--cyan)')}
-      </div>
-      ${(d.open_trades||[]).length ? d.open_trades.map(t=>`
-        <div style="background:var(--bg);border:1px solid var(--border);border-left:3px solid var(--cyan);
-             border-radius:10px;padding:10px 12px;margin-bottom:6px;font-size:12.5px">
-          <b style="font-size:13.5px">${t.pair}</b>
-          <span style="color:${t.side==='BUY'?'var(--green)':'#ff4d6d'};font-weight:800"> ${t.side}</span>
-          <span style="color:var(--dim)"> · เข้า ${t.entry} · SL ${t.sl} · TP ${t.tp} · มั่นใจ ${t.confidence}%</span>
-        </div>`).join('')
-        : `<div class="empty" style="padding:14px">ยังไม่มีไม้เปิด — ระบบรอจังหวะที่มั่นใจพอ<br>
-           <span style="font-size:11.5px">cron ตรวจตลาดทุก 30 นาที</span></div>`}`;
-  }catch(e){ $('at').innerHTML='<div class="empty">โหลดไม่ได้</div>'; }
-}
-
 // ---------- 💰 เงิน + ✅ งานค้าง ----------
 const ST = {
   waiting_payment:['⏰ รอจ่ายเงิน','var(--amber)'], silent:['😶 ลูกค้าเงียบ','var(--dim)'],
@@ -866,9 +823,9 @@ async function loadMetaBot(){
 }
 
 initBars(); loadStats(); loadJobs(); renderTasks(); loadStatus(); loadDemos(); loadOrders(); loadRoadmap(); loadSeo();
-loadLinks(); loadPulse(); loadAuto(); loadBoard(); loadHunterStatus(); loadMetaBot();
+loadLinks(); loadPulse(); loadBoard(); loadHunterStatus(); loadMetaBot();
 setInterval(()=>{ loadStats(); loadJobs(); loadStatus(); loadOrders(); loadRoadmap(); loadSeo();
-                  loadPulse(); loadAuto(); loadBoard(); loadHunterStatus(); loadMetaBot(); }, 60000);
+                  loadPulse(); loadBoard(); loadHunterStatus(); loadMetaBot(); }, 60000);
 </script>
 </body>
 </html>
