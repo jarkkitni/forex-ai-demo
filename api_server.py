@@ -1342,9 +1342,35 @@ SEO_SLUG_BIZ = {
     "bot-ran-serm-suay": "beauty", "bot-ran-ahan": "restaurant", "n8n-automation": "automation",
 }
 
+# สีประจำหน้า (ac = สีเน้น, ink = สีตัวอักษรบนปุ่มสีเน้น, glow = แสงเรืองพื้นหลัง)
+# ทำไมแยกสี: 6 หน้าเคยหน้าตาเหมือนกันหมดจนแยกไม่ออก ให้แต่ละธุรกิจมีสีของตัวเอง
+# ทำไมเก็บ rgba สำเร็จรูป: เลี่ยง color-mix() ใน CSS ที่เบราว์เซอร์เก่าไม่รองรับ
+SEO_ACCENT = {
+    "line-bot":          ("#00e47a", "#03130b", "rgba(0,228,122,.13)"),
+    "bot-jongkiw":       ("#38bdf8", "#04131c", "rgba(56,189,248,.13)"),
+    "chatbot-clinic":    ("#22d3ee", "#04151a", "rgba(34,211,238,.13)"),
+    "bot-ran-serm-suay": ("#f472b6", "#1a0512", "rgba(244,114,182,.13)"),
+    "bot-ran-ahan":      ("#fb923c", "#1a0c02", "rgba(251,146,60,.13)"),
+    "n8n-automation":    ("#a78bfa", "#100726", "rgba(167,139,250,.13)"),
+}
+SEO_ACCENT_DEFAULT = ("#00e47a", "#03130b", "rgba(0,228,122,.13)")
+
 
 def _seo_page(slug: str) -> str:
     p = SEO_PAGES[slug]
+    ac, ac_ink, glow = SEO_ACCENT.get(slug, SEO_ACCENT_DEFAULT)
+    og_img = f"{BASE_URL}/static/og/{slug}.png"   # ต้องเป็น URL เต็ม ไม่งั้น FB อ่านไม่เจอ
+    breadcrumb_ld = (
+        '<script type="application/ld+json">'
+        + json.dumps({
+            "@context": "https://schema.org", "@type": "BreadcrumbList",
+            "itemListElement": [
+                {"@type": "ListItem", "position": 1, "name": "หน้าแรก", "item": BASE_URL},
+                {"@type": "ListItem", "position": 2, "name": p["h1"], "item": f"{BASE_URL}/{slug}"},
+            ],
+        }, ensure_ascii=False)
+        + "</script>"
+    )
     pts = "".join(f"<li>{x}</li>" for x in p["points"])
     botkit_url = f"/botkit?biz={SEO_SLUG_BIZ.get(slug, '')}#order" if SEO_SLUG_BIZ.get(slug) else "/botkit"
     secs, chat, tbl, faq_html, faq_ld = _rich_blocks(p)
@@ -1364,11 +1390,20 @@ def _seo_page(slug: str) -> str:
 <meta name="keywords" content="{p['kw']}">
 <link rel="canonical" href="{BASE_URL}/{slug}">
 <meta name="robots" content="index, follow">
+<meta name="theme-color" content="{ac}">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="th_TH">
+<meta property="og:site_name" content="BotKit by Jark">
 <meta property="og:title" content="{p['title']}">
 <meta property="og:description" content="{p['desc']}">
 <meta property="og:url" content="{BASE_URL}/{slug}">
+<meta property="og:image" content="{og_img}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{p['title']}">
+<meta name="twitter:description" content="{p['desc']}">
+<meta name="twitter:image" content="{og_img}">
 <script type="application/ld+json">
 {{"@context":"https://schema.org","@type":"Service","name":"{p['h1']}",
 "description":"{p['desc']}","areaServed":{{"@type":"Country","name":"Thailand"}},
@@ -1376,55 +1411,70 @@ def _seo_page(slug: str) -> str:
 "offers":{{"@type":"Offer","price":"590","priceCurrency":"THB"}}}}
 </script>
 {faq_ld}
+{breadcrumb_ld}
 <style>
+:root{{--ac:{ac};--ink:{ac_ink};--glow:{glow};
+      --surface:linear-gradient(160deg,#101a2e,#0b1223);--line:#1e2a45}}
 *{{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',system-ui,Tahoma,sans-serif}}
-body{{background:#060a16;color:#e2e8f0;line-height:1.6}}
-.w{{max-width:800px;margin:0 auto;padding:40px 20px 60px}}
-h1{{font-size:clamp(26px,5vw,38px);font-weight:800;margin-bottom:14px;line-height:1.3}}
-h1 span{{color:#00e47a}}
-.lead{{font-size:17px;color:#9fb0d0;margin-bottom:26px}}
-ul{{list-style:none;margin:22px 0}}
-li{{padding:9px 0 9px 30px;position:relative;font-size:15.5px;color:#c7d3e8}}
-li::before{{content:"✓";position:absolute;left:0;color:#00e47a;font-weight:800;font-size:17px}}
-h2{{font-size:20px;margin:32px 0 12px}}
+/* พื้นหลัง: แสงเรืองสีประจำหน้า 2 จุดบนหัวหน้า ไล่เข้มลงล่าง — CSS ล้วน ไม่มีไฟล์รูป */
+body{{color:#e6edf8;line-height:1.75;background:
+  radial-gradient(900px 520px at 12% -10%,var(--glow),transparent 60%),
+  radial-gradient(760px 440px at 92% 6%,rgba(43,58,143,.20),transparent 62%),
+  linear-gradient(#070b18,#05070f);
+  background-attachment:fixed}}
+.w{{max-width:760px;margin:0 auto;padding:52px 22px 72px}}
+h1{{font-size:clamp(27px,5vw,39px);font-weight:800;margin-bottom:16px;line-height:1.32;letter-spacing:-.3px}}
+h1 span{{color:var(--ac)}}
+.lead{{font-size:17.5px;color:#a8b8d6;margin-bottom:28px}}
+ul{{list-style:none;margin:24px 0}}
+li{{padding:10px 0 10px 32px;position:relative;font-size:16.5px;color:#cbd6ea}}
+li::before{{content:"✓";position:absolute;left:0;top:9px;color:var(--ac);font-weight:800;font-size:17px;line-height:1.4}}
+h2{{font-size:21px;color:#fff;margin:44px 0 14px;padding-left:13px;
+   border-left:4px solid var(--ac);border-radius:2px;line-height:1.45}}
+p{{color:#cbd6ea;font-size:16.5px;margin:14px 0}}
+strong{{color:var(--ac)}}
 .demos{{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0 30px}}
-.d{{background:#0e1526;border:1px solid #1c2740;border-radius:12px;padding:12px 16px;
-   text-decoration:none;color:#e2e8f0;font-weight:600;font-size:14px}}
-.d:hover{{border-color:#00e47a}}
-.cta{{display:inline-block;background:#00e47a;color:#03130b;padding:15px 32px;border-radius:12px;
-     font-weight:800;text-decoration:none;font-size:16px;margin-top:8px}}
-.price{{background:#0e1526;border:1px solid #1c2740;border-radius:14px;padding:18px;margin:24px 0}}
-.price b{{color:#00e47a;font-size:22px}}
-footer{{margin-top:40px;padding-top:22px;border-top:1px solid #1c2740;color:#5b6b8c;font-size:13px}}
-footer a{{color:#22d3ee}}
-p{{color:#c7d3e8;font-size:15.5px;margin:12px 0}}
-h2{{color:#fff}}
-strong{{color:#00e47a}}
+.d{{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 16px;
+   text-decoration:none;color:#e6edf8;font-weight:600;font-size:14px;
+   transition:border-color .18s,transform .18s}}
+.d:hover{{border-color:var(--ac);transform:translateY(-1px)}}
+.cta{{display:inline-block;background:var(--ac);color:var(--ink);padding:16px 34px;border-radius:12px;
+     font-weight:800;text-decoration:none;font-size:16px;margin-top:8px;
+     box-shadow:0 8px 26px var(--glow);transition:transform .18s,box-shadow .18s}}
+.cta:hover{{transform:translateY(-1px);box-shadow:0 12px 32px var(--glow)}}
+.price{{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;margin:26px 0;
+       box-shadow:0 10px 30px rgba(0,0,0,.28)}}
+.price b{{color:var(--ac);font-size:22px}}
+footer{{margin-top:48px;padding-top:24px;border-top:1px solid var(--line);color:#6a7b9d;font-size:13px;line-height:1.9}}
+footer a{{color:var(--ac);text-decoration:none}}
+footer a:hover{{text-decoration:underline}}
 /* ตัวอย่างแชท */
-.chat{{background:#0e1526;border:1px solid #1c2740;border-radius:14px;padding:16px;margin:16px 0}}
-.msg{{max-width:80%;padding:10px 14px;border-radius:14px;margin:8px 0;font-size:14.5px;line-height:1.5}}
-.msg.u{{background:#1c2740;color:#e2e8f0;margin-left:auto;border-bottom-right-radius:4px}}
-.msg.b{{background:#00e47a;color:#03130b;border-bottom-left-radius:4px;font-weight:500}}
-.msg.n{{background:none;color:#5b6b8c;font-size:12.5px;text-align:center;max-width:100%;padding:4px}}
+.chat{{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin:18px 0;
+      box-shadow:0 10px 30px rgba(0,0,0,.28)}}
+.msg{{max-width:80%;padding:11px 15px;border-radius:14px;margin:9px 0;font-size:15px;line-height:1.6}}
+.msg.u{{background:#1f2b47;color:#e6edf8;margin-left:auto;border-bottom-right-radius:4px}}
+.msg.b{{background:var(--ac);color:var(--ink);border-bottom-left-radius:4px;font-weight:500}}
+.msg.n{{background:none;color:#6a7b9d;font-size:12.5px;text-align:center;max-width:100%;padding:5px}}
 /* ตารางราคา */
-.tb{{width:100%;border-collapse:collapse;margin:16px 0;font-size:14.5px}}
-.tb th{{text-align:left;padding:11px;border-bottom:2px solid #1c2740;color:#9fb0d0;font-size:13px}}
-.tb td{{padding:12px 11px;border-bottom:1px solid #1c2740;color:#c7d3e8}}
-.tb .pr{{color:#00e47a;font-weight:800;white-space:nowrap}}
+.tb{{width:100%;border-collapse:collapse;margin:18px 0;font-size:15px}}
+.tb th{{text-align:left;padding:12px;border-bottom:2px solid var(--line);color:#a8b8d6;font-size:13px}}
+.tb td{{padding:13px 12px;border-bottom:1px solid var(--line);color:#cbd6ea}}
+.tb .pr{{color:var(--ac);font-weight:800;white-space:nowrap}}
 /* FAQ */
 .faq{{margin:16px 0}}
-.q{{font-weight:700;color:#fff;font-size:15.5px;margin-top:18px}}
-.q::before{{content:"Q. ";color:#00e47a}}
-.a{{color:#9fb0d0;font-size:15px;margin-top:6px;padding-left:2px}}
-.note{{background:#0e1526;border-left:3px solid #00e47a;border-radius:0 10px 10px 0;
-      padding:13px 16px;margin:18px 0;font-size:14.5px;color:#c7d3e8}}
+.q{{font-weight:700;color:#fff;font-size:16px;margin-top:22px}}
+.q::before{{content:"Q. ";color:var(--ac)}}
+.a{{color:#a8b8d6;font-size:15.5px;margin-top:6px;padding-left:2px}}
+.note{{background:var(--surface);border-left:3px solid var(--ac);border-radius:0 12px 12px 0;
+      padding:14px 17px;margin:20px 0;font-size:15.5px;color:#cbd6ea}}
+@media (prefers-reduced-motion:reduce){{*{{transition:none!important}}}}
 </style></head><body><div class="w">
 <h1>{p['h1']}<br><span>ลองฟรีก่อนตัดสินใจ</span></h1>
 <p class="lead">{p['lead']}</p>
 <ul>{pts}</ul>
 
 <h2>🎪 ลองเล่นระบบจริงได้เลย</h2>
-<p style="color:#9fb0d0;font-size:14.5px">กดเข้าไปคุยกับบอทได้เลย เหมือนเป็นลูกค้าจริง ไม่ต้องสมัคร</p>
+<p style="color:#a8b8d6;font-size:15px">กดเข้าไปคุยกับบอทได้เลย เหมือนเป็นลูกค้าจริง ไม่ต้องสมัคร</p>
 <div class="demos">{demos}</div>
 
 {secs}
@@ -1433,7 +1483,7 @@ strong{{color:#00e47a}}
 
 <div class="price">
   💰 <b>เริ่มต้น ฿590/เดือน</b><br>
-  <span style="color:#9fb0d0;font-size:14px">ไม่มีค่าติดตั้ง · ยกเลิกได้ทุกเมื่อ · ไม่ผูกมัด</span>
+  <span style="color:#a8b8d6;font-size:14.5px">ไม่มีค่าติดตั้ง · ยกเลิกได้ทุกเมื่อ · ไม่ผูกมัด</span>
 </div>
 
 <a class="cta" href="{botkit_url}">ดูแพ็กเกจทั้งหมด →</a>
