@@ -2736,7 +2736,9 @@ def _valid_slug(slug: str) -> bool:
 
 
 def _build_cfg_from_form(d: dict) -> dict:
-    """ประกอบ config dict ตามโครง configs/_TEMPLATE.json จากข้อมูลฟอร์ม
+    """ประกอบ config dict ตามโครง _TEMPLATE.json จากข้อมูลฟอร์ม
+    (22 ก.ค. 2026 ย้ายไฟล์เทมเพลตออกไปนอก repo แล้ว → "Ai Agen/นกน้อยพิมพ์รัง-client-template/
+    configs/_TEMPLATE.json" — เป็นแค่เอกสารอ้างอิงตอนเขียนโค้ด ตอนรันจริงไม่ได้อ่านไฟล์นี้)
     การันตี promo path: ถ้าไม่มีกลุ่มไหนถูกติ๊กเป็นโปรเลย ตั้งกลุ่มแรกที่มีรายการให้เป็น hot อัตโนมัติ"""
     contact_in = d.get("contact") or {}
     categories, any_hot = [], False

@@ -280,7 +280,8 @@ def save_config(slug: str, cfg: dict) -> tuple:
 # ---- Multi-tenant page routing (นกน้อยพิมพ์รัง เฟส 2 — 21 ก.ค. 2026) ----
 # ปัญหาเดิม: /webhook/meta ยิงทุก event ไปที่ page_token/slug เดียวตายตัวจาก env var เดียว ไม่เช็คว่า
 # event มาจาก Page ไหน — ถ้ามีร้านที่ 2 เสียบ deployment เดียวกัน ข้อความจะปนกันข้ามร้าน (README
-# client-template/README-เปิดร้านใหม่.md เขียนไว้)
+# "Ai Agen/นกน้อยพิมพ์รัง-client-template/README-เปิดร้านใหม่.md" เขียนไว้ — 22 ก.ค. 2026 ย้ายออก
+# ไปนอก repo นี้แล้ว เพราะเป็นเอกสาร/เทมเพลตของ "วิธีเปิดร้านใหม่" ไม่ใช่โค้ดที่ deploy)
 # แก้โดยเพิ่มตาราง Supabase `shop_pages` (page_id -> slug/page_token) โหลด cache ในแรม + TTL
 # (pattern เดียวกับ fastwork_hunter._load_seen — service-role key เท่านั้น กัน anon อ่าน token ร้านอื่นได้)
 # Fallback: หา page_id ไม่เจอใน mapping = ใช้ค่า default ที่รับมา (พฤติกรรมเดิมของ Lullabell เป๊ะ

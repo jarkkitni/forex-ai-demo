@@ -34,6 +34,15 @@
       "tech": ["LINE Messaging API", "Supabase", "Edge Functions", "Session state"],
       "link": "/demo/dialysis",
       "linkLabel": "ลองระบบเก็บข้อมูล →"
+    },
+    {
+      "tag": "🆕 จองคิวผ่านแชท AI",
+      "title": "ระบบจองคิว — AI จับวัน-เวลาอัตโนมัติ",
+      "desc": "ลูกค้าคุยกับ AI ผ่าน LINE ได้ตามธรรมชาติ พอบอกวัน-เวลาที่สะดวก ระบบจับข้อมูลอัตโนมัติแล้วแจ้งเตือนแอดมินทันที ไม่ต้องมานั่งเช็คแชทเอง เหมาะกับร้าน/คลินิกที่รับจองคิวผ่าน LINE",
+      "matches": ["ระบบจองคิวผ่าน LINE OA", "แจ้งเตือนคิวใหม่อัตโนมัติ", "ไม่ต้องเฝ้าแชทเอง"],
+      "tech": ["LINE Messaging API", "Claude AI", "Python", "LINE Push Notification"],
+      "link": "/demo/chat/lullabell",
+      "linkLabel": "ลองจองคิวผ่านแชทจริง →"
     }
   ],
   "why": {

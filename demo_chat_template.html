@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{BIZ_NAME}} — ตัวอย่างแชท LINE</title>
+<style>
+  :root{ --line-green:#06C755; --line-dark:#06C05A; }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  body{margin:0;background:#dedede;font-family:'Segoe UI',-apple-system,'Noto Sans Thai',sans-serif;
+       min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:12px 10px 0;}
+  .caption{color:#555;font-size:12.5px;text-align:center;max-width:400px;margin-bottom:8px;line-height:1.4;}
+  .caption b{color:#06C755;}
+  /* height: ตั้งค่าสำรอง (vh) ก่อน แล้วค่อย override ด้วย dvh ถ้าเบราว์เซอร์รองรับ (มือถือ Chrome/Safari
+     ที่แถบ URL แสดง/ซ่อนได้ 100vh มักคำนวณสูงเกินจอที่มองเห็นจริง ทำให้ปุ่ม quick-reply + inputbar
+     ตกขอบล่างจอ ต้องเลื่อนหน้าเพิ่มถึงจะเห็น — ลูกค้าหลายคนไม่รู้ว่าต้องเลื่อน คิดว่าปุ่มไม่ขึ้น) */
+  .phone{width:100%;max-width:400px;background:#8ec9a0;border-radius:18px 18px 0 0;overflow:hidden;
+         box-shadow:0 8px 30px rgba(0,0,0,.25);display:flex;flex-direction:column;
+         height:72vh;height:min(72vh, calc(100dvh - 110px));min-height:420px;max-height:640px;}
+  .statusbar{background:#000;color:#fff;font-size:11px;padding:5px 16px;display:flex;justify-content:space-between;}
+  .topbar{background:var(--line-green);color:#fff;padding:10px 12px;display:flex;align-items:center;gap:10px;}
+  .topbar .back{font-size:20px;opacity:.9;}
+  .avatar{width:34px;height:34px;border-radius:50%;background:#fff;display:flex;align-items:center;
+          justify-content:center;font-size:18px;flex-shrink:0;}
+  .who{flex:1;}
+  .who .name{font-size:14.5px;font-weight:700;line-height:1.2;}
+  .who .sub{font-size:10.5px;opacity:.85;display:flex;align-items:center;gap:4px;}
+  .official{background:rgba(255,255,255,.25);font-size:9px;padding:1px 6px;border-radius:99px;font-weight:700;}
+  .chat{flex:1;overflow-y:auto;padding:14px 10px;background:
+        repeating-linear-gradient(0deg,#dcefda,#dcefda 2px,#e3f2e1 2px,#e3f2e1 4px);}
+  .row{display:flex;margin-bottom:10px;align-items:flex-end;gap:6px;}
+  .row.me{justify-content:flex-end;}
+  .row .bavatar{width:26px;height:26px;border-radius:50%;background:#fff;border:1px solid #cde3ca;
+                display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
+  .bubble{max-width:72%;padding:9px 12px;border-radius:15px;font-size:13.5px;line-height:1.5;white-space:pre-wrap;
+          box-shadow:0 1px 1px rgba(0,0,0,.06);}
+  .row.bot .bubble{background:#fff;color:#1a1a1a;border-bottom-left-radius:4px;}
+  .row.me .bubble{background:var(--line-green);color:#fff;border-bottom-right-radius:4px;font-weight:500;}
+  .time{font-size:9.5px;color:#7a8a77;margin:0 4px;align-self:flex-end;white-space:nowrap;}
+  .typing-row{display:flex;gap:6px;align-items:center;padding:0 4px 8px;}
+  .typing-row .bavatar{width:26px;height:26px;border-radius:50%;background:#fff;border:1px solid #cde3ca;
+                display:flex;align-items:center;justify-content:center;font-size:13px;}
+  .typing-bubble{background:#fff;border-radius:15px;border-bottom-left-radius:4px;padding:10px 14px;
+                 box-shadow:0 1px 1px rgba(0,0,0,.06);display:flex;gap:4px;}
+  .dot{width:6px;height:6px;border-radius:50%;background:#b7c4b5;animation:blink 1.2s infinite;}
+  .dot:nth-child(2){animation-delay:.2s;} .dot:nth-child(3){animation-delay:.4s;}
+  @keyframes blink{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-2px)}}
+  .quick{display:flex;flex-wrap:wrap;gap:6px;padding:0 10px 10px;background:#e3f2e1;}
+  .quick button{background:#fff;color:#06883f;border:1.3px solid #b7ddb2;border-radius:99px;
+                padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;}
+  .inputbar{background:#fff;padding:9px 10px;display:flex;gap:8px;align-items:center;border-top:1px solid #e2e2e2;}
+  .inputbar input{flex:1;border:none;background:#f2f2f2;border-radius:20px;padding:10px 15px;font-size:13.5px;font-family:inherit;}
+  .inputbar input:focus{outline:2px solid var(--line-green);}
+  .sendbtn{width:36px;height:36px;border-radius:50%;background:var(--line-green);border:none;color:#fff;
+           font-size:15px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+  .sendbtn:disabled{opacity:.5;}
+  .footer-note{max-width:400px;text-align:center;color:#8a8a8a;font-size:10.5px;margin:10px 0 24px;}
+</style>
+</head>
+<body>
+
+<div class="caption">📱 <b>ตัวอย่างหน้าตาจริงเวลาคุยกับบอทบน LINE</b><br>ลองพิมพ์คุยได้เลย — เป็น AI จริง ตอบจากข้อมูลร้านจริง ไม่ใช่ภาพนิ่ง</div>
+
+<div class="phone">
+  <div class="statusbar"><span>9:41</span><span>📶 🔋</span></div>
+  <div class="topbar">
+    <span class="back">‹</span>
+    <div class="avatar">{{EMOJI}}</div>
+    <div class="who">
+      <div class="name">{{BIZ_NAME}}</div>
+      <div class="sub"><span class="official">บัญชีทางการ</span></div>
+    </div>
+  </div>
+  <div class="chat" id="chat"></div>
+  <div class="quick" id="quick"></div>
+  <div class="inputbar">
+    <input id="inp" placeholder="ข้อความ" autocomplete="off">
+    <button class="sendbtn" id="send">➤</button>
+  </div>
+</div>
+<div class="footer-note">เดโมนี้จำลองหน้าจอ LINE เพื่อให้เห็นภาพ — AI ที่ตอบคือ AI ตัวเดียวกับที่จะขึ้นบัญชี LINE จริง</div>
+
+<script>
+const SLUG = "{{SLUG}}";
+const EMOJI = "{{EMOJI}}";
+const GREETING = {{GREETING_JSON}};
+const chat = document.getElementById('chat');
+const quick = document.getElementById('quick');
+const inp = document.getElementById('inp');
+const sendBtn = document.getElementById('send');
+const SID = (() => {
+  let s = sessionStorage.getItem('demo_sid');
+  if (!s) { s = Math.random().toString(36).slice(2) + Date.now().toString(36); sessionStorage.setItem('demo_sid', s); }
+  return s;
+})();
+
+function nowTime(){
+  const d = new Date();
+  return d.toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'});
+}
+function addMsg(text, who){
+  const row = document.createElement('div');
+  row.className = 'row ' + who;
+  if(who === 'bot'){
+    row.innerHTML = `<div class="bavatar">${EMOJI}</div><div class="bubble"></div><div class="time">${nowTime()}</div>`;
+    row.querySelector('.bubble').textContent = text;
+  } else {
+    row.innerHTML = `<div class="time">${nowTime()}</div><div class="bubble"></div>`;
+    row.querySelector('.bubble').textContent = text;
+  }
+  chat.appendChild(row);
+  chat.scrollTop = chat.scrollHeight;
+}
+function typing(on){
+  let t = document.getElementById('typingrow');
+  if(on && !t){
+    t = document.createElement('div'); t.id = 'typingrow'; t.className = 'typing-row';
+    t.innerHTML = `<div class="bavatar">${EMOJI}</div><div class="typing-bubble"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
+    chat.appendChild(t); chat.scrollTop = chat.scrollHeight;
+  }
+  if(!on && t) t.remove();
+}
+
+async function ask(text){
+  if(!text.trim()) return;
+  addMsg(text, 'me');
+  inp.value = ''; inp.disabled = true; sendBtn.disabled = true;
+  typing(true);
+  try{
+    const r = await fetch(`/api/demo/chat/${SLUG}`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ message: text, session_id: SID }),
+    });
+    const d = await r.json();
+    typing(false);
+    addMsg(d.success ? d.reply : (d.error || 'ขออภัยค่ะ ระบบขัดข้องชั่วคราว'), 'bot');
+  }catch(e){
+    typing(false);
+    addMsg('เชื่อมต่อไม่ได้ ลองใหม่อีกครั้งค่ะ', 'bot');
+  }
+  inp.disabled = false; sendBtn.disabled = false; inp.focus();
+}
+
+sendBtn.onclick = () => ask(inp.value);
+inp.addEventListener('keydown', e => { if(e.key === 'Enter') ask(inp.value); });
+
+const PRESETS = ['มีบริการอะไรบ้าง', 'ราคาประมาณเท่าไหร่', 'จองคิวยังไง'];
+PRESETS.forEach(p => {
+  const b = document.createElement('button');
+  b.textContent = p;
+  b.onclick = () => ask(p);
+  quick.appendChild(b);
+});
+
+addMsg(GREETING, 'bot');
+</script>
+</body>
+</html>
