@@ -128,7 +128,11 @@
                          0 0 32px var(--n-c,var(--green));
              animation:neonFlicker 4.5s infinite ease-in-out;}
   .neon-desc{font-size:12px;color:var(--dim);margin-top:2px}
+  .neon-badge{font-size:11px;font-weight:800;letter-spacing:.5px;vertical-align:middle;
+              margin-left:7px;padding:1px 7px;border-radius:99px;text-shadow:none;
+              color:#080c18;background:var(--n-c,var(--green))}
   .neon-red{--n-c:#ff4d6d} .neon-cyan{--n-c:var(--cyan)} .neon-green{--n-c:var(--green)}
+  .neon-amber{--n-c:var(--amber)} .neon-pink{--n-c:var(--pink)}
   @keyframes neonFlicker{
     0%,19%,21%,23%,54%,56%,100%{opacity:1}
     20%,22%,55%{opacity:.72}
@@ -168,6 +172,18 @@
         <div class="neon-item neon-green">
           <span class="neon-name">นกน้อยทำลัง</span>
           <span class="neon-desc">Offline deterministic fallback ตอน AI ล่มสนิท (Lullabell meta_bot.py)</span>
+        </div>
+        <div class="neon-item neon-amber">
+          <span class="neon-name">นกน้อยพิมพ์รัง</span>
+          <span class="neon-desc">โคลนร้านใหม่จากบอทที่พิสูจน์แล้ว (Lullabell) เปลี่ยนแค่ config — ยัง single-tenant</span>
+        </div>
+        <div class="neon-item neon-pink">
+          <span class="neon-name">นกน้อยบินเดี่ยว</span>
+          <span class="neon-desc">อัดจอเดโมจริง → ตัดต่อ ffmpeg → แคปชั่น → อัปโหลด · ขอไฟเขียวก่อนกดเผยแพร่เสมอ</span>
+        </div>
+        <div class="neon-item neon-red">
+          <span class="neon-name">นกน้อยบินเดี่ยว<span class="neon-badge">v2</span></span>
+          <span class="neon-desc">+ ฮุก AI 4 วิ (Google Flow) ต่อหัวคลิป · คลังฮุกใช้ซ้ำ ต้นทุนต่อโพสต์ 0 · ห้ามแทนคลิปเดโมจริง</span>
         </div>
       </div>
     </div>
