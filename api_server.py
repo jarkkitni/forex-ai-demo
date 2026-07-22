@@ -1966,6 +1966,17 @@ def daily_summary():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+@app.route("/api/gemini-diag")
+def api_gemini_diag():
+    """วินิจฉัย Gemini 404 (22 ก.ค. 2026) — ถาม Google ตรงๆ ว่า key นี้ใช้โมเดลไหนได้บ้าง
+    แล้วเทียบกับที่เราตั้งไว้ ตอบได้ทันทีว่าปัญหาอยู่ที่ "ชื่อโมเดลล้าสมัย" หรือ "key/โปรเจกต์"
+    — ไม่คืนค่า key ออกไป คืนแค่ชื่อโมเดลกับ error message"""
+    try:
+        return jsonify(ai_guard.gemini_diag())
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)[:300]}), 500
+
+
 @app.route("/api/ai-health")
 def api_ai_health():
     """AI ยังหายใจอยู่ไหม — ใช้ดูบน Monitor + ให้ cron เช็คได้

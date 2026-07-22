@@ -36,10 +36,97 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 # ชื่อโมเดลนี้ไปแล้ว) — เปลี่ยนเป็น "ลองหลายโมเดลเรียงกัน" กันเคสแบบนี้ซ้ำ ถ้าตัวหลักโดนเลิกรองรับ/เปลี่ยนชื่อ
 # อีกในอนาคต ระบบลองตัวถัดไปเองอัตโนมัติ ไม่ต้องรอแก้โค้ด+push+deploy ใหม่ทุกครั้ง
 # ตั้ง env var GEMINI_MODEL เป็น comma-separated list เพื่อ override ลำดับ/รายชื่อได้ (ตัวแรกในลิสต์ = ลองก่อน)
+#
+# 22 ก.ค. 2026 (รอบ 4) — แก้ให้ "หาโมเดลเองเป็น" แทนการเดาชื่อ:
+#   อาการ: /api/ai-health โชว์ calls=2 fails=1 · last_error = "Gemini ทุกโมเดลใช้ไม่ได้หมด
+#   (gemini-2.5-flash, gemini-2.0-flash): 404 Not Found" = ลิสต์ที่ hardcode ไว้ 404 ยกเข่ง
+#   ทั้งที่รอบ 2 (21 ก.ค.) เพิ่งยืนยันว่า gemini-2.5-flash ใช้ได้ → ไม่ใช่ key พัง แต่เป็นชื่อโมเดล
+#   ที่ key นี้มองเห็นได้เปลี่ยนไป
+#
+#   สาเหตุราก: 404 ของ Generative Language API หมายถึง "โมเดลชื่อนี้ไม่มีให้ key นี้ใช้กับ
+#   v1beta:generateContent" ซึ่งเกิดได้จากหลายทาง — Google retire alias เปล่าๆ (`gemini-2.0-flash`)
+#   ให้ไปใช้ชื่อมีเวอร์ชัน (`-001`) หรือ alias ใหม่ (`gemini-flash-latest`), โมเดลไม่เปิดในรีเจี้ยน/
+#   โปรเจกต์ของ key, หรือ Generative Language API ถูกปิดในโปรเจกต์
+#
+#   บทเรียนจริง: การไล่ "เดาชื่อโมเดลเพิ่มในลิสต์" ทุกครั้งที่ Google เปลี่ยนของ = วิ่งตามไม่มีวันจบ
+#   (รอบนี้รอบที่ 4 แล้ว) — Google มี ListModels API บอกตรงๆ ว่า key นี้ใช้อะไรได้บ้าง
+#   เลยเปลี่ยนเป็น: ลองลิสต์ที่ตั้งไว้ก่อน (เร็ว ไม่เสีย request) → ถ้า 404 หมดทุกตัว ค่อยถาม
+#   ListModels ว่ามีอะไรให้ใช้จริง แล้วลองตัวนั้น → ครั้งต่อไป Google เปลี่ยนชื่ออีก ระบบหาเองได้
+#   ไม่ต้องแก้โค้ด+push+deploy ใหม่ และไม่ต้องรอให้ลูกค้าเจอบอทตอบห้วนก่อนถึงจะรู้
 GEMINI_MODELS = [m.strip() for m in
-                 os.environ.get("GEMINI_MODEL", "gemini-2.5-flash,gemini-2.0-flash").split(",")
+                 os.environ.get(
+                     "GEMINI_MODEL",
+                     "gemini-2.5-flash,gemini-flash-latest,gemini-2.5-flash-lite,"
+                     "gemini-2.0-flash-001,gemini-2.0-flash").split(",")
                  if m.strip()]
 GEMINI_URL_TMPL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+GEMINI_LIST_URL = "https://generativelanguage.googleapis.com/v1beta/models"
+
+# cache ผลจาก ListModels — อย่ายิงถามทุกครั้งที่ลูกค้าทัก (เปลืองและช้า)
+_gemini_discovered: dict = {"models": [], "at": 0.0, "error": ""}
+_GEMINI_DISCOVER_TTL = 3600 * 6     # หาใหม่ทุก 6 ชม. ก็พอ (Google ไม่ได้เปลี่ยนชื่อรายชั่วโมง)
+
+
+def _gemini_discover_models(force: bool = False) -> list:
+    """ถาม Google ตรงๆ ว่า key นี้เรียกโมเดลไหนกับ generateContent ได้บ้าง
+
+    คืน list ชื่อโมเดล เรียง flash/lite ขึ้นก่อน (ถูกและเร็วกว่า pro — งานนี้เป็นแชทบอทตอบไว
+    ไม่ต้องการโมเดลหนัก) — ถามไม่สำเร็จ/ไม่มี key = คืน [] แล้วให้ผู้เรียกจัดการต่อ ไม่ raise
+    เพราะนี่เป็นทางสำรองของทางสำรอง ห้ามทำให้ path หลักพังเพิ่ม"""
+    if not GEMINI_API_KEY:
+        return []
+    now = time.time()
+    if not force and _gemini_discovered["models"] and \
+            (now - _gemini_discovered["at"]) < _GEMINI_DISCOVER_TTL:
+        return _gemini_discovered["models"]
+    try:
+        r = requests.get(GEMINI_LIST_URL, params={"key": GEMINI_API_KEY, "pageSize": 200},
+                         timeout=20)
+        r.raise_for_status()
+        names = []
+        for m in r.json().get("models", []):
+            if "generateContent" not in (m.get("supportedGenerationMethods") or []):
+                continue
+            name = (m.get("name") or "").replace("models/", "").strip()
+            if name:
+                names.append(name)
+
+        def rank(n: str) -> tuple:
+            # flash-lite ถูกสุด → flash → อื่นๆ | เลี่ยง preview/exp ไว้ท้ายสุด (ชื่อพวกนี้หายบ่อย)
+            unstable = any(k in n for k in ("preview", "exp", "thinking"))
+            tier = 0 if "flash-lite" in n else (1 if "flash" in n else 2)
+            return (1 if unstable else 0, tier, n)
+
+        names.sort(key=rank)
+        _gemini_discovered.update({"models": names, "at": now, "error": ""})
+        print(f"[ai_guard] Gemini ListModels: key นี้ใช้ได้ {len(names)} โมเดล "
+              f"— 5 ตัวแรก {names[:5]}", flush=True)
+        return names
+    except Exception as e:
+        _gemini_discovered.update({"models": [], "at": now, "error": str(e)[:200]})
+        print(f"[ai_guard] Gemini ListModels ถามไม่สำเร็จ: {str(e)[:200]}", flush=True)
+        return []
+
+
+def gemini_diag() -> dict:
+    """สรุปสถานะ Gemini แบบไม่หลุดความลับ — ใช้กับ /api/gemini-diag เพื่อดูว่า key เห็นโมเดลอะไรบ้าง
+    (ตอบคำถาม '404 เพราะชื่อโมเดล หรือเพราะ key/โปรเจกต์' ได้ใน 10 วิ แทนการเดา)"""
+    found = _gemini_discover_models(force=True)
+    configured = list(GEMINI_MODELS)
+    return {
+        "key_configured":     bool(GEMINI_API_KEY),
+        "configured_models":  configured,
+        "usable_models":      found,
+        "usable_count":       len(found),
+        # ตัวที่เราตั้งไว้ แต่ Google บอกว่าใช้ไม่ได้ = ต้นเหตุ 404 โดยตรง
+        "configured_but_dead": [m for m in configured if m not in found] if found else configured,
+        "recommended":        found[0] if found else None,
+        "list_error":         _gemini_discovered.get("error", ""),
+        "hint": ("ถ้า usable_count = 0 และ list_error ขึ้น API_KEY_INVALID/PERMISSION_DENIED "
+                 "= ปัญหาที่ key/โปรเจกต์ (ไปเปิด Generative Language API หรือออก key ใหม่ที่ "
+                 "aistudio.google.com) · ถ้า usable_count > 0 แต่ configured_but_dead ไม่ว่าง "
+                 "= แค่ชื่อโมเดลล้าสมัย ระบบจะสลับไปใช้ตัวใน usable_models ให้เองอัตโนมัติแล้ว"),
+    }
 
 # ---- สถานะ AI แยกต่อโปรเจกต์ (slug) — กันบั๊ก 20 ก.ค.: เดิม _health เป็น dict ก้อนเดียวใช้ร่วมกันทุกบอท
 # ทำให้ถ้าร้าน A ชน AI ล่มจนแจ้งเตือนไปแล้ว ระบบจะเงียบไม่แจ้งร้าน B อีก 6 ชม. แม้ร้าน B ล่มคนละเวลาคนละสาเหตุ
@@ -161,36 +248,64 @@ def _call_gemini(prompt: str, max_tokens: int = 1000) -> str:
     gemini-2.0-flash ด้วยเพราะโมเดลนี้ไม่รองรับ thinking อยู่แล้ว ใส่ param นี้ไปจะถูกเมิน ไม่พัง"""
     if not GEMINI_API_KEY:
         raise RuntimeError("GEMINI_API_KEY ยังไม่ได้ตั้ง — สร้างที่ aistudio.google.com แล้วใส่ค่าใน Render")
-    last_exc: Exception | None = None
-    for model in GEMINI_MODELS:
-        url = GEMINI_URL_TMPL.format(model=model)
-        try:
-            r = requests.post(
-                url,
-                params={"key": GEMINI_API_KEY},
-                json={
-                    "contents": [{"parts": [{"text": prompt}]}],
-                    "generationConfig": {
-                        "maxOutputTokens": max_tokens,
-                        "thinkingConfig": {"thinkingBudget": 0},
-                    },
+
+    def _try_model(model: str) -> str:
+        r = requests.post(
+            GEMINI_URL_TMPL.format(model=model),
+            params={"key": GEMINI_API_KEY},
+            json={
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {
+                    "maxOutputTokens": max_tokens,
+                    "thinkingConfig": {"thinkingBudget": 0},
                 },
-                timeout=30,
-            )
-            r.raise_for_status()
-            data = r.json()
-            try:
-                return data["candidates"][0]["content"]["parts"][0]["text"].strip()
-            except (KeyError, IndexError) as e:
-                # Gemini ตอบ 200 มาได้แต่ไม่มีคำตอบที่ใช้ได้จริง (เช่น โดน safety filter บล็อก) —
-                # ต้องถือว่าโมเดลนี้ใช้ไม่ได้ ไม่ใช่ถือว่าสำเร็จทั้งที่ไม่มีข้อความตอบ
-                raise RuntimeError(f"Gemini ({model}) ตอบไม่มี candidates ที่ใช้ได้: {str(data)[:200]}") from e
+            },
+            timeout=30,
+        )
+        r.raise_for_status()
+        data = r.json()
+        try:
+            return data["candidates"][0]["content"]["parts"][0]["text"].strip()
+        except (KeyError, IndexError) as e:
+            # Gemini ตอบ 200 มาได้แต่ไม่มีคำตอบที่ใช้ได้จริง (เช่น โดน safety filter บล็อก) —
+            # ต้องถือว่าโมเดลนี้ใช้ไม่ได้ ไม่ใช่ถือว่าสำเร็จทั้งที่ไม่มีข้อความตอบ
+            raise RuntimeError(f"Gemini ({model}) ตอบไม่มี candidates ที่ใช้ได้: {str(data)[:200]}") from e
+
+    last_exc: Exception | None = None
+    tried: list = []
+
+    # รอบ 1 — ลิสต์ที่ตั้งไว้ (เร็วสุด ไม่ต้องเสีย request ถาม Google ก่อน)
+    for model in GEMINI_MODELS:
+        tried.append(model)
+        try:
+            return _try_model(model)
         except Exception as e:
             print(f"[ai_guard] Gemini model '{model}' ใช้ไม่ได้ ({e}) — ลองโมเดลถัดไปในลิสต์", flush=True)
             last_exc = e
-            continue
+
+    # รอบ 2 — ลิสต์ที่ตั้งไว้ตายหมด (เคส 22 ก.ค. 2026) ให้ถาม ListModels ว่าจริงๆ key นี้ใช้อะไรได้
+    # แล้วลองตัวที่ Google ยืนยันเองว่ามีอยู่ — จุดนี้แหละที่ทำให้ไม่ต้องแก้โค้ดทุกครั้งที่ Google เปลี่ยนชื่อ
+    discovered = [m for m in _gemini_discover_models() if m not in tried]
+    if discovered:
+        print(f"[ai_guard] ลิสต์ที่ตั้งไว้ตายหมด — ListModels เสนอ {discovered[:3]} ลองต่อ", flush=True)
+    for model in discovered[:3]:      # พอ 3 ตัว ไม่ต้องไล่ทั้งลิสต์ให้ลูกค้ารอนาน
+        tried.append(model)
+        try:
+            text = _try_model(model)
+            print(f"[ai_guard] ✅ Gemini ใช้ '{model}' ได้ — ควรตั้ง env GEMINI_MODEL={model} "
+                  f"ให้เป็นตัวแรกจะได้ไม่ต้องลองพลาดก่อนทุกครั้ง", flush=True)
+            return text
+        except Exception as e:
+            print(f"[ai_guard] Gemini (discovered) '{model}' ก็ใช้ไม่ได้ ({e})", flush=True)
+            last_exc = e
+
+    hint = ""
+    if not discovered:
+        hint = (" | ListModels ไม่คืนโมเดลเลย"
+                f"{' (' + _gemini_discovered['error'] + ')' if _gemini_discovered.get('error') else ''}"
+                " → น่าจะเป็นที่ key/โปรเจกต์ ไม่ใช่ชื่อโมเดล — เช็ค /api/gemini-diag")
     raise RuntimeError(
-        f"Gemini ทุกโมเดลใช้ไม่ได้หมด ({', '.join(GEMINI_MODELS)}): {last_exc}"
+        f"Gemini ทุกโมเดลใช้ไม่ได้หมด ({', '.join(tried)}): {last_exc}{hint}"
     ) from last_exc
 
 
