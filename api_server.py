@@ -2237,6 +2237,15 @@ def portfolio_page():
     return html, 200, {"Content-Type": "text/html; charset=utf-8"}
 
 
+@app.route("/opennest")
+def opennest_page():
+    """แผนสอนเวิร์กช็อปนกน้อยเปิดรัง — เปิดจากการ์ดเทคนิคบน /monitor (22 ก.ค. 2026)
+    noindex อยู่ในตัวไฟล์แล้ว (มีสคริปต์ขาย/ราคา ไม่ให้ Google เก็บ — แพทเทิร์นเดียวกับ /hunter)"""
+    p = os.path.join(os.path.dirname(__file__), "opennest.html")
+    with open(p, "r", encoding="utf-8") as f:
+        return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
 @app.route("/posttoday")
 def posttoday_page():
     """Landing สำหรับแอป TikTok Content Posting (Website URL ที่ยื่น App Review) — ห้ามลบ"""

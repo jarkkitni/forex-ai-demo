@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>🐦 นกน้อยเปิดรัง — แผนสอนเวิร์กช็อป</title>
+<style>
+  :root{--bg:#060913;--card:#0b1120;--border:#131c31;--text:#e8edf7;--dim:#8b97b3;
+        --violet:#a78bfa;--green:#00e47a;--cyan:#22d3ee;--amber:#f59e0b;--pink:#f472b6;--red:#ff4d6d}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:
+        radial-gradient(900px 500px at 15% -10%, rgba(167,139,250,.14), transparent 60%),
+        radial-gradient(700px 420px at 95% 5%, rgba(34,211,238,.08), transparent 55%),
+        var(--bg);
+       color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.65;padding:18px 14px 60px}
+  .wrap{max-width:760px;margin:0 auto}
+  header{text-align:center;margin:14px 0 26px}
+  h1{font-size:26px;color:var(--violet);text-shadow:0 0 8px var(--violet),0 0 26px rgba(167,139,250,.5)}
+  .sub{color:var(--dim);font-size:13.5px;margin-top:6px}
+  .goal{display:inline-block;margin-top:12px;padding:7px 16px;border-radius:99px;font-size:13px;font-weight:700;
+        color:#0a1f14;background:var(--green);box-shadow:0 0 14px rgba(0,228,122,.45)}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px 16px;margin-bottom:16px}
+  h2{font-size:17px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+  h2 .n{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;
+        background:var(--violet);color:#0b1120;font-size:13px;font-weight:800;margin-right:8px;vertical-align:-4px}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{padding:8px 9px;border:1px solid var(--border);text-align:left;vertical-align:top}
+  th{color:var(--violet);background:#0d1428;font-size:12.5px}
+  .ok{color:var(--green);font-weight:700} .no{color:var(--red);font-weight:700}
+  .tier{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
+  .tbox{flex:1 1 200px;background:#0d1428;border:1px solid var(--border);border-left:3px solid var(--c,var(--violet));
+        border-radius:12px;padding:12px}
+  .tbox b{color:var(--c,var(--violet));font-size:13.5px}
+  .tbox p{font-size:12.5px;color:var(--dim);margin-top:4px}
+  .step{display:flex;gap:12px;margin-bottom:14px}
+  .t{flex:0 0 86px;color:var(--cyan);font-weight:800;font-size:13px;padding-top:2px}
+  .s{flex:1;border-left:2px solid var(--border);padding-left:12px}
+  .s b{font-size:14px}
+  .s .say{background:#0d1428;border-left:3px solid var(--amber);border-radius:0 10px 10px 0;
+          padding:9px 12px;margin:7px 0;font-size:13px;color:#d8e0f2}
+  .s .say::before{content:"💬 พูดประมาณนี้: ";color:var(--amber);font-weight:700;font-size:12px;display:block;margin-bottom:3px}
+  .s .show{font-size:12.5px;color:var(--dim)}
+  .s .show::before{content:"👀 โชว์: ";color:var(--cyan);font-weight:700}
+  .warn{background:#1a0d14;border:1px solid #3d1424;border-left:4px solid var(--red);border-radius:0 12px 12px 0;
+        padding:12px 14px;font-size:13.5px;margin:10px 0}
+  .warn b{color:var(--red)}
+  .tip{background:#0d1a14;border:1px solid #12331f;border-left:4px solid var(--green);border-radius:0 12px 12px 0;
+       padding:12px 14px;font-size:13.5px;margin:10px 0}
+  .tip b{color:var(--green)}
+  .copybox{position:relative;background:#0d1428;border:1px dashed #2a3a5f;border-radius:12px;
+           padding:14px;margin:10px 0;font-size:13.5px;white-space:pre-wrap}
+  .copybtn{position:absolute;top:8px;right:8px;background:var(--violet);color:#0b1120;border:0;border-radius:8px;
+           padding:4px 12px;font-size:12px;font-weight:800;cursor:pointer}
+  .copybtn:active{transform:scale(.95)}
+  ul.plain{list-style:none} ul.plain li{margin-bottom:7px;font-size:13.5px}
+  label.chk{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border-radius:10px;cursor:pointer;
+            font-size:13.5px;border:1px solid transparent}
+  label.chk:hover{background:#0d1428}
+  label.chk input{margin-top:3px;accent-color:var(--violet);width:16px;height:16px;flex:none}
+  label.chk.done{color:var(--dim);text-decoration:line-through}
+  .prog{font-size:12px;color:var(--dim);margin-bottom:8px}
+  footer{text-align:center;color:#2c3a5c;font-size:11.5px;margin-top:30px}
+  a{color:var(--cyan)}
+  @media(max-width:480px){.step{flex-direction:column;gap:2px}.t{flex:none}.s{border-left:0;padding-left:0}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>🐦 นกน้อยเปิดรัง</h1>
+  <div class="sub">แผนสอนเวิร์กช็อป "ทำบอทตอบลูกค้าให้ร้านคุณ ใน 2 ชั่วโมง" — ฉบับพกไปหน้างาน</div>
+  <div class="goal">🎯 ตัววัดจริง: ผู้เรียนต่อ BotKit หลังฟรี 7 วัน ≥ 1 ราย</div>
+</header>
+
+<div class="card">
+  <h2><span class="n">1</span>โมเดล 3 ชั้น — ห้องเรียนคือการปิดการขาย</h2>
+  <div class="tier">
+    <div class="tbox" style="--c:var(--amber)"><b>ชั้น 1 · ค่าคอร์ส</b><p>4-5 คน × ฿590 = กันทุนค่าเวลา ไม่ใช่กำไรจริง</p></div>
+    <div class="tbox" style="--c:var(--green)"><b>ชั้น 2 · ลูกค้า BotKit ⭐</b><p>ปิด 2/5 = ฿1,180-5,800/เดือน ต่อเนื่อง — นี่คือเป้าจริง</p></div>
+    <div class="tbox" style="--c:var(--pink)"><b>ชั้น 3 · คอนเทนต์</b><p>คลิปในงาน → นกน้อยบินเดี่ยว + social proof รอบถัดไป</p></div>
+  </div>
+  <div class="tip"><b>กลุ่มเป้าหมายเดียวเท่านั้น:</b> เจ้าของร้านที่ลูกค้าทักแชทเยอะ — คัดด้วยคำถามเดียว
+  "ร้านคุณมีลูกค้าทักแชทวันละกี่คน?" ตอบไม่ได้ = ไม่รับ (คนอยากเรียน AI เฉยๆ ถามเยอะ จ่ายน้อย ไม่ซื้อต่อ)</div>
+</div>
+
+<div class="card">
+  <h2><span class="n">2</span>บอท 2 ระดับ — ท่องให้ขึ้นใจก่อนสอน (ลูกค้าถามแน่)</h2>
+  <table>
+    <tr><th></th><th>ระดับ 1: บอทเว็บ (ได้ในคลาส)</th><th>ระดับ 2: เกาะ LINE/FB จริง (ตอนจ่าย)</th></tr>
+    <tr><td><b>คืออะไร</b></td><td>ลิงก์ /demo/ชื่อร้าน แชร์ได้ แปะ QR หน้าร้านได้</td><td>บอทตอบในเพจ FB / LINE OA ของร้านเอง</td></tr>
+    <tr><td><b>ใช้เวลา</b></td><td class="ok">5 นาที (config เตรียมก่อนวันงาน)</td><td>1-2 วันทำการหลังสมัคร</td></tr>
+    <tr><td><b>รออนุมัติ?</b></td><td class="ok">ไม่ต้อง — เว็บเราเอง</td><td class="ok">ไม่ต้องแล้ว — แอป Meta ผ่าน review มาแล้ว เสียบเพจใหม่ได้เลย</td></tr>
+  </table>
+  <div class="warn"><b>ห้ามสัญญาว่าเชื่อม LINE/FB จริง "ในคลาส"</b> — การเชื่อมช่องทางจริงคือของที่ได้ตอนจ่าย BotKit
+  นี่คือตัวปิดการขาย อย่าเผลอแจกฟรี · ถ้าโดนถามเรื่องรออนุมัติ ตอบได้เต็มปาก:
+  "ค่าผ่านทาง 3 วันนั้นเราจ่ายแทนทุกร้านไปแล้ว ตอนนี้เชื่อมได้ใน 1-2 วันทำการ"</div>
+</div>
+
+<div class="card">
+  <h2><span class="n">3</span>ก่อนวันงาน — งานจริงอยู่ตรงนี้ 80%</h2>
+  <ul class="plain">
+    <li>☕ <b>ดีลร้านกาแฟ:</b> ขอพื้นที่ 3 ชม.ช่วงเงียบ แลกทำบอทร้านให้ฟรี + ผู้เรียนสั่งเครื่องดื่มทุกคน
+        → ได้สถานที่ฟรี + ผลงานลง portfolio + <b>บอทตัวจริงทำงานในร้านให้ชี้โชว์วันงาน</b></li>
+    <li>📋 <b>ฟอร์มคัดกรอง 5 ข้อ:</b> ①ร้านอะไร มีเพจ/LINE OA ไหม ②ลูกค้าทักวันละกี่คน <b>(ข้อคัดคน)</b>
+        ③คำถามที่ลูกค้าถามซ้ำบ่อยสุด 3 ข้อ ④เมนู/บริการ+ราคา ⑤เอามือถือมาได้ไหม</li>
+    <li>📦 <b>เงื่อนไขบังคับ:</b> ส่งเมนู+ราคา+รูป 3-5 ใบ+โลโก้ <b>ก่อนวันงาน 3 วัน</b> — ไม่ส่ง = สละสิทธิ์ให้คิวถัดไป
+        (คัดคนจริงจัง + เราพรีโหลด config เสร็จก่อน วันจริงคือ "เปิดของที่เสร็จแล้ว" ไม่ใช่นั่งทำสด)</li>
+  </ul>
+  <div class="tip"><b>Starter pack ของฟรี (ตีกรอบชัด):</b> เมนูไม่เกิน 10 รายการ · โปร 1 ตัว · รูป 3 ใบ · โลโก้ 1
+  — เกินกว่านั้น (เมนูทั้งเล่ม/หลายสาขา/อัปเดตรายสัปดาห์) = ของที่ได้ตอนจ่าย BotKit
+  ถ้าของฟรีสมบูรณ์เกินไป จะไม่มีเหตุผลให้จ่ายต่อ</div>
+</div>
+
+<div class="card">
+  <h2><span class="n">4</span>Timeline สอน 2 ชั่วโมง — พูดอะไร โชว์อะไร</h2>
+
+  <div class="step"><div class="t">00:00-00:15</div><div class="s">
+    <b>เปิดด้วยของจริง ไม่ใช่สไลด์</b>
+    <div class="say">ทุกคนลองสแกน QR บนโต๊ะครับ — นั่นคือบอทของร้านกาแฟที่เรานั่งอยู่ตอนนี้ ลองถามราคาลาเต้ดูครับ ...เห็นไหมครับ มันตอบเมนูจริงของร้านนี้ อีกสองชั่วโมง ร้านของทุกคนจะมีแบบนี้เหมือนกัน</div>
+    <div class="show">บอทร้านกาแฟ (ทำไว้ก่อนวันงาน) + QR แปะทุกโต๊ะ</div>
+  </div></div>
+
+  <div class="step"><div class="t">00:15-00:30</div><div class="s">
+    <b>โมเมนต์ว้าว — ทีละร้านเปิดบอทตัวเอง</b>
+    <div class="say">ทีนี้เปิดลิงก์ที่ผมส่งให้ในไลน์กลุ่มครับ ...ใช่ครับ นั่นเมนูร้านคุณ ราคาร้านคุณ ที่ส่งมาให้ผมเมื่อ 3 วันก่อน ลองถามแบบที่ลูกค้าชอบถามดูครับ</div>
+    <div class="show">บอทของแต่ละร้าน (พรีโหลดจากฟอร์มแล้ว) บนมือถือของเขาเอง — จังหวะนี้คนจะถ่ายจอแชร์เอง</div>
+  </div></div>
+
+  <div class="step"><div class="t">00:30-01:15</div><div class="s">
+    <b>เวิร์กช็อป — ปรับบอทของตัวเอง</b>
+    <div class="say">คำตอบไหนยังไม่เหมือนที่คุณตอบลูกค้าจริง บอกผมครับ เดี๋ยวเราแก้กันสดๆ ตรงนี้เลย แล้วลองใหม่ทันที</div>
+    <div class="show">แก้ config สด: เพิ่มโปร เปลี่ยนคำทักทาย เพิ่มคำถามที่เจอบ่อย — เดินวนช่วยทีละร้าน (เหตุผลที่รับแค่ 4-5)</div>
+  </div></div>
+
+  <div class="step"><div class="t">01:15-01:40</div><div class="s">
+    <b>ของจริงที่ scale แล้ว + วิธีใช้งาน</b>
+    <div class="say">ร้านทำผมเจ้านี้ใช้บอทแบบนี้ตอบลูกค้าจริงบนเพจ Facebook กับ IG มาตั้งแต่กลางเดือน — ลูกค้าทักตีสอง บอทก็ตอบ และนี่เพจของผมเอง ลองทักตอนนี้ได้เลยครับ บอทน้องนกตอบแน่นอน</div>
+    <div class="show">เคส Lullabell (FB/IG จริง) + ทักเพจเราสด (บอทน้องนก) + สอนวิธีแชร์ลิงก์บอท/แปะ QR หน้าร้าน</div>
+  </div></div>
+
+  <div class="step"><div class="t">01:40-02:00</div><div class="s">
+    <b>ปิดการขาย + ถ่ายรูปรวม</b>
+    <div class="say">บอทที่ทุกคนถืออยู่ ใช้ได้เลย 7 วัน ฟรี พอครบ ถ้ามันช่วยตอบลูกค้าแทนได้จริง — เริ่ม ฿590/เดือน ผมเชื่อมเข้า LINE OA หรือเพจ Facebook ของร้านให้เลย ลูกค้าทักช่องทางเดิม บอทตอบเอง ไม่ต้องตัดสินใจวันนี้ครับ อีก 5 วันผมทักไปถามว่าบอทช่วยได้กี่แชท แล้วค่อยคุยกัน</div>
+    <div class="show">กระดาษ 1 แผ่น/ร้าน: ลิงก์บอทตัวเอง + วิธีแชร์ + ราคา BotKit + ช่องทางติดต่อ</div>
+  </div></div>
+</div>
+
+<div class="card">
+  <h2><span class="n">5</span>กับดักห้ามเหยียบ</h2>
+  <div class="warn"><b>1. อย่าแจกการเชื่อม LINE/FB ฟรี</b> — มันคือตัวปิดการขายชั้น 2 (ดูข้อ 2)</div>
+  <div class="warn"><b>2. Demo หมดอายุจริง 7 วัน</b> — ไม่ต่อ = ปิด ไม่งั้นเราเลี้ยงบอทฟรีตลอดชาติ และ scarcity นี่แหละที่ทำให้ตัดสินใจจ่าย (ร้านที่ลูกค้าเริ่มทักบอทแล้วโดนปิด จะรู้ทันทีว่าขาดอะไร)</div>
+  <div class="warn"><b>3. ขอ consent ก่อนอัดคลิป</b> — ทุกคนในเฟรมต้องยินยอมก่อนถ่าย + รูปที่ใช้ในบอทต้องเป็นของลูกค้าเอง + บอกชัดว่าลิงก์ demo เป็นสาธารณะ</div>
+  <div class="warn"><b>4. โพสต์อะไรสาธารณะ = ขอไฟเขียวก่อนเสมอ</b> — กติกาถาวร ทุกโพสต์ ทุกคลิป ไม่มีข้อยกเว้น</div>
+</div>
+
+<div class="card">
+  <h2><span class="n">6</span>โพสต์รับสมัคร (ก๊อปไปใช้ — ⚠️ ขอไฟเขียวก่อนโพสต์จริง)</h2>
+  <div class="copybox" id="recruitPost">เจ้าของร้านที่เหนื่อยกับการตอบแชทเอง — มานั่งกาแฟกับผม 2 ชั่วโมง แล้วกลับบ้านพร้อมบอทของร้านคุณเอง ☕🤖
+
+ไม่ใช่คอร์สสอนทฤษฎี AI — คุณจะได้บอทที่ตอบชื่อเมนู/ราคา/เวลาเปิดของร้านคุณจริงๆ เปิดให้ลูกค้าลองทักได้ตั้งแต่วันนั้นเลย
+
+✅ ไม่ต้องมีพื้นฐานคอมพิวเตอร์ — แค่รู้ข้อมูลร้านตัวเอง
+✅ ได้บอทใช้จริงฟรี 7 วันหลังจบคลาส
+✅ รับแค่ 5 ร้านแรกเท่านั้น (ดูแลทั่วถึงทีละร้าน)
+
+📍 [ร้านกาแฟ __] · วันที่ __ เวลา __ · ค่าเข้าร่วม ฿590 (รวมเครื่องดื่ม)
+สมัคร: ทักมาบอกว่า "ร้านอะไร + ลูกค้าทักแชทวันละกี่คน"</div>
+  <button class="copybtn" onclick="copyBox('recruitPost',this)">คัดลอก</button>
+</div>
+
+<div class="card">
+  <h2><span class="n">7</span>Checklist <span style="font-size:12px;color:var(--dim)">(ติ๊กแล้วจำไว้ในเครื่องนี้)</span></h2>
+  <div class="prog" id="prog"></div>
+  <b style="font-size:13.5px;color:var(--violet)">ก่อนวันงาน</b>
+  <label class="chk"><input type="checkbox" data-k="c1">ปิดดีลร้านกาแฟ (สถานที่ + ทำบอทให้ร้าน)</label>
+  <label class="chk"><input type="checkbox" data-k="c2">บอทร้านกาแฟขึ้น demo_configs.json + ทดสอบแล้ว + พิมพ์ QR แปะโต๊ะ</label>
+  <label class="chk"><input type="checkbox" data-k="c3">โพสต์รับสมัคร (ขอไฟเขียวก่อน) + คัดคนด้วยฟอร์ม 5 ข้อ จนได้ 4-5 ร้าน</label>
+  <label class="chk"><input type="checkbox" data-k="c4">ทุกร้านส่งของครบก่อนวันงาน 3 วัน → config พรีโหลด + ทดสอบทีละร้าน</label>
+  <label class="chk"><input type="checkbox" data-k="c5">กล้อง/ขาตั้งพร้อม + เตรียมขอ consent ผู้เข้าร่วม</label>
+  <label class="chk"><input type="checkbox" data-k="c6">QR รับเงินค่าคอร์ส + กระดาษสรุป 1 แผ่น/ร้าน</label>
+  <b style="font-size:13.5px;color:var(--violet);display:block;margin-top:10px">หลังวันงาน</b>
+  <label class="chk"><input type="checkbox" data-k="c7">จดตัวเลข: มากี่คน / สมัคร BotKit กี่ร้าน / รายได้ — ลง WORK-นกน้อยเปิดรัง.md</label>
+  <label class="chk"><input type="checkbox" data-k="c8">ตัดคลิป → นกน้อยบินเดี่ยว (ขอไฟเขียวก่อนโพสต์)</label>
+  <label class="chk"><input type="checkbox" data-k="c9">เพิ่มบอทร้านกาแฟ + รูปงานลง portfolio.json</label>
+  <label class="chk"><input type="checkbox" data-k="c10">วันที่ 5: ทัก follow-up ทุกร้าน + ส่งลิงก์สมัคร BotKit</label>
+  <label class="chk"><input type="checkbox" data-k="c11">วันที่ 7: ร้านไหนไม่ต่อ → ปิด demo ตามกติกา</label>
+  <label class="chk"><input type="checkbox" data-k="c12">สรุป: รอบ 2 จัดไหม ปรับอะไร — อัปเดตแผนใน WORK file</label>
+</div>
+
+<footer>🐦 นกน้อยเปิดรัง · ต้นฉบับแผน: WORK-นกน้อยเปิดรัง.md · หน้านี้ noindex</footer>
+</div>
+
+<script>
+function copyBox(id, btn){
+  navigator.clipboard.writeText(document.getElementById(id).innerText).then(()=>{
+    btn.textContent="คัดลอกแล้ว ✓"; setTimeout(()=>btn.textContent="คัดลอก",1600);
+  });
+}
+const KEY="opennest_checklist";
+const saved=JSON.parse(localStorage.getItem(KEY)||"{}");
+const boxes=document.querySelectorAll("label.chk input");
+function refresh(){
+  let done=0;
+  boxes.forEach(b=>{b.closest("label").classList.toggle("done",b.checked); if(b.checked)done++;});
+  document.getElementById("prog").textContent=`ความคืบหน้า ${done}/${boxes.length}`;
+}
+boxes.forEach(b=>{
+  b.checked=!!saved[b.dataset.k];
+  b.addEventListener("change",()=>{saved[b.dataset.k]=b.checked;localStorage.setItem(KEY,JSON.stringify(saved));refresh();});
+});
+refresh();
+</script>
+</body>
+</html>
