@@ -762,17 +762,40 @@ async function loadHunterStatus(){
   try{
     const d = await (await fetch('/api/hunter/status')).json();
     const el = $('hunterStatus');
+
+    // 🔴 ปิดสวิตช์อยู่ = ต้องตะโกน ไม่ใช่เงียบ (บทเรียน 22 ก.ค. 2026: ปิดไว้ 22 ชม.
+    //    แล้วไม่มีใครรู้ เพราะการ์ดหน้าตาเหมือนตอนปกติทุกอย่าง)
+    if(d && d.enabled === false){
+      el.innerHTML = `
+        <div style="background:rgba(239,68,68,.12);border:1px solid #ef4444;border-radius:12px;
+             padding:14px 16px">
+          <div style="font-size:16px;font-weight:800;color:#f87171;margin-bottom:6px">
+            ⛔ Hunter ปิดอยู่ — ไม่ได้หางานให้เลย
+          </div>
+          <div style="font-size:12.5px;color:#fca5a5;line-height:1.6">
+            เปิดคืน: Render → forex-ai-demo → Environment → ตั้ง
+            <b style="color:#fff">HUNTERS_ENABLED=1</b>
+          </div>
+        </div>`;
+      return;
+    }
+
     if(!d || !d.last_check){
       el.innerHTML = '<div class="empty">รอรอบสแกนถัดไป (cron ทุก 30 นาที)</div>';
       return;
     }
-    const mins = Math.max(0, Math.round((Date.now() - new Date(d.last_check).getTime())/60000));
-    const alive = mins <= 45;   // เกิน 45 นาที = อาจ cron หยุด
-    const col = alive ? 'var(--green)' : 'var(--amber)';
-    const txt = alive ? 'ทำงานปกติ' : 'อาจหยุด — เช็ค cron';
+    const mins = (d.stale_minutes != null) ? d.stale_minutes
+               : Math.max(0, Math.round((Date.now() - new Date(d.last_check).getTime())/60000));
+    // 3 ระดับ: ปกติ / ช้าผิดปกติ / หยุดไปแล้วแน่ๆ
+    const dead = mins > 90, warn = mins > 45;
+    const col = dead ? '#f87171' : (warn ? 'var(--amber)' : 'var(--green)');
+    const txt = dead ? `⚠️ ไม่ได้สแกนมา ${(mins/60).toFixed(1)} ชม. — เช็ค cron ด่วน`
+              : (warn ? 'ช้ากว่าปกติ — จับตาดู' : 'ทำงานปกติ');
     const ago = mins < 1 ? 'เมื่อกี้' : `${mins} นาทีที่แล้ว`;
+    const offline = d.offline_alerts || 0;
     el.innerHTML = `
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;
+           ${dead?'background:rgba(239,68,68,.12);border:1px solid #ef4444;border-radius:10px;padding:9px 12px':''}">
         <span style="width:9px;height:9px;border-radius:50%;background:${col};display:inline-block;box-shadow:0 0 8px ${col}"></span>
         <span style="font-weight:700;color:${col}">${txt}</span>
         <span style="color:var(--dim);font-size:12px">· สแกนล่าสุด ${ago}</span>
@@ -780,10 +803,12 @@ async function loadHunterStatus(){
       <div style="display:flex;gap:8px 16px;flex-wrap:wrap;font-size:13px;color:var(--text)">
         <span>🔍 เช็ค <b style="color:var(--cyan)">${d.checked||0}</b> งาน</span>
         <span>🎯 ตรงคำค้น <b style="color:var(--cyan)">${d.new_matching||0}</b></span>
-        <span>💰 Haiku คัดออก <b style="color:var(--amber)">${d.triaged_out||0}</b></span>
-        <span>🧠 Sonnet วิเคราะห์ <b style="color:var(--green)">${d.analyzed||0}</b></span>
+        <span>🧹 คัดออก <b style="color:var(--amber)">${d.triaged_out||0}</b></span>
+        <span>🧠 วิเคราะห์ <b style="color:var(--green)">${d.analyzed||0}</b></span>
         <span>🔔 เตือน LINE <b style="color:var(--pink)">${d.alerts_sent||0}</b></span>
-      </div>`;
+      </div>
+      ${offline ? `<div style="margin-top:9px;font-size:12px;color:var(--amber)">
+        🐦 นกน้อยทำลัง: ${offline} งานแจ้งได้ทั้งที่ AI ล่ม</div>` : ''}`;
   }catch(e){ $('hunterStatus').innerHTML = '<div class="empty">โหลดสถานะไม่ได้</div>'; }
 }
 

@@ -45,12 +45,16 @@ N8N_POST_SECRET     = os.environ.get("N8N_POST_SECRET", "")  # กัน endpoin
 # hybrid: ตั้ง LULLABELL_FORWARD_URL = แบบ A (แยก service); เว้นว่าง = แบบ B (ตอบในนี้ผ่าน multi-tenant) ----
 LULLABELL_PAGE_ID    = os.environ.get("LULLABELL_PAGE_ID", "783393614867196")  # เพจ Lullabell (ค่าเดียวกับ META_PAGE_ID เดิม)
 LULLABELL_FORWARD_URL = os.environ.get("LULLABELL_FORWARD_URL", "")  # เช่น https://lullabell-bot.onrender.com/webhook/meta
-# ---- คิลสวิตช์ Hunter/RSS/autotrade (21 ก.ค. 2026) — งานเบื้องหลังพวกนี้เรียก Claude ทุก 30 นาที
-# เผาเครดิต Anthropic จนหมด ทำให้บอทร้านลูกค้า (Lullabell) ที่ใช้ AI ตัวเดียวกันพลอยสะดุดไปด้วย
-# default = ปิด (กันเผาเครดิต) — เปิดคืนภายหลังได้โดยตั้ง HUNTERS_ENABLED=1 บน Render ไม่ต้องแก้โค้ด ----
+# ---- คิลสวิตช์ Hunter/RSS (21 ก.ค. 2026, แก้ 22 ก.ค.) ----
+# เดิมคุม autotrade ด้วย แต่ autotrade ถูกลบทั้งฟีเจอร์แล้ว เหลือคุมแค่ Hunter
+# 🔴 บทเรียน 22 ก.ค. 2026: เดิมตอนปิดอยู่ route คืน **200** → cron-job.org เห็นว่าสำเร็จ
+#    ไม่เตือนอะไรเลย ผลคือ Hunter หยุดหาลูกค้าไป 22+ ชม. โดยไม่มีใครรู้
+#    (แพทเทิร์นเดียวกับเคส API key expire 18 ก.ค. — ของพังต้องส่งเสียง)
+#    ตอนนี้คืน 503 แทน เพื่อให้ cron เห็นว่าล้มเหลวและส่งเมลเตือน
 HUNTERS_ENABLED = os.environ.get("HUNTERS_ENABLED", "").strip().lower() in ("1", "true", "yes", "on")
 _HUNTERS_OFF_MSG = {"success": False, "disabled": True,
-                    "error": "Hunter/autotrade ปิดชั่วคราว กันเผาเครดิต Claude — ตั้ง HUNTERS_ENABLED=1 บน Render เพื่อเปิดคืน"}
+                    "error": "Hunter ปิดอยู่ — ตั้ง HUNTERS_ENABLED=1 บน Render เพื่อเปิดคืน"}
+_HUNTERS_OFF_CODE = 503   # ห้ามเปลี่ยนกลับเป็น 200 (ดูเหตุผลด้านบน)
 # ---- LINE OA ของ "ร้านลูกค้า" (เช่น @lullabell) — คนละตัวกับ LINE_TOKEN/LINE_CHANNEL_SECRET ด้านบนซึ่งเป็นของ ForexAI Pro เอง ----
 LULLABELL_LINE_CHANNEL_SECRET = os.environ.get("LULLABELL_LINE_CHANNEL_SECRET", "")
 LULLABELL_LINE_CHANNEL_TOKEN  = os.environ.get("LULLABELL_LINE_CHANNEL_TOKEN", "")
@@ -208,11 +212,12 @@ def line_webhook():
                 _save_registered_user(user_id)
             _reply_line(
                 reply_token,
-                "⚡ ยินดีต้อนรับสู่ ForexAI Pro!\n\n"
-                "✅ ลงทะเบียนสำเร็จ!\n\n"
-                "📊 คุณจะได้รับสัญญาณเทรด EUR/USD, GBP/USD, BTC/USD\n"
-                "จากระบบ AI วิเคราะห์อัตโนมัติ\n\n"
-                "💡 กด 'ส่ง LINE' ในหน้า Dashboard เพื่อรับสัญญาณ",
+                "👋 ยินดีต้อนรับครับ!\n\n"
+                "✅ ลงทะเบียนเรียบร้อย\n\n"
+                "🤖 เรารับทำ LINE Bot / บอทตอบแชท Facebook-Instagram\n"
+                "ระบบจองคิว และงาน automation ให้ธุรกิจ\n\n"
+                "💡 ดูตัวอย่างผลงานจริง: forex-ai-demo.onrender.com/portfolio\n"
+                "สนใจแบบไหน พิมพ์บอกได้เลยครับ",
             )
 
         elif etype == "message":
@@ -223,17 +228,18 @@ def line_webhook():
                     _save_registered_user(user_id)
                     _reply_line(
                         reply_token,
-                        "✅ ลงทะเบียนสำเร็จ!\n\n"
-                        "📱 คุณจะได้รับ ForexAI Signal แจ้งเตือนอัตโนมัติ\n\n"
-                        "💡 แจ้งทีมงานว่าพร้อมรับสัญญาณแล้ว",
+                        "✅ ลงทะเบียนเรียบร้อย!\n\n"
+                        "🤖 รับทำ LINE Bot · บอทตอบแชท FB/IG · ระบบจองคิว · automation\n\n"
+                        "💡 ผลงานจริง: forex-ai-demo.onrender.com/portfolio",
                     )
                 elif already_reg:
-                    _reply_line(reply_token, "✅ คุณลงทะเบียนแล้ว — รอรับสัญญาณได้เลย!")
+                    _reply_line(reply_token, "✅ คุณลงทะเบียนไว้แล้วครับ — สนใจงานแบบไหน พิมพ์บอกได้เลย")
             else:
                 _reply_line(
                     reply_token,
-                    "🤖 ForexAI Pro\n\n"
-                    "พิมพ์ /start เพื่อลงทะเบียนรับสัญญาณ",
+                    "🤖 รับทำ LINE Bot & AI Agent สำหรับธุรกิจ\n\n"
+                    "ดูผลงาน: forex-ai-demo.onrender.com/portfolio\n"
+                    "พิมพ์ /start เพื่อลงทะเบียน",
                 )
 
     return jsonify({"message": "ok"})
@@ -241,7 +247,7 @@ def line_webhook():
 
 @app.route("/api/line-users", methods=["GET"])
 def get_line_users():
-    """จำนวน LINE users ที่จะได้รับ Signal"""
+    """จำนวน LINE users ที่ลงทะเบียนไว้"""
     env_count = 1 if (LINE_USER_ID and LINE_USER_ID not in registered_users) else 0
     total     = len(registered_users) + env_count
     return jsonify({
@@ -270,13 +276,17 @@ def health():
 @app.route("/api/hunter/check", methods=["GET", "POST"])
 def hunter_check():
     """ดักจับงาน FastWork ที่ตรงสกิล → AI วิเคราะห์ + ร่างข้อเสนอ → LINE
-    เรียกจาก cron ภายนอก (cron-job.org) ทุก 30 นาที"""
+    เรียกจาก cron ภายนอก (cron-job.org) ทุก 30 นาที
+
+    22 ก.ค. 2026: Hunter ใช้ tier="free" (Gemini→Groq) แล้ว จึง **ไม่บังคับ ANTHROPIC_API_KEY**
+    อีกต่อไป — เดิมบังคับไว้ ทำให้เปิด Hunter ไม่ได้เลยตอนเครดิต Claude หมด"""
     if not HUNTERS_ENABLED:
-        return jsonify(_HUNTERS_OFF_MSG), 200   # ปิดกันเผาเครดิต Claude (21 ก.ค. 2026)
-    if not ANTHROPIC_API_KEY or not LINE_TOKEN or not LINE_USER_ID:
-        return jsonify({"success": False, "error": "missing env keys"}), 500
+        return jsonify(_HUNTERS_OFF_MSG), _HUNTERS_OFF_CODE   # 503 ให้ cron เห็นว่าล้ม (22 ก.ค. 2026)
+    if not LINE_TOKEN or not LINE_USER_ID:
+        return jsonify({"success": False, "error": "missing LINE env keys"}), 500
     try:
-        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        # client ใช้เฉพาะตอน tier="smart" — Hunter เป็น tier="free" จึงไม่ต้องมี key จริง
+        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
         result = fastwork_hunter.run_hunter(client, _push_line, LINE_USER_ID)
         _save_hunter_status(result)   # เก็บสถานะล่าสุดลง Supabase (โชว์บน Monitor)
         return jsonify({"success": True, **result})
@@ -309,7 +319,12 @@ def _save_hunter_status(result: dict) -> None:
 
 @app.route("/api/hunter/status", methods=["GET"])
 def hunter_status():
-    """สถานะ Hunter ล่าสุด (สำหรับการ์ดบน Monitor) — อ่านจาก Supabase"""
+    """สถานะ Hunter ล่าสุด (สำหรับการ์ดบน Monitor) — อ่านจาก Supabase
+
+    22 ก.ค. 2026 เพิ่ม enabled + stale_minutes เพื่อให้ Monitor แยกออกว่า
+    "ปิดสวิตช์อยู่" ต่างจาก "เปิดอยู่แต่ไม่ได้สแกนมานาน" — เดิมทั้งสองกรณีหน้าตาเหมือนกันหมด
+    ทำให้ Hunter หยุดไป 22 ชม. โดยไม่มีใครสังเกต"""
+    from datetime import timezone
     try:
         r = requests.get(
             f"{seo_tracker.SUPABASE_URL}/rest/v1/hunter_status?id=eq.1&select=*",
@@ -320,7 +335,21 @@ def hunter_status():
         st = rows[0] if rows else {}
     except Exception:
         st = {}
-    return jsonify({"success": True, **st})
+
+    stale = None
+    last = st.get("last_check")
+    if last:
+        try:
+            t = datetime.fromisoformat(str(last).replace("Z", "+00:00"))
+            if t.tzinfo is None:
+                t = t.replace(tzinfo=timezone.utc)
+            stale = int((datetime.now(timezone.utc) - t).total_seconds() // 60)
+        except Exception:
+            pass
+
+    return jsonify({"success": True, **st,
+                    "enabled": HUNTERS_ENABLED,
+                    "stale_minutes": stale})
 
 
 @app.route("/api/hunter/log", methods=["GET"])
@@ -335,7 +364,7 @@ def hunter_log():
 def hunter_rss():
     """ดักงานจากทั้งเน็ตผ่าน Google Alerts RSS (cron ยิงทุก 30 นาที)"""
     if not HUNTERS_ENABLED:
-        return jsonify(_HUNTERS_OFF_MSG), 200   # ปิดกันเผาเครดิต Claude (21 ก.ค. 2026)
+        return jsonify(_HUNTERS_OFF_MSG), _HUNTERS_OFF_CODE   # 503 ให้ cron เห็นว่าล้ม (22 ก.ค. 2026)
     if not rss_hunter.is_configured():
         return jsonify({"success": False, "error": "ยังไม่ได้ตั้ง RSS_FEEDS"}), 503
     if not ANTHROPIC_API_KEY or not LINE_TOKEN or not LINE_USER_ID:
@@ -2680,5 +2709,5 @@ def index():
 if __name__ == "__main__":
     port  = int(os.environ.get("PORT", 5000))
     debug = os.environ.get("RENDER") is None
-    print(f"🚀 ForexAI Pro Server — port {port}")
+    print(f"🚀 NEXUS Server — port {port}")
     app.run(debug=debug, port=port, host="0.0.0.0")
