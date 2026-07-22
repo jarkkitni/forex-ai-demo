@@ -328,20 +328,27 @@ def run_hunter(anthropic_client, push_line_fn, line_user_id: str,
     new_matched = []
     newly_seen = []
 
+    # 🔴 แก้บั๊ก 22 ก.ค. 2026 — "งานหายเงียบเพราะโดน mark ว่าเห็นแล้วทั้งที่ยังไม่ได้ดู"
+    # เดิม: mark seen ทุกงานตรงนี้เลย แต่ด้านล่างพิจารณาแค่ max_alerts*2 (=6) งานแรก
+    #       → รอบที่เจองานตรง 16 งาน มี 10 งานถูกทิ้งถาวร รอบหน้าก็ข้ามเพราะ dedup
+    #       (เคสจริง: รอบ 22 ก.ค. 19:00 new_matching=16 แต่ดูจริงแค่ 6)
+    # ใหม่: งานที่ "ไม่ตรงสกิล / ปิดรับแล้ว" mark seen ได้เลย (ไม่มีวันกลับมาสนใจ)
+    #       ส่วนงานที่ตรงสกิล **ยังไม่ mark** จนกว่าจะพิจารณาจริงเสร็จ (ดูท้ายฟังก์ชัน)
     for job in jobs:
         jid = job.get("id")
         if not jid or str(jid) in _seen_job_ids:
             continue
+
+        if job.get("status") == "open":
+            grade, matched = _match_skills(job)
+            if grade and not prime:
+                new_matched.append((job, grade, matched))
+                continue   # ยังไม่ mark seen — รอพิจารณาก่อน
+
         _seen_job_ids.add(str(jid))
         newly_seen.append(jid)
-        if job.get("status") != "open":
-            continue
 
-        grade, matched = _match_skills(job)
-        if grade and not prime:
-            new_matched.append((job, grade, matched))
-
-    _save_seen(newly_seen)   # บันทึก id ใหม่ลง DB — รอบหน้า/หลังรีสตาร์ตจะไม่ดักซ้ำ
+    _save_seen(newly_seen)   # บันทึก id ที่ปิดจบแล้วลง DB — รอบหน้าจะไม่ดักซ้ำ
 
     if prime:
         print(f"[Hunter] prime รอบแรก: seed {len(newly_seen)} งานปัจจุบัน (ไม่แจ้งเตือน)", flush=True)
@@ -357,9 +364,11 @@ def run_hunter(anthropic_client, push_line_fn, line_user_id: str,
 
     triaged_out = 0
     offline_alerts = 0
+    considered_ids = []      # งานที่ "ดูจริง" แล้ว — เฉพาะพวกนี้ถึงจะ mark seen ได้
     for job, grade, matched in new_matched[:max_alerts * 2]:
         if alerts_sent >= max_alerts:
             break
+        considered_ids.append(job.get("id"))
 
         # ด่าน 1: คัดขยะทิ้งก่อน (ถูก) — ผ่านแล้วค่อยจ่ายค่าวิเคราะห์เต็ม
         if not _triage(anthropic_client, job, matched, push_line_fn, line_user_id):
@@ -415,6 +424,17 @@ def run_hunter(anthropic_client, push_line_fn, line_user_id: str,
         results.append(entry)
         _hunter_log = (_hunter_log + [entry])[-20:]
 
+    # mark seen เฉพาะงานที่พิจารณาจริงในรอบนี้ — ที่เหลือปล่อยไว้ให้รอบหน้าเก็บต่อ
+    for jid in considered_ids:
+        _seen_job_ids.add(str(jid))
+    _save_seen(considered_ids)
+
+    deferred = len(new_matched) - len(considered_ids)
+    if deferred:
+        # ห้ามเงียบ — ถ้าไม่ log ไว้ ตัวเลข alerts_sent จะดูเหมือน "ดูครบแล้ว" ทั้งที่ยังเหลือ
+        print(f"[Hunter] ยกยอดไปรอบหน้า {deferred} งาน "
+              f"(ตรงสกิล {len(new_matched)} · ดูจริงรอบนี้ {len(considered_ids)})", flush=True)
+
     return {
         "checked": len(jobs),
         "new_matching": len(new_matched),
@@ -422,6 +442,7 @@ def run_hunter(anthropic_client, push_line_fn, line_user_id: str,
         "analyzed": len(results),
         "alerts_sent": alerts_sent,
         "offline_alerts": offline_alerts,  # กี่งานที่แจ้งได้ทั้งที่ AI ล่ม (นกน้อยทำลัง)
+        "deferred": deferred,              # ยกยอดไปรอบหน้ากี่งาน (ต้องเป็น 0 ในภาวะปกติ)
         "results": results,
     }
 
