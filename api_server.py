@@ -473,7 +473,8 @@ def _render_demo(biz: str) -> str:
     cfg = _load_demo_configs()[biz]
     # แปลง services list → map ที่ frontend ใช้
     cfg["services_map"] = {
-        s["name"]: {"emoji": s["emoji"], "price": s["price"], "bg": s["bg"]}
+        s["name"]: {"emoji": s["emoji"], "price": s["price"], "bg": s["bg"],
+                    "img": s.get("img", "")}   # รูปจริงต่อบริการ (ไม่บังคับ — ไม่มี = อีโมจิเหมือนเดิม)
         for s in cfg["services"]
     }
     tpl_path = os.path.join(os.path.dirname(__file__), "demo_generic.html")

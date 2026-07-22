@@ -35,7 +35,11 @@
   .cards { display:flex; gap:8px; overflow-x:auto; align-self:flex-start; max-width:95%; padding-bottom:4px; }
   .card { min-width:150px; background:#fff; border-radius:14px; overflow:hidden;
           box-shadow:0 1px 3px rgba(0,0,0,.12); }
-  .card .img { height:80px; display:flex; align-items:center; justify-content:center; font-size:34px; }
+  .card .img { height:80px; display:flex; align-items:center; justify-content:center; font-size:34px; overflow:hidden; }
+  .card .img img { width:100%; height:100%; object-fit:cover; display:block; }
+  .card.photo .img { height:110px; }
+  .fb-header .avatar { overflow:hidden; }
+  .fb-header .avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
   .card .body { padding:8px 10px; }
   .card .title { font-weight:700; font-size:12.5px; }
   .card .price { color:#0084ff; font-weight:700; font-size:12px; margin-top:2px; }
@@ -120,8 +124,10 @@ function quickReplies(opts, handler){
 function serviceCards(){
   const c = el(`<div class="cards"></div>`);
   Object.entries(SERVICES).forEach(([name,s])=>{
+    // มีรูปจริง (s.img) → โชว์รูปแทนอีโมจิ · ไม่มี → อีโมจิบนพื้นสีเหมือนเดิม (ร้านเก่าไม่กระทบ)
+    const media = s.img ? `<img src="${s.img}" alt="${name}" loading="lazy">` : s.emoji;
     const card = el(`<div class="card">
-      <div class="img" style="background:${s.bg}">${s.emoji}</div>
+      <div class="img" style="background:${s.bg}">${media}</div>
       <div class="body"><div class="title">${name}</div><div class="price">${s.price}</div></div>
     </div>`);
     c.appendChild(card);
@@ -129,9 +135,29 @@ function serviceCards(){
   chat.appendChild(c); scroll();
 }
 
+// แกลเลอรีรูปร้านจริง — โชว์เฉพาะร้านที่มี CFG.photos (นกน้อยเปิดรัง: โมเมนต์ "บอทส่งรูปร้านฉันเอง")
+function photoGallery(){
+  const g = el(`<div class="cards"></div>`);
+  (CFG.photos||[]).forEach(p=>{
+    const src = p.src || p, label = p.label || '';
+    g.appendChild(el(`<div class="card photo">
+      <div class="img"><img src="${src}" alt="${label}" loading="lazy"></div>
+      ${label?`<div class="body"><div class="title">${label}</div></div>`:''}
+    </div>`));
+  });
+  chat.appendChild(g); scroll();
+}
+const PHOTO_BTN = '📷 ดูรูปร้าน';
+function mainButtons(){
+  const btns = ['ดูบริการ + ราคา',CFG.book_word,'โปรโมชั่น','เวลาทำการ / ที่อยู่'];
+  if((CFG.photos||[]).length) btns.splice(1,0,PHOTO_BTN);
+  return btns;
+}
+
 async function start(){
+  if(CFG.logo_url) document.querySelector('.fb-header .avatar').innerHTML = `<img src="${CFG.logo_url}" alt="">`;
   await botMsg(CFG.greeting);
-  quickReplies(['ดูบริการ + ราคา',CFG.book_word,'โปรโมชั่น','เวลาทำการ / ที่อยู่'], mainMenu);
+  quickReplies(mainButtons(), mainMenu);
 }
 
 async function mainMenu(choice){
@@ -140,6 +166,12 @@ async function mainMenu(choice){
     serviceCards();
     await botMsg('สนใจบริการไหน กดจองคิวได้เลยนะคะ 😊', 800);
     quickReplies([CFG.book_word,'โปรโมชั่น','กลับเมนูหลัก'], mainMenu);
+  }
+  else if(choice===PHOTO_BTN){
+    await botMsg('รูปจากร้านจริงค่ะ 👇 (เลื่อนดูได้เลย)');
+    photoGallery();
+    await botMsg('สนใจบริการไหน กดจองคิวได้เลยนะคะ 😊', 800);
+    quickReplies([CFG.book_word,'ดูบริการ + ราคา','กลับเมนูหลัก'], mainMenu);
   }
   else if(choice==='โปรโมชั่น'){
     await botMsg(CFG.promo);
