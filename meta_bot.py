@@ -566,13 +566,19 @@ def _render_location_text(cfg: dict) -> str:
     return "\n".join(lines)
 
 
+def _ai_name(cfg: dict) -> str:
+    """ชื่อ persona ของ AI ต่อร้าน (เช่น 'น้องเบลล์'/'น้องนก'/'น้องรัง') — อ่านจาก config key 'ai_name'
+    fallback ไป biz_name กันพังถ้า config เก่าไหนยังไม่ได้ตั้งไว้ (23 ก.ค. 2026 — แก้บั๊ก hardcode ข้ามร้าน)"""
+    return cfg.get("ai_name") or cfg.get("biz_name") or "ผู้ช่วย"
+
+
 def _offline_fallback_answer(cfg: dict, user_text: str) -> str:
     """ตอบแบบ deterministic ล้วนๆ (ไม่ผ่าน AI ตัวไหนเลย) ใช้เฉพาะตอนทั้ง Claude และ Groq ล่มพร้อมกัน
     (เคสจริง 21 ก.ค. 2026 — Anthropic หมดเครดิต + Groq โดน rate limit พร้อมกัน ทำให้บอทตอบได้แค่ "รอสักครู่"
     ทั้งที่คำถามพื้นฐานอย่างราคา/ที่อยู่ ตอบได้ถูกต้อง 100% จากข้อมูลใน config โดยไม่ต้องพึ่ง AI เลย)
     ตรวจแล้วว่าราคาในนี้ตรงกับเมนูจริงที่ลูกค้าส่งมาทุกตัว (21 ก.ค. 2026) ใช้เป็นฐานอ้างอิงได้เต็มที่
     คืนข้อความสำเร็จรูปถ้าเดาเจตนาได้ ไม่งั้นคืน None ให้ผู้เรียกใช้ retry_msg เดิมแทน (เช่น คำถามซับซ้อน/นอกเมนู)"""
-    apology = "น้องเบลล์ขอนำเสนอข้อมูลด้านล่างให้เลยนะคะ 🤍\n\n"
+    apology = f"{_ai_name(cfg)}ขอนำเสนอข้อมูลด้านล่างให้เลยนะคะ 🤍\n\n"
     contact = cfg.get("contact", {})
     tail = f"\n\nหากต้องการสอบถามเพิ่มเติมหรือจองคิว ทักแอดมินตรงได้ที่ LINE {contact.get('line', '')} หรือโทร {contact.get('phone', '')} ค่ะ"
     if _is_price_query(user_text):
@@ -623,7 +629,7 @@ def _system_prompt(cfg: dict) -> str:
     landmarks_txt = " / ".join(landmarks) if isinstance(landmarks, list) else ""
     perks_txt = "\n".join(f"- {x}" for x in
                           [cfg.get("gift"), cfg.get("perks"), cfg.get("friend_promo"), cfg.get("topup_promo")] if x)
-    return f"""คุณคือ "น้องเบลล์" ผู้ช่วยตอบแชทของร้าน {cfg.get('biz_full', cfg.get('biz_name',''))} {cfg.get('emoji','')}
+    return f"""คุณคือ "{_ai_name(cfg)}" ผู้ช่วยตอบแชทของร้าน {cfg.get('biz_full', cfg.get('biz_name',''))} {cfg.get('emoji','')}
 สโลแกน: {cfg.get('tagline','')}
 วันนี้วันที่: {_today_th()}
 
@@ -697,12 +703,13 @@ def generate_reply(client, cfg: dict, sender_id: str, user_text: str,
     slug: ชื่อร้าน (เช่น "lullabell") — ส่งต่อให้ ai_guard แยกสถานะ/cooldown แจ้งเตือนต่อร้าน กันร้านหนึ่งล่มบังไม่ให้อีกร้านได้แจ้งเตือน"""
     import ai_guard
     hist = _history.get(sender_id, [])
-    convo = "\n".join(f"{'ลูกค้า' if r=='user' else 'น้องเบลล์'}: {t}" for r, t in hist)
+    ai_name = _ai_name(cfg)
+    convo = "\n".join(f"{'ลูกค้า' if r=='user' else ai_name}: {t}" for r, t in hist)
     prompt = (
         _system_prompt(cfg)
         + "\n\n=== บทสนทนาก่อนหน้า ===\n" + (convo or "(ยังไม่มี)")
         + f"\n\nลูกค้าเพิ่งพิมพ์ว่า: \"{user_text}\"\n"
-        + "ตอบกลับในฐานะน้องเบลล์ (ข้อความเดียว สั้น กระชับ):"
+        + f"ตอบกลับในฐานะ{ai_name} (ข้อความเดียว สั้น กระชับ):"
     )
     # ai_tier ต่อร้าน: "smart" (ค่าเริ่มต้น กันของเก่าพังถ้าไม่ได้ตั้ง) = ใช้ Claude เป็นหลัก + fallback Groq อัตโนมัติถ้า Claude ล่ม
     # "free" = ใช้ Groq (ฟรี) เป็นหลักเลย สำหรับร้านที่ยังไม่ได้อัปเกรดแพ็กเกจ AI ฉลาดขึ้น
@@ -920,7 +927,7 @@ def handle_line(data: dict, client, channel_token: str, slug: str = "lullabell",
             # ก่อนใช้ retry_msg เฉยๆ ลองเดาเจตนาก่อน — ถ้าถามราคา/ที่อยู่ ตอบจาก template จริงได้เลยไม่ต้องพึ่ง AI
             # (เพิ่ม 21 ก.ค. — เคส Claude+Groq ล่มพร้อมกัน กันลูกค้าเจอแค่ "รอสักครู่" ทั้งที่ตอบได้จริง)
             fb = (_offline_fallback_answer(cfg, user_text)
-                  or cfg.get("advisor", {}).get("retry_msg", "รบกวนรอสักครู่นะคะ น้องเบลล์กำลังดูให้อยู่ค่ะ 🤍"))
+                  or cfg.get("advisor", {}).get("retry_msg", f"รบกวนรอสักครู่นะคะ {_ai_name(cfg)}กำลังดูให้อยู่ค่ะ 🤍"))
             send_line_reply(channel_token, reply_token, fb)
             result["skipped"] += 1
     return result
@@ -1067,7 +1074,7 @@ def handle(data: dict, client, page_token: str, slug: str = "lullabell",
                 # ก่อนใช้ retry_msg เฉยๆ ลองเดาเจตนาก่อน — ถ้าถามราคา/ที่อยู่ ตอบจาก template จริงได้เลยไม่ต้องพึ่ง AI
                 # (เพิ่ม 21 ก.ค. — เคส Claude+Groq ล่มพร้อมกัน กันลูกค้าเจอแค่ "รอสักครู่" ทั้งที่ตอบได้จริง)
                 fb = (_offline_fallback_answer(cfg, user_text)
-                      or cfg.get("advisor", {}).get("retry_msg", "รบกวนรอสักครู่นะคะ น้องเบลล์กำลังดูให้อยู่ค่ะ 🤍"))
+                      or cfg.get("advisor", {}).get("retry_msg", f"รบกวนรอสักครู่นะคะ {_ai_name(cfg)}กำลังดูให้อยู่ค่ะ 🤍"))
                 _send_with_quick_replies(page_token, sender, fb, quick_replies=default_qr)
                 # AI ล่มสนิทแต่ลูกค้าถามที่อยู่ → แนบรูปการ์ดแผนที่ให้เหมือนตอน AI ตอบได้ปกติ (เพิ่ม 21 ก.ค. ตามคำขอ
                 # sIRImeta) กันลูกค้าที่ถามที่อยู่พลาดรูปแผนที่สวยๆ ไปแค่เพราะ AI ดันล่มพอดีตอนนั้น
