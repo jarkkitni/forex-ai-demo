@@ -54,6 +54,10 @@
   .sendbtn{width:36px;height:36px;border-radius:50%;background:var(--line-green);border:none;color:#fff;
            font-size:15px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
   .sendbtn:disabled{opacity:.5;}
+  .micbtn{width:36px;height:36px;border-radius:50%;background:#f2f2f2;border:none;color:#555;
+          font-size:15px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+  .micbtn.recording{background:#e0453c;color:#fff;animation:pulse 1s infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
   .footer-note{max-width:400px;text-align:center;color:#8a8a8a;font-size:10.5px;margin:10px 0 24px;}
 </style>
 </head>
@@ -75,6 +79,7 @@
   <div class="quick" id="quick"></div>
   <div class="inputbar">
     <input id="inp" placeholder="ข้อความ" autocomplete="off">
+    <button class="micbtn" id="mic" style="display:none">🎤</button>
     <button class="sendbtn" id="send">➤</button>
   </div>
 </div>
@@ -84,10 +89,12 @@
 const SLUG = "{{SLUG}}";
 const EMOJI = "{{EMOJI}}";
 const GREETING = {{GREETING_JSON}};
+const VOICE_ENABLED = {{VOICE_ENABLED}};
 const chat = document.getElementById('chat');
 const quick = document.getElementById('quick');
 const inp = document.getElementById('inp');
 const sendBtn = document.getElementById('send');
+const micBtn = document.getElementById('mic');
 const SID = (() => {
   let s = sessionStorage.getItem('demo_sid');
   if (!s) { s = Math.random().toString(36).slice(2) + Date.now().toString(36); sessionStorage.setItem('demo_sid', s); }
@@ -143,6 +150,70 @@ async function ask(text){
 
 sendBtn.onclick = () => ask(inp.value);
 inp.addEventListener('keydown', e => { if(e.key === 'Enter') ask(inp.value); });
+
+// ---- ฟีเจอร์เสียง (ทดลอง, เฉพาะร้านที่เปิด voice_enabled) ----
+let mediaRecorder = null;
+let audioChunks = [];
+let isRecording = false;
+
+function playReplyAudio(b64){
+  if(!b64) return;
+  const audio = new Audio('data:audio/mp3;base64,' + b64);
+  audio.play().catch(() => {}); // best-effort — เบราว์เซอร์บางตัวบล็อก autoplay ถ้ายังไม่เคยมี interaction
+}
+
+async function sendVoice(blob){
+  addMsg('🎧 กำลังฟังอยู่ค่ะ...', 'bot');   // ข้อความคั่นทันที กันลูกค้าคิดว่าบอทค้างระหว่างรอ Gemini+TTS
+  typing(true);
+  try{
+    const form = new FormData();
+    form.append('audio', blob, 'voice.webm');
+    form.append('session_id', SID);
+    const r = await fetch(`/api/demo/chat/${SLUG}/voice`, { method: 'POST', body: form });
+    const d = await r.json();
+    typing(false);
+    if(d.success){
+      addMsg(d.transcript, 'me');           // โชว์ว่าบอทฟังเป็นข้อความอะไร (ให้ตรวจสอบได้ว่าฟังถูกไหม)
+      addMsg(d.reply, 'bot');
+      playReplyAudio(d.audio_base64);
+    } else {
+      addMsg(d.error || 'ขออภัยค่ะ ระบบขัดข้องชั่วคราว', 'bot');
+    }
+  }catch(e){
+    typing(false);
+    addMsg('ส่งเสียงไม่สำเร็จ ลองใหม่อีกครั้งค่ะ', 'bot');
+  }
+}
+
+async function toggleRecording(){
+  if(isRecording){
+    mediaRecorder.stop();
+    return;
+  }
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+    audioChunks = [];
+    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+    mediaRecorder.onstop = () => {
+      stream.getTracks().forEach(t => t.stop());
+      micBtn.classList.remove('recording');
+      isRecording = false;
+      const blob = new Blob(audioChunks, { type: 'audio/webm' });
+      sendVoice(blob);
+    };
+    mediaRecorder.start();
+    isRecording = true;
+    micBtn.classList.add('recording');
+  }catch(e){
+    addMsg('ขอสิทธิ์ใช้ไมโครโฟนไม่สำเร็จ — เช็คการอนุญาตไมค์ของเบราว์เซอร์ด้วยค่ะ', 'bot');
+  }
+}
+
+if(VOICE_ENABLED){
+  micBtn.style.display = 'flex';
+  micBtn.onclick = toggleRecording;
+}
 
 const PRESETS = ['มีบริการอะไรบ้าง', 'ราคาประมาณเท่าไหร่', 'จองคิวยังไง'];
 PRESETS.forEach(p => {

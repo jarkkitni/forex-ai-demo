@@ -5,6 +5,9 @@
   "ai_tier": "free",
   "_ai_tier_note": "ราคา/เมนู/เวลาเปิดตอบจาก template ตรงจาก config เลย ไม่ผ่าน AI การันตีไม่เพี้ยน — เหมือน sirimeta.json/lullabell.json",
 
+  "voice_enabled": true,
+  "_voice_note": "ทดลองฟีเจอร์คุยด้วยเสียง (23 ก.ค. 2026) — เปิดเฉพาะร้านนี้ผ่าน /demo/chat/rangkafae เท่านั้น ไม่กระทบ webhook Messenger จริง",
+
   "biz_name": "รังกาแฟ",
   "biz_full": "รังกาแฟ (Rang Kafae) — คาเฟ่เล็กๆ ใจกลางเชียงใหม่",
   "ai_name": "น้องรัง",

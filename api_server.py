@@ -1619,6 +1619,7 @@ def demo_chat_page(slug):
         "{{ACCENT_SOFT}}": cfg.get("accent_soft", "#e3f2e1"),
         "{{SLUG}}": slug,
         "{{GREETING_JSON}}": json.dumps(cfg.get("greeting", "สวัสดีค่ะ"), ensure_ascii=False),
+        "{{VOICE_ENABLED}}": "true" if cfg.get("voice_enabled") else "false",
     }.items():
         html = html.replace(k, v)
     return html, 200, {"Content-Type": "text/html; charset=utf-8"}
@@ -1657,6 +1658,64 @@ def demo_chat_api(slug):
         reply, promo_choices = meta_bot.generate_reply(client, cfg, f"demo:{slug}:{session_id}", user_text,
                                         notify_fn=_push_line, line_user_id=LINE_USER_ID, slug=slug)
         return jsonify({"success": True, "reply": reply, "promo_choices": promo_choices or []})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"success": False, "error": "ขออภัยค่ะ ระบบขัดข้องชั่วคราว"}), 500
+
+
+@app.route("/api/demo/chat/<slug>/voice", methods=["POST"])
+def demo_chat_voice_api(slug):
+    """
+    ฟีเจอร์เสียงทดลอง (23 ก.ค. 2026) — เฉพาะ config ที่เปิด "voice_enabled": true เท่านั้น
+    (ตอนนี้มีแค่ configs/rangkafae.json) ไม่แตะ webhook Messenger จริงของร้านไหนเลย
+    รับไฟล์เสียง → ai_guard.transcribe_audio() → meta_bot.generate_reply() (ฟังก์ชันเดียวกับ
+    /api/demo/chat/<slug> และ Lullabell จริง) → ai_guard.text_to_speech() → คืน JSON พร้อม audio base64
+    """
+    if "/" in slug or ".." in slug or not meta_bot.cfg_exists(slug):
+        return jsonify({"success": False, "error": "ไม่พบร้านนี้"}), 404
+    cfg = meta_bot.load_cfg(slug)
+    if not cfg.get("voice_enabled"):
+        return jsonify({"success": False, "error": "ร้านนี้ยังไม่เปิดฟีเจอร์เสียง"}), 404
+    if not ANTHROPIC_API_KEY:
+        return jsonify({"success": False, "error": "ไม่ได้ตั้ง ANTHROPIC_API_KEY"}), 400
+
+    # จำกัดคนละส่วนกับข้อความ (DEMO_CHAT_LIMIT) — เสียง (Gemini audio + TTS) แพงกว่าต่อครั้ง
+    ok, left = ai_guard.rate_limit(ai_guard.client_ip(request) + f":demo-voice:{slug}",
+                                   limit=int(os.environ.get("DEMO_VOICE_LIMIT", "10")))
+    if not ok:
+        return jsonify({
+            "success": False,
+            "error": "ลองส่งเสียงไปเยอะแล้ววันนี้ครับ 😊 พรุ่งนี้ลองใหม่ได้ หรือพิมพ์คุยต่อได้เลย",
+            "rate_limited": True,
+        }), 429
+
+    audio_file = request.files.get("audio")
+    session_id = (request.form.get("session_id") or "anon").strip()[:80]
+    if not audio_file:
+        return jsonify({"success": False, "error": "ไม่มีไฟล์เสียง"}), 400
+
+    try:
+        audio_bytes = audio_file.read()
+        mime_type = audio_file.mimetype or "audio/webm"
+        transcript = ai_guard.transcribe_audio(audio_bytes, mime_type)
+        if not transcript:
+            return jsonify({"success": False, "error": "ฟังไม่ออกค่ะ ลองพูดใหม่อีกทีได้ไหมคะ"}), 200
+
+        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        reply, promo_choices = meta_bot.generate_reply(
+            client, cfg, f"demo-voice:{slug}:{session_id}", transcript,
+            notify_fn=_push_line, line_user_id=LINE_USER_ID, slug=slug)
+
+        audio_reply = ai_guard.text_to_speech(reply)
+        audio_b64 = base64.b64encode(audio_reply).decode("ascii") if audio_reply else ""
+
+        return jsonify({
+            "success": True,
+            "transcript": transcript,
+            "reply": reply,
+            "promo_choices": promo_choices or [],
+            "audio_base64": audio_b64,
+        })
     except Exception as e:
         traceback.print_exc()
         return jsonify({"success": False, "error": "ขออภัยค่ะ ระบบขัดข้องชั่วคราว"}), 500
