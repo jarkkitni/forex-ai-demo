@@ -23,13 +23,16 @@
     "fb": "รังกาแฟ (เพจนี้เลยค่ะ ทักแชทได้ตลอด)",
     "ig": "-",
     "email": "",
-    "address": "เชียงใหม่ (ย่านตัวเมือง)",
-    "map_link": "",
+    "address": "ย่านสันติธรรม เชียงใหม่",
+    "map_link": "https://maps.app.goo.gl/f4RDLJUTknWW5sFMA",
     "map_image": "",
     "map_attachment_id": "",
     "map_attachment_id_ig": "",
     "parking": "",
-    "landmarks": []
+    "landmarks": [
+      "ตรงข้าม AhaHotel",
+      "ติดกับบ้านสันติธรรม"
+    ]
   },
 
   "gift": "🎁 ลูกค้าใหม่รับส่วนลด 10% เครื่องดื่มแก้วแรกค่ะ",
