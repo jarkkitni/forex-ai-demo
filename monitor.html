@@ -637,6 +637,10 @@ async function loadSeo(){
           <div style="font-size:22px;font-weight:800;color:${d.organic_orders_7d?'var(--green)':'var(--dim)'}">
             ${d.organic_orders_7d}${d.conversion_pct?` <span style="font-size:12px">(${d.conversion_pct}%)</span>`:''}</div>
           <div style="font-size:10.5px;color:var(--dim)">💰 SEO → สั่งซื้อจริง</div></div>
+        <div style="flex:1;min-width:110px;background:${d.line_clicks_7d?'rgba(6,199,85,.12)':'var(--bg)'};
+             border:1px solid ${d.line_clicks_7d?'#06c755':'var(--border)'};border-radius:10px;padding:11px">
+          <div style="font-size:22px;font-weight:800;color:${d.line_clicks_7d?'#06c755':'var(--dim)'}">${d.line_clicks_7d||0}</div>
+          <div style="font-size:10.5px;color:var(--dim)">💬 กดทักไลน์จริง (7 วัน)</div></div>
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px">

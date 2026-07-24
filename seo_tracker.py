@@ -27,6 +27,9 @@ SEO_PATHS = [
     "/bot-ran-serm-suay", "/bot-ran-ahan", "/n8n-automation",
 ]
 
+# path ปุ่ม "ทักไลน์จริง" (Lullabell) ในหน้า /portfolio — /go/lullabell-line ใน api_server.py
+LULLABELL_LINE_CLICK_PATH = "/go/lullabell-line"
+
 # บอท/crawler — ไม่นับเป็นคนจริง แต่บันทึกไว้ดูว่า Googlebot มาแล้วยัง
 BOT_UA = re.compile(
     r"googlebot|bingbot|slurp|duckduckbot|baiduspider|yandex|facebookexternalhit|"
@@ -179,6 +182,24 @@ def log_order(source: str, plan: str = "") -> None:
         print(f"[SEO] log_order fail: {e}", flush=True)
 
 
+def log_line_click(source: str = "portfolio") -> None:
+    """บันทึกคนกดปุ่ม "ทักไลน์จริง" (Lullabell) ในหน้า /portfolio — แยกจาก log() เพราะปุ่มนี้
+    อยู่ในเว็บเราเอง referrer ตอนคลิกจะเป็นเว็บเราเองเสมอ ซึ่ง log() จะข้ามทิ้งเป็น "เดินในเว็บ"
+    (ดูเงื่อนไข "forex-ai-demo.onrender.com" in ref ด้านบน) — มิเรอร์ log_order() ที่ POST ตรง
+    เข้า seo_hits โดยไม่เช็ค referrer เหมือนกัน"""
+    if not is_configured():
+        return
+    try:
+        requests.post(
+            f"{SUPABASE_URL}/rest/v1/seo_hits",
+            headers=_hdrs({"Prefer": "return=minimal"}),
+            json={"path": LULLABELL_LINE_CLICK_PATH, "source": source or "portfolio", "is_bot": False},
+            timeout=4,
+        )
+    except Exception as e:
+        print(f"[SEO] log_line_click fail: {e}", flush=True)
+
+
 def _get(params: str) -> list:
     r = requests.get(f"{SUPABASE_URL}/rest/v1/seo_hits?{params}",
                      headers=_hdrs(), timeout=8)
@@ -214,6 +235,9 @@ def summary() -> dict:
             by_page[r["path"]] = by_page.get(r["path"], 0) + 1
 
     organic = by_source.get("google", 0) + by_source.get("bing", 0)
+
+    # กดปุ่ม "ทักไลน์จริง" (Lullabell) กี่ครั้ง — log_line_click() เขียน path นี้แยกไว้แล้ว
+    line_clicks_7d = sum(1 for r in humans if r["path"] == LULLABELL_LINE_CLICK_PATH)
 
     # คำค้นที่พาคนมา (เท่าที่ search engine ยอมส่งมาให้)
     kw = {}
@@ -269,4 +293,5 @@ def summary() -> dict:
         "organic_orders_7d": organic_orders,
         "orders_by_source": orders_by_source,
         "conversion_pct": conv_rate,
+        "line_clicks_7d": line_clicks_7d,
     }

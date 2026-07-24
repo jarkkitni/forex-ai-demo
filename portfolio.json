@@ -15,7 +15,9 @@
       "matches": ["ตอบกลับลูกค้าอัตโนมัติ + เชื่อมต่อ AI", "เก็บประวัติการสนทนาลงฐานข้อมูล"],
       "tech": ["LINE Messaging API", "Meta Send API", "Claude AI", "Python", "Supabase"],
       "link": "/beauty",
-      "linkLabel": "ดูตัวอย่างบอท →"
+      "linkLabel": "ดูตัวอย่างบอท →",
+      "link2": "/go/lullabell-line",
+      "link2Label": "💬 ทักไลน์จริงเลย (คุยกับบอทจริง) →"
     },
     {
       "tag": "📊 Dashboard + KPI เรียลไทม์",

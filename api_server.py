@@ -2842,6 +2842,15 @@ def beauty_demo():
             return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
 
 
+@app.route("/go/lullabell-line")
+def go_lullabell_line():
+    """ปุ่ม "ทักไลน์จริง" ในหน้า /portfolio → นับคลิกแยก (24 ก.ค. 2026 — ไม่ใช้ _track_visit ปกติ
+    เพราะ referrer ตอนคลิกจะเป็นเว็บเราเองเสมอ โดน seo_tracker.log() ข้ามทิ้งเป็น "เดินในเว็บ")
+    แล้วเด้งไปแอดเพื่อน LINE OA จริงของ Lullabell (@377fjobt)"""
+    seo_tracker.log_line_click(source=request.args.get("src", "portfolio"))
+    return redirect("https://lin.ee/xHA5ylB", code=302)
+
+
 @app.route("/")
 def index():
     """หน้าแรก = หน้าขาย BotKit (22 ก.ค. 2026)
