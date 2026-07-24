@@ -10,12 +10,16 @@ ENV ที่ใช้:
 
 PAPER-SAFE: ไม่มีการเงิน ไม่มีลบข้อมูล — แค่รับ/ตอบข้อความ
 """
-import os, json, hmac, hashlib, time, re, traceback
+import os, json, hmac, hashlib, time, re, traceback, uuid, base64
 from datetime import datetime, timezone
 import requests
 import seo_tracker  # ใช้ SUPABASE_URL / SUPABASE_KEY ร่วมกัน (multi-tenant page routing, เหมือน fastwork_hunter)
 
 GRAPH = "https://graph.facebook.com/v21.0"
+# เก็บ constant นี้แยกจาก BASE_URL ใน api_server.py ตั้งใจ (กัน circular import — api_server import
+# meta_bot อยู่แล้ว) ใช้แค่สร้าง URL ไฟล์เสียง .m4a ที่ส่งให้ LINE fetch เท่านั้น ค่าต้องตรงกับ
+# api_server.py:BASE_URL เสมอถ้าเปลี่ยนโดเมนในอนาคต
+_SELF_BASE_URL = "https://forex-ai-demo.onrender.com"
 
 # ---- ความจำการสนทนาสั้นๆ ต่อผู้ส่ง (in-memory, รีเซ็ตเมื่อ restart) ----
 _history: dict = {}      # sender_id -> [(role, text), ...]  เก็บ 8 เทิร์นล่าสุด
@@ -851,10 +855,17 @@ def verify_line_signature(channel_secret: str, body_bytes: bytes, header: str) -
     return hmac.compare_digest(expected, header)
 
 
-def send_line_reply(channel_token: str, reply_token: str, text: str) -> tuple:
-    """ตอบกลับผ่าน LINE reply API (ฟรี ไม่กินโควต้า push)"""
+def send_line_reply(channel_token: str, reply_token: str, text: str,
+                     audio_url: str = "", audio_ms: int = 0) -> tuple:
+    """ตอบกลับผ่าน LINE reply API (ฟรี ไม่กินโควต้า push)
+    audio_url/audio_ms (24 ก.ค. 2026, ทางเลือก): ถ้าใส่มา จะแนบ audio message ต่อท้ายข้อความในการ
+    ตอบครั้งเดียวกัน (LINE Reply API ส่งได้สูงสุด 5 message/ครั้งอยู่แล้ว) — ไม่ใส่ก็ทำงานเหมือนเดิม
+    เป๊ะๆ (ส่งแค่ข้อความ) ไม่กระทบ caller เดิมที่เรียกแบบ 3 argument"""
     if not channel_token or not reply_token:
         return 0, "no token/reply_token"
+    messages = [{"type": "text", "text": text[:4900]}]
+    if audio_url and audio_ms:
+        messages.append({"type": "audio", "originalContentUrl": audio_url, "duration": audio_ms})
     try:
         r = requests.post(
             f"{LINE_API}/reply",
@@ -862,12 +873,41 @@ def send_line_reply(channel_token: str, reply_token: str, text: str) -> tuple:
                 "Authorization": f"Bearer {channel_token}",
                 "Content-Type": "application/json",
             },
-            json={"replyToken": reply_token, "messages": [{"type": "text", "text": text[:4900]}]},
+            json={"replyToken": reply_token, "messages": messages},
             timeout=15,
         )
         return r.status_code, r.text[:300]
     except Exception as e:
         return 0, str(e)[:200]
+
+
+def _download_line_content(message_id: str, channel_token: str) -> bytes | None:
+    """โหลดไฟล์เสียง/รูปที่ลูกค้าส่งมาทาง LINE — LINE ไม่ได้แนบ url ตรงๆ แบบ Meta ต้องขอผ่าน
+    content API ด้วย message id + channel token (24 ก.ค. 2026)"""
+    try:
+        r = requests.get(
+            f"https://api-data.line.me/v2/bot/message/{message_id}/content",
+            headers={"Authorization": f"Bearer {channel_token}"},
+            timeout=20,
+        )
+        r.raise_for_status()
+        return r.content
+    except Exception as e:
+        print(f"[meta_bot/line] โหลดไฟล์เสียงล้มเหลว message_id={message_id}: {e}", flush=True)
+        return None
+
+
+def _save_line_tts_audio(audio_bytes: bytes) -> str:
+    """เซฟไฟล์เสียงตอบกลับ (.m4a) ลง static/tts_line/ แล้วคืน URL เต็มให้ LINE fetch ได้
+    (24 ก.ค. 2026) — โฟลเดอร์นี้ serve อยู่แล้วผ่าน route /static/<path> ที่มีอยู่แล้วใน
+    api_server.py ไม่ต้องเพิ่ม route ใหม่ · ไฟล์เป็น ephemeral ตาม Render free tier disk อยู่แล้ว
+    ไม่ต้องเขียน cleanup job แยก"""
+    folder = os.path.join(os.path.dirname(__file__), "static", "tts_line")
+    os.makedirs(folder, exist_ok=True)
+    fname = f"{uuid.uuid4().hex}.m4a"
+    with open(os.path.join(folder, fname), "wb") as f:
+        f.write(audio_bytes)
+    return f"{_SELF_BASE_URL}/static/tts_line/{fname}"
 
 
 def handle_line(data: dict, client, channel_token: str, slug: str = "lullabell",
@@ -876,6 +916,11 @@ def handle_line(data: dict, client, channel_token: str, slug: str = "lullabell",
     รับ payload จาก LINE Messaging API webhook ของร้านลูกค้า (เช่น @lullabell)
     ใช้ AI advisor logic เดียวกับ handle() (FB/IG) — ต่างกันแค่ช่องทางรับ-ส่ง
     หมายเหตุ: ใช้ channel_token/channel_secret ของ "ร้านลูกค้า" ไม่ใช่ของ ForexAI Pro เอง (คนละ LINE OA)
+
+    24 ก.ค. 2026 — เพิ่มรองรับข้อความเสียง (type="audio") นอกจาก text เดิม: ถอดเสียงผ่าน
+    ai_guard.transcribe_audio() แล้วส่งต่อเข้า generate_reply() ตัวเดียวกับ path ข้อความ/FB/IG
+    ทุกอย่าง (ไม่เขียน logic ตอบคำถามซ้ำ) จากนั้น TTS กลับเป็น .m4a แนบไปกับข้อความตอบ — TTS ล้มเหลว
+    ก็ยังส่งข้อความตอบได้ตามปกติ (best-effort เหมือน demo รังกาแฟ)
     """
     result = {"replied": 0, "skipped": 0}
     try:
@@ -884,18 +929,40 @@ def handle_line(data: dict, client, channel_token: str, slug: str = "lullabell",
         return {"error": f"config: {e}"}
 
     for ev in data.get("events", []):
-        if ev.get("type") != "message" or ev.get("message", {}).get("type") != "text":
+        msg = ev.get("message", {})
+        msg_type = msg.get("type", "")
+        if ev.get("type") != "message" or msg_type not in ("text", "audio"):
             result["skipped"] += 1
             continue
         # กัน LINE ส่ง webhook event เดิมซ้ำ (at-least-once delivery เหมือน Meta) — ใช้ message.id
         # ที่ LINE แปะมาให้ต่อข้อความเป็นตัวกันซ้ำ (แพทเทิร์นเดียวกับ handle() ของ FB/IG)
-        dedup_key = ev.get("message", {}).get("id", "")
+        dedup_key = msg.get("id", "")
         if _already_processed(dedup_key):
             result["skipped"] += 1
             continue
         sender = ev.get("source", {}).get("userId", "")
         reply_token = ev.get("replyToken", "")
-        user_text = (ev.get("message", {}).get("text") or "").strip()
+
+        if msg_type == "audio":
+            import ai_guard
+            audio_bytes = _download_line_content(msg.get("id", ""), channel_token)
+            if not audio_bytes:
+                result["skipped"] += 1
+                continue
+            try:
+                user_text = ai_guard.transcribe_audio(audio_bytes, "audio/m4a").strip()
+            except Exception as e:
+                print(f"[meta_bot/line] transcribe_audio ล้มเหลว sender={sender}: {e}", flush=True)
+                send_line_reply(channel_token, reply_token, "ฟังไม่ออกค่ะ ลองพูดใหม่อีกทีได้ไหมคะ 🤍")
+                result["skipped"] += 1
+                continue
+            if not user_text:
+                send_line_reply(channel_token, reply_token, "ฟังไม่ออกค่ะ ลองพูดใหม่อีกทีได้ไหมคะ 🤍")
+                result["skipped"] += 1
+                continue
+        else:
+            user_text = (msg.get("text") or "").strip()
+
         if not sender or not user_text:
             result["skipped"] += 1
             continue
@@ -915,7 +982,17 @@ def handle_line(data: dict, client, channel_token: str, slug: str = "lullabell",
         try:
             reply, _promo_choices = generate_reply(client, cfg, history_key, user_text,
                                     notify_fn=notify_fn, line_user_id=line_user_id, slug=slug)
-            send_line_reply(channel_token, reply_token, reply)
+            # เสียงตอบกลับ — ใส่เฉพาะตอนลูกค้าทักมาเป็นเสียงเหมือนกัน (ทักพิมพ์ ตอบข้อความอย่างเดียว
+            # เหมือนเดิม 100% ไม่มี regression กับลูกค้าที่พิมพ์คุยตามปกติ)
+            audio_url, audio_ms = "", 0
+            if msg_type == "audio":
+                audio_bytes_out = ai_guard.text_to_speech(reply, encoding="M4A")
+                if audio_bytes_out:
+                    audio_url = _save_line_tts_audio(audio_bytes_out)
+                    # ประมาณความยาวเสียงจากจำนวนตัวอักษร (คร่าวๆ พอ ไม่ต้อง decode m4a จริงจัง) —
+                    # กันเคส duration ผิดจนเกินไฟล์จริงมาก LINE อาจปฏิเสธ ใส่ margin เผื่อไว้
+                    audio_ms = max(2000, min(len(reply) * 90, 60000))
+            send_line_reply(channel_token, reply_token, reply, audio_url=audio_url, audio_ms=audio_ms)
             result["replied"] += 1
         except Exception as e:
             # เดิม except เปล่าไม่ log อะไรเลย — เจอเคสจริง 20 ก.ค. ที่ลูกค้าโดน fallback message

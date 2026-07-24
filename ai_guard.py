@@ -537,10 +537,14 @@ def transcribe_audio(audio_bytes: bytes, mime_type: str) -> str:
     raise RuntimeError(f"Gemini ถอดเสียงไม่สำเร็จทุกโมเดล: {last_exc}")
 
 
-def text_to_speech(text: str, voice: str = "th-TH-Standard-A") -> bytes | None:
+def text_to_speech(text: str, voice: str = "th-TH-Standard-A", encoding: str = "MP3") -> bytes | None:
     """แปลงข้อความเป็นเสียงผ่าน Google Cloud Text-to-Speech — best-effort เท่านั้น
     คืน None (+ log) ถ้าพัง แทนที่จะ raise เพราะไม่อยากให้ TTS ที่พังไปบัง transcript/reply
-    ข้อความที่ได้มาแล้วสำเร็จก่อนหน้านี้ (ผู้เรียกยังส่ง text กลับให้ลูกค้าอ่านได้แม้ไม่มีเสียง)"""
+    ข้อความที่ได้มาแล้วสำเร็จก่อนหน้านี้ (ผู้เรียกยังส่ง text กลับให้ลูกค้าอ่านได้แม้ไม่มีเสียง)
+
+    encoding: "MP3" (ค่าเริ่มต้น — ใช้กับ <audio> ในเบราว์เซอร์ เช่น demo รังกาแฟ) หรือ "M4A"
+    (24 ก.ค. 2026 — LINE Messaging API บังคับไฟล์เสียงต้องเป็น .m4a เท่านั้นเวลาส่ง audio message
+    Google Cloud TTS รองรับ M4A ตรงๆ ไม่ต้องพึ่ง ffmpeg แปลงเพิ่ม)"""
     if not GOOGLE_TTS_API_KEY:
         print("[ai_guard] text_to_speech: GOOGLE_TTS_API_KEY ยังไม่ได้ตั้ง — ข้ามเสียง", flush=True)
         return None
@@ -551,13 +555,13 @@ def text_to_speech(text: str, voice: str = "th-TH-Standard-A") -> bytes | None:
             json={
                 "input": {"text": text[:900]},   # กันข้อความยาวเกินจนช้า/แพงเกินจำเป็นสำหรับ demo
                 "voice": {"languageCode": "th-TH", "name": voice},
-                "audioConfig": {"audioEncoding": "MP3"},
+                "audioConfig": {"audioEncoding": encoding},
             },
             timeout=20,
         )
         r.raise_for_status()
-        b64_mp3 = r.json().get("audioContent", "")
-        return base64.b64decode(b64_mp3) if b64_mp3 else None
+        b64_audio = r.json().get("audioContent", "")
+        return base64.b64decode(b64_audio) if b64_audio else None
     except Exception as e:
         print(f"[ai_guard] text_to_speech ล้มเหลว: {str(e)[:300]}", flush=True)
         return None
