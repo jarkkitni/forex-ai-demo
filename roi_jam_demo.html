@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>รอยจำ — เล่มภาพเก็บความทรงจำ</title>
+<meta name="description" content="เว็บตัวอย่างร้านทำเล่มภาพ/นิตยสารส่วนตัวจากความทรงจำ — เดโมนำเสนอลูกค้า">
+<style>
+  :root{
+    --ink:#201A1D;
+    --paper:#F4EFE6;
+    --card:#FFFDF8;
+    --safelight:#C4432A;
+    --safelight-strong:#A5341E;
+    --sprocket:#8A8172;
+    --teal:#35564F;
+    --line: rgba(32,26,29,.14);
+    --shadow: rgba(32,26,29,.18);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --ink:#EDE6DA;
+      --paper:#14110F;
+      --card:#201A1D;
+      --safelight:#E2643F;
+      --safelight-strong:#F08462;
+      --sprocket:#A79E8E;
+      --teal:#5B8B80;
+      --line: rgba(237,230,218,.14);
+      --shadow: rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ink:#EDE6DA; --paper:#14110F; --card:#201A1D;
+    --safelight:#E2643F; --safelight-strong:#F08462; --sprocket:#A79E8E; --teal:#5B8B80;
+    --line: rgba(237,230,218,.14); --shadow: rgba(0,0,0,.5);
+  }
+  :root[data-theme="light"]{
+    --ink:#201A1D; --paper:#F4EFE6; --card:#FFFDF8;
+    --safelight:#C4432A; --safelight-strong:#A5341E; --sprocket:#8A8172; --teal:#35564F;
+    --line: rgba(32,26,29,.14); --shadow: rgba(32,26,29,.18);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Helvetica Neue",Arial,sans-serif;
+    line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  @media (prefers-reduced-motion:no-preference){
+    .tile, .step, details{ transition: transform .35s ease, box-shadow .35s ease; }
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{ scroll-behavior:auto !important; transition:none !important; animation:none !important; }
+  }
+
+  .serif{ font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif; }
+  .mono{ font-family:"SF Mono","Cascadia Code",Consolas,"Liberation Mono",monospace; font-variant-numeric:tabular-nums; }
+
+  .wrap{ max-width:1080px; margin:0 auto; padding:0 24px; }
+
+  .perf{
+    height:14px;
+    background-image: radial-gradient(circle, var(--paper) 3.4px, transparent 3.6px);
+    background-color: var(--ink);
+    background-size: 26px 14px;
+    background-position: 13px center;
+  }
+
+  /* ---------- header ---------- */
+  header.top{ background:var(--ink); color:var(--paper); }
+  .navrow{ display:flex; align-items:center; justify-content:space-between; padding:20px 24px; }
+  .logo{ font-size:22px; font-weight:700; letter-spacing:.5px; }
+  .logo span{ color:var(--safelight-strong); }
+  nav.links{ display:flex; gap:28px; font-size:14px; }
+  nav.links a{ color:var(--paper); opacity:.82; text-decoration:none; }
+  nav.links a:hover, nav.links a:focus-visible{ opacity:1; text-decoration:underline; text-underline-offset:4px; }
+  a:focus-visible, summary:focus-visible, button:focus-visible{
+    outline:2px solid var(--safelight); outline-offset:3px;
+  }
+
+  /* ---------- hero ---------- */
+  .hero{ background:var(--ink); color:var(--paper); padding:64px 0 88px; }
+  .hero-grid{ display:grid; grid-template-columns: 1.05fr .95fr; gap:56px; align-items:center; }
+  @media (max-width:860px){ .hero-grid{ grid-template-columns:1fr; } }
+  .eyebrow{
+    font-size:12.5px; letter-spacing:2.2px; text-transform:uppercase; color:var(--safelight-strong);
+    font-weight:700; margin:0 0 14px;
+  }
+  h1{
+    font-size:clamp(32px,4.4vw,50px); line-height:1.12; margin:0 0 22px; text-wrap:balance;
+    font-weight:600;
+  }
+  .hero p.lead{ font-size:17px; max-width:46ch; color:color-mix(in srgb, var(--paper) 82%, transparent); margin:0 0 30px; }
+  .cta-row{ display:flex; gap:14px; flex-wrap:wrap; }
+  .btn{
+    display:inline-flex; align-items:center; gap:8px; padding:13px 24px; font-size:15px; font-weight:700;
+    text-decoration:none; border:1px solid transparent; cursor:pointer; font-family:inherit;
+  }
+  .btn-primary{ background:var(--safelight); color:#fff8f4; }
+  .btn-primary:hover{ background:var(--safelight-strong); }
+  .btn-ghost{ background:transparent; color:var(--paper); border-color: color-mix(in srgb, var(--paper) 40%, transparent); }
+  .btn-ghost:hover{ border-color:var(--paper); }
+
+  .sheet{ position:relative; }
+  .sheet-grid{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:14px;
+  }
+  .tile{
+    aspect-ratio:4/5; padding:8px 8px 0; background:var(--card);
+    box-shadow:0 10px 24px -12px var(--shadow);
+  }
+  .tile .shot{ height:78%; }
+  .tile:nth-child(1) .shot{ background:linear-gradient(155deg,#dfe9e6,#7fa79c 60%,#3d6459); }
+  .tile:nth-child(2) .shot{ background:linear-gradient(160deg,#f3ded1,#e2a678 55%,#a85f3a); }
+  .tile:nth-child(3) .shot{ background:linear-gradient(145deg,#e9e2ee,#a9a0c9 60%,#544a7a); }
+  .tile:nth-child(4) .shot{ background:linear-gradient(150deg,#fbe7d6,#e8b98f 55%,#b97a4b); }
+  .tile:nth-child(5) .shot{ background:linear-gradient(160deg,#e2ecec,#8fb9bb 55%,#3f6668); }
+  .tile:nth-child(6) .shot{ background:linear-gradient(150deg,#f1e0df,#d59a95 55%,#8f4842); }
+  .tile:nth-child(2n){ transform:rotate(1.4deg); }
+  .tile:nth-child(2n+1){ transform:rotate(-1deg); }
+  .tile figcaption{
+    display:flex; justify-content:space-between; font-size:10.5px; color:var(--ink);
+    padding:7px 1px 9px; opacity:.72;
+  }
+  figure{ margin:0; }
+
+  /* ---------- section shell ---------- */
+  section{ padding:76px 0; }
+  .kicker{
+    font-size:12.5px; letter-spacing:2px; text-transform:uppercase; color:var(--safelight);
+    font-weight:700; margin:0 0 10px;
+  }
+  h2{ font-size:clamp(26px,3vw,34px); margin:0 0 14px; text-wrap:balance; font-weight:600; }
+  .section-intro{ max-width:56ch; color:color-mix(in srgb, var(--ink) 68%, transparent); margin:0 0 44px; }
+
+  /* ---------- products ---------- */
+  .products{ background:var(--card); border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+  .prod-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:26px; }
+  @media (max-width:920px){ .prod-grid{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:540px){ .prod-grid{ grid-template-columns:1fr; } }
+  .prod{ border:1px solid var(--line); background:var(--paper); }
+  .prod-cover{ aspect-ratio:3/4; position:relative; overflow:hidden; }
+  .prod-cover .frameno{
+    position:absolute; top:9px; left:10px; font-size:10px; letter-spacing:.5px; color:#fff;
+    opacity:.85; text-shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+  .prod:nth-child(1) .prod-cover{ background:linear-gradient(165deg,#274c46,#0f2622); }
+  .prod:nth-child(2) .prod-cover{ background:linear-gradient(165deg,#5a3a2e,#2d1c16); }
+  .prod:nth-child(3) .prod-cover{ background:linear-gradient(165deg,#3c3350,#1c1729); }
+  .prod:nth-child(4) .prod-cover{ background:linear-gradient(165deg,#5c2e33,#2a1417); }
+  .prod-body{ padding:16px 18px 20px; }
+  .prod-body h3{ font-size:17px; margin:0 0 6px; font-weight:600; }
+  .prod-meta{ font-size:12.5px; color:color-mix(in srgb, var(--ink) 60%, transparent); margin:0 0 12px; }
+  .prod-price{ display:flex; align-items:baseline; gap:6px; font-size:13px; }
+  .prod-price b{ font-size:19px; }
+  .prod-tag{
+    display:inline-block; font-size:10.5px; letter-spacing:.4px; padding:3px 8px; margin-bottom:10px;
+    background: color-mix(in srgb, var(--teal) 16%, transparent); color:var(--teal); font-weight:700;
+  }
+
+  /* ---------- process ---------- */
+  .process-strip{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:0; position:relative;
+    border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+  }
+  @media (max-width:760px){ .process-strip{ grid-template-columns:1fr; } }
+  .step{ padding:34px 30px; border-right:1px solid var(--line); }
+  .step:last-child{ border-right:none; }
+  @media (max-width:760px){ .step{ border-right:none; border-bottom:1px solid var(--line); } .step:last-child{ border-bottom:none; } }
+  .step .no{ font-size:12px; color:var(--safelight); margin-bottom:10px; font-weight:700; }
+  .step h3{ font-size:17px; margin:0 0 8px; font-weight:600; }
+  .step p{ font-size:14px; margin:0; color:color-mix(in srgb, var(--ink) 68%, transparent); }
+
+  /* ---------- faq ---------- */
+  .faq-list{ max-width:720px; }
+  details{ border-bottom:1px solid var(--line); padding:18px 0; }
+  summary{
+    cursor:pointer; font-size:16px; font-weight:600; list-style:none; display:flex; justify-content:space-between;
+    align-items:center; gap:16px;
+  }
+  summary::-webkit-details-marker{ display:none; }
+  summary::after{ content:"+"; font-size:20px; color:var(--safelight); flex-shrink:0; }
+  details[open] summary::after{ content:"–"; }
+  details p{ margin:12px 0 0; font-size:14.5px; color:color-mix(in srgb, var(--ink) 70%, transparent); max-width:62ch; }
+
+  /* ---------- footer cta ---------- */
+  footer{ background:var(--ink); color:var(--paper); }
+  .foot-cta{ padding:66px 0 40px; text-align:center; }
+  .foot-cta h2{ color:var(--paper); }
+  .foot-fine{
+    border-top:1px solid color-mix(in srgb, var(--paper) 18%, transparent);
+    padding:20px 0 30px; font-size:12px; color:color-mix(in srgb, var(--paper) 55%, transparent);
+    display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;
+  }
+  .demo-badge{
+    display:inline-block; margin-top:26px; font-size:11.5px; letter-spacing:.4px;
+    color:color-mix(in srgb, var(--paper) 60%, transparent); border:1px solid color-mix(in srgb, var(--paper) 25%, transparent);
+    padding:5px 12px;
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap navrow">
+    <div class="logo serif">รอย<span>จำ</span></div>
+    <nav class="links">
+      <a href="#products">สินค้า</a>
+      <a href="#process">ขั้นตอน</a>
+      <a href="#faq">คำถามที่พบบ่อย</a>
+      <a href="#order">สั่งทำเล่ม</a>
+    </nav>
+  </div>
+</header>
+
+<div class="perf" aria-hidden="true"></div>
+
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <p class="eyebrow">เล่มภาพทำมือ · จัดหน้าโดยทีมงาน</p>
+      <h1 class="serif">เก็บความทรงจำให้เป็นเล่ม<br>ไม่ใช่แค่ไฟล์ในโทรศัพท์</h1>
+      <p class="lead">ส่งภาพที่ชอบมาทางไลน์ ทีมงานช่วยจัดหน้าและเลือกปกให้ ดูตัวอย่างก่อนพิมพ์จริงทุกเล่ม ไม่ต้องมีสกิลออกแบบเลยสักนิด</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="#order">ทักไลน์เริ่มทำเล่มแรก</a>
+        <a class="btn btn-ghost" href="#products">ดูแบบเล่ม/ราคา</a>
+      </div>
+    </div>
+    <div class="sheet">
+      <div class="sheet-grid">
+        <figure class="tile"><div class="shot"></div><figcaption><span>No. 03</span><span>ทะเลใต้ · ก.พ. 69</span></figcaption></figure>
+        <figure class="tile"><div class="shot"></div><figcaption><span>No. 07</span><span>งานบวชน้องชาย</span></figcaption></figure>
+        <figure class="tile"><div class="shot"></div><figcaption><span>No. 11</span><span>เชียงคาน 2569</span></figcaption></figure>
+        <figure class="tile"><div class="shot"></div><figcaption><span>No. 14</span><span>วันเกิดคุณย่า</span></figcaption></figure>
+        <figure class="tile"><div class="shot"></div><figcaption><span>No. 18</span><span>ทริปญี่ปุ่นหน้าหนาว</span></figcaption></figure>
+        <figure class="tile"><div class="shot"></div><figcaption><span>No. 22</span><span>รับปริญญาพี่สาว</span></figcaption></figure>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="perf" aria-hidden="true"></div>
+
+<section class="products" id="products">
+  <div class="wrap">
+    <p class="kicker">แบบเล่ม</p>
+    <h2 class="serif">เลือกเล่มที่เข้ากับเรื่องราวของคุณ</h2>
+    <p class="section-intro">ราคาเริ่มต้นต่อเล่ม ปรับขนาด/จำนวนหน้า/ปกได้ตามต้องการ คุยรายละเอียดกันได้ตอนทักสั่งทำ</p>
+    <div class="prod-grid">
+      <article class="prod">
+        <div class="prod-cover"><span class="frameno mono">TRV · A5</span></div>
+        <div class="prod-body">
+          <span class="prod-tag">ขายดี</span>
+          <h3 class="serif">เล่มภาพทริป</h3>
+          <p class="prod-meta">ปกแข็ง A5 · กระดาษด้าน · 20–40 หน้า</p>
+          <p class="prod-price mono">เริ่มต้น <b>฿690</b></p>
+        </div>
+      </article>
+      <article class="prod">
+        <div class="prod-cover"><span class="frameno mono">WED · A4</span></div>
+        <div class="prod-body">
+          <span class="prod-tag">งานพิธี</span>
+          <h3 class="serif">อัลบั้มครอบครัว/งานแต่ง</h3>
+          <p class="prod-meta">ปกแข็งหุ้มผ้า A4 · 30–60 หน้า</p>
+          <p class="prod-price mono">เริ่มต้น <b>฿1,290</b></p>
+        </div>
+      </article>
+      <article class="prod">
+        <div class="prod-cover"><span class="frameno mono">MAG · A4</span></div>
+        <div class="prod-body">
+          <span class="prod-tag">ทำง่าย เร็ว</span>
+          <h3 class="serif">นิตยสารภาพส่วนตัว</h3>
+          <p class="prod-meta">ปกอ่อน เข้าเล่มมุงหลังคา · 16–24 หน้า</p>
+          <p class="prod-price mono">เริ่มต้น <b>฿390</b></p>
+        </div>
+      </article>
+      <article class="prod">
+        <div class="prod-cover"><span class="frameno mono">PST · A6</span></div>
+        <div class="prod-body">
+          <span class="prod-tag">ของฝาก</span>
+          <h3 class="serif">ชุดโปสการ์ดภาพ</h3>
+          <p class="prod-meta">กระดาษเนื้อคอตตอน · ชุดละ 10 ใบ</p>
+          <p class="prod-price mono">เริ่มต้น <b>฿290</b></p>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="process">
+  <div class="wrap">
+    <p class="kicker">ขั้นตอน</p>
+    <h2 class="serif">จากภาพในมือถือ ถึงเล่มในมือคุณ</h2>
+    <p class="section-intro">3 ขั้นตอนเท่านั้น ไม่ต้องออกแบบเอง ไม่ต้องรอเรียนโปรแกรมจัดหน้า</p>
+  </div>
+  <div class="process-strip">
+    <div class="step">
+      <p class="no mono">01</p>
+      <h3 class="serif">ส่งภาพทางไลน์</h3>
+      <p>เลือกภาพที่ชอบส่งมาได้เลย ไม่จำกัดจำนวน ทีมงานช่วยคัดให้ได้ถ้าเยอะเกินไป</p>
+    </div>
+    <div class="step">
+      <p class="no mono">02</p>
+      <h3 class="serif">ทีมงานจัดหน้าให้</h3>
+      <p>เลือกขนาด ปก และสไตล์การจัดวาง ส่งตัวอย่างหน้าเล่มกลับมาให้ดูก่อนทุกครั้ง</p>
+    </div>
+    <div class="step">
+      <p class="no mono">03</p>
+      <h3 class="serif">ยืนยัน แล้วรอรับเล่ม</h3>
+      <p>พิมพ์จริงหลังคุณกดโอเคเท่านั้น จัดส่งถึงบ้านภายใน 2–3 วันทำการ</p>
+    </div>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="wrap">
+    <p class="kicker">คำถามที่พบบ่อย</p>
+    <h2 class="serif">ก่อนตัดสินใจสั่งทำ</h2>
+    <div class="faq-list">
+      <details open>
+        <summary>ใช้เวลานานแค่ไหนกว่าจะได้เล่ม?</summary>
+        <p>ปกติจัดหน้าเสร็จภายใน 2–3 วันหลังได้ภาพครบ จากนั้นพิมพ์และจัดส่งอีก 2–3 วันทำการ</p>
+      </details>
+      <details>
+        <summary>ต้องออกแบบเองไหม ไม่ถนัดเลย</summary>
+        <p>ไม่ต้องค่ะ ทีมงานจัดหน้าให้ทั้งหมดจากภาพที่ส่งมา คุณแค่เลือกสไตล์และดูตัวอย่างก่อนพิมพ์จริง</p>
+      </details>
+      <details>
+        <summary>ปรับแต่งได้แค่ไหน</summary>
+        <p>เลือกขนาด ปก จำนวนหน้า และสไตล์การจัดวางได้ ส่งภาพเพิ่มหรือสลับรูปได้ตลอดช่วงตรวจตัวอย่าง</p>
+      </details>
+      <details>
+        <summary>ค่าส่งเท่าไหร่ นานแค่ไหนถึงจะได้รับ</summary>
+        <p>ส่งฟรีทั่วประเทศเมื่อสั่งขั้นต่ำ ฿500 ปกติถึงภายใน 2–3 วันทำการหลังพิมพ์เสร็จ</p>
+      </details>
+      <details>
+        <summary>ถ้าไม่พอใจเล่มที่พิมพ์ออกมาทำอย่างไร</summary>
+        <p>ทุกเล่มจะส่งตัวอย่างหน้าเต็มให้ตรวจก่อนพิมพ์จริงเสมอ พิมพ์ก็ต่อเมื่อคุณกดยืนยันแล้วเท่านั้น</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<footer id="order">
+  <div class="wrap foot-cta">
+    <p class="kicker">พร้อมเริ่มหรือยัง</p>
+    <h2 class="serif">ส่งภาพแรกมาวันนี้ เล่มแรกของคุณเริ่มต้นที่ ฿290</h2>
+    <div class="cta-row" style="justify-content:center;margin-top:24px">
+      <a class="btn btn-primary" href="#">ทักไลน์สั่งทำเลย</a>
+    </div>
+    <p class="demo-badge mono">ตัวอย่างเว็บไซต์เพื่อนำเสนอลูกค้า · รอยจำ Demo</p>
+  </div>
+  <div class="wrap foot-fine">
+    <span>© 2026 รอยจำ — เล่มภาพเก็บความทรงจำ</span>
+    <span>ทำเล่มจากใจ ทุกหน้าจัดเองโดยทีมงาน</span>
+  </div>
+</footer>
+
+</body>
+</html>

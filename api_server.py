@@ -3028,6 +3028,15 @@ def beauty_demo():
             return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
 
 
+@app.route("/preview/roi-jam")
+def preview_roi_jam():
+    """เดโมร้านทำเล่มภาพ "รอยจำ" — เตรียมเสนอลูกค้า FastWork (nimnim, งาน "หาหาคนทำเว็บไซต์" 24 ก.ค. 2026)
+    เป็น one-off client pitch ไม่ใช่ BotKit vertical เลยไม่ผ่านระบบ demo_configs.json/_render_demo"""
+    html_path = os.path.join(os.path.dirname(__file__), "roi_jam_demo.html")
+    with open(html_path, "r", encoding="utf-8") as f:
+        return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
 @app.route("/go/lullabell-line")
 def go_lullabell_line():
     """ปุ่ม "ทักไลน์จริง" ในหน้า /portfolio → นับคลิกแยก (24 ก.ค. 2026 — ไม่ใช้ _track_visit ปกติ
