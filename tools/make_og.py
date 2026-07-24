@@ -39,7 +39,7 @@ def find_edge():
     sys.exit("❌ ไม่เจอ Microsoft Edge — แก้ EDGE_CANDIDATES ในไฟล์นี้")
 
 
-def card_html(h1: str, ac: str, ink: str, glow: str) -> str:
+def card_html(h1: str, ac: str, ink: str, glow: str, tagline: str, sub: str, price_pill: str) -> str:
     # ฟอนต์: Leelawadee UI / Tahoma = ฟอนต์ไทยที่มีอยู่ใน Windows ทุกเครื่อง
     # ถ้าใช้ฟอนต์ที่ไม่มีจริง Edge headless จะ fallback แล้วสระไทยลอย
     return f"""<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><style>
@@ -59,9 +59,9 @@ h1 em{{font-style:normal;color:{ac}}}
 .brand{{font-size:25px;color:#7d8dae}}
 </style></head><body><div class="wrap">
 <div class="bar"></div>
-<h1>{h1}<br><em>ลองฟรีก่อนตัดสินใจ</em></h1>
-<div class="sub">ตอบแชทอัตโนมัติ 24 ชม. · รับจองคิว · เก็บข้อมูลลูกค้าครบ</div>
-<div class="row"><div class="pill">เริ่ม ฿590/เดือน</div>
+<h1>{h1}<br><em>{tagline}</em></h1>
+<div class="sub">{sub}</div>
+<div class="row"><div class="pill">{price_pill}</div>
 <div class="brand">BotKit by Jark</div></div>
 </div></body></html>"""
 
@@ -74,9 +74,13 @@ def main():
 
     for slug, page in SEO_PAGES.items():
         ac, ink, glow = SEO_ACCENT.get(slug, SEO_ACCENT_DEFAULT)
+        # ดีฟอลต์ = ข้อความเดิมของ 6 หน้าแรก (แพ็กเกจรายเดือน ฿590) ทุกตัวอักษร — override เฉพาะหน้าที่โมเดลราคาต่างออกไป
+        tagline = page.get("og_tagline", "ลองฟรีก่อนตัดสินใจ")
+        sub = page.get("og_sub", "ตอบแชทอัตโนมัติ 24 ชม. · รับจองคิว · เก็บข้อมูลลูกค้าครบ")
+        price_pill = page.get("og_price_pill", "เริ่ม ฿590/เดือน")
         html_path = os.path.join(tmpdir, f"{slug}.html")
         with open(html_path, "w", encoding="utf-8") as f:
-            f.write(card_html(page["h1"], ac, ink, glow))
+            f.write(card_html(page["h1"], ac, ink, glow, tagline, sub, price_pill))
 
         # เขียนลง temp ที่ไม่มีช่องว่างในพาธก่อน แล้วค่อยย้าย (Edge งอแงกับพาธมีช่องว่าง)
         tmp_png = os.path.join(tmpdir, f"{slug}.png")
