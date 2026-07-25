@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>จัดการราคา — Shop Admin</title>
+<style>
+  :root{--bg:#0d1117;--card:#161b22;--line:#232a34;--text:#e9edf2;--muted:#9aa4b2;--accent:#3ddc97;--danger:#ff6b6b}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Sarabun',sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+  .wrap{max-width:640px;margin:0 auto;padding:40px 20px}
+  h1{font-size:22px;margin-bottom:6px}
+  .sub{color:var(--muted);font-size:14px;margin-bottom:28px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px;margin-bottom:16px}
+  input[type=password],input[type=text]{width:100%;background:#0d1117;border:1px solid var(--line);border-radius:8px;color:var(--text);padding:11px 12px;font-size:16px}
+  button{background:var(--accent);color:#062015;font-weight:700;border:none;border-radius:8px;padding:11px 20px;font-size:15px;cursor:pointer}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .msg{margin-top:12px;font-size:14px}
+  .msg.err{color:var(--danger)}
+  .msg.ok{color:var(--accent)}
+  .cat-title{font-size:17px;font-weight:700;margin:26px 0 10px;display:flex;align-items:center;gap:8px}
+  .grp-name{color:var(--muted);font-size:13px;margin:14px 0 6px;text-transform:uppercase;letter-spacing:.5px}
+  .hot-tag{background:rgba(61,220,151,.14);color:var(--accent);font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;margin-left:6px}
+  .item-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}
+  .item-row:last-child{border-bottom:none}
+  .item-name{grid-column:1/-1;font-size:14px;color:var(--text);margin-bottom:2px}
+  .item-row label{font-size:11px;color:var(--muted);display:block;margin-bottom:3px}
+  .save-bar{position:sticky;bottom:0;background:var(--bg);padding:16px 0;border-top:1px solid var(--line);margin-top:24px;display:flex;justify-content:flex-end;gap:10px;align-items:center}
+  .hint{color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const SLUG = location.pathname.split('/').filter(Boolean).pop();
+const $ = sel => document.querySelector(sel);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pinKey = 'shopadmin_pin_' + SLUG;
+
+async function api(path, opts) {
+  opts = opts || {};
+  const headers = Object.assign({'Content-Type': 'application/json'}, opts.headers || {});
+  const pin = localStorage.getItem(pinKey);
+  if (pin) headers['X-Shop-Admin-Pin'] = pin;
+  const res = await fetch('/api/shop-admin/' + SLUG + path, Object.assign({}, opts, {headers}));
+  return res.json();
+}
+
+function renderLogin(bizName, errMsg) {
+  $('#app').innerHTML = `
+    <div class="wrap">
+      <h1>${esc(bizName || SLUG)}</h1>
+      <div class="sub">จัดการราคา/โปรโมชั่นด้วยตัวเอง</div>
+      <div class="card">
+        <label style="display:block;margin-bottom:8px;font-size:14px;color:var(--muted)">รหัส PIN</label>
+        <input type="password" id="pinInput" inputmode="numeric" placeholder="••••">
+        <div style="margin-top:14px"><button id="loginBtn">เข้าสู่ระบบ</button></div>
+        ${errMsg ? `<div class="msg err">${esc(errMsg)}</div>` : ''}
+      </div>
+    </div>`;
+  $('#loginBtn').onclick = doLogin;
+  $('#pinInput').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  $('#pinInput').focus();
+}
+
+async function doLogin() {
+  const pin = $('#pinInput').value.trim();
+  if (!pin) return;
+  const r = await fetch('/api/shop-admin/' + SLUG + '/login', {
+    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({pin})
+  }).then(r => r.json());
+  if (r.success) {
+    localStorage.setItem(pinKey, pin);
+    loadEditor();
+  } else {
+    renderLogin(null, r.error || 'เข้าสู่ระบบไม่สำเร็จ');
+  }
+}
+
+let originalItems = {};   // "cat_id:group_idx:item_idx" -> {p, d}
+let dirty = {};
+
+function itemKey(catId, gIdx, iIdx) { return catId + ':' + gIdx + ':' + iIdx; }
+
+function renderEditor(categories) {
+  originalItems = {};
+  dirty = {};
+  const catsHtml = categories.map(cat => `
+    <div class="cat-title">${esc(cat.emoji)} ${esc(cat.name)}</div>
+    ${cat.groups.map(grp => `
+      <div class="grp-name">${esc(grp.name)}${grp.hot ? '<span class="hot-tag">โปรฮอต</span>' : ''}</div>
+      ${grp.items.map(it => {
+        const key = itemKey(cat.id, grp.group_idx, it.idx);
+        originalItems[key] = {p: it.p, d: it.d};
+        return `
+        <div class="item-row" data-key="${esc(key)}">
+          <div class="item-name">${esc(it.n)}</div>
+          <div>
+            <label>ราคา</label>
+            <input type="text" class="p-input" value="${esc(it.p)}">
+          </div>
+          <div>
+            <label>รายละเอียด</label>
+            <input type="text" class="d-input" value="${esc(it.d)}">
+          </div>
+        </div>`;
+      }).join('')}
+    `).join('')}
+  `).join('');
+  $('#app').innerHTML = `
+    <div class="wrap">
+      <h1>จัดการราคา</h1>
+      <div class="sub">แก้ราคา/รายละเอียดแล้วกด "บันทึกการเปลี่ยนแปลง" — ชื่อรายการแก้ในนี้ไม่ได้ ติดต่อผู้ดูแลระบบถ้าต้องการเพิ่ม/ลบรายการ</div>
+      ${catsHtml}
+      <div class="save-bar">
+        <span class="hint" id="dirtyHint"></span>
+        <button id="saveBtn" disabled>บันทึกการเปลี่ยนแปลง</button>
+      </div>
+    </div>`;
+  document.querySelectorAll('.item-row').forEach(row => {
+    const key = row.dataset.key;
+    const pInput = row.querySelector('.p-input');
+    const dInput = row.querySelector('.d-input');
+    const onChange = () => {
+      const orig = originalItems[key];
+      if (pInput.value !== orig.p || dInput.value !== orig.d) {
+        dirty[key] = {p: pInput.value, d: dInput.value};
+      } else {
+        delete dirty[key];
+      }
+      updateSaveBar();
+    };
+    pInput.addEventListener('input', onChange);
+    dInput.addEventListener('input', onChange);
+  });
+  $('#saveBtn').onclick = doSave;
+  updateSaveBar();
+}
+
+function updateSaveBar() {
+  const n = Object.keys(dirty).length;
+  $('#saveBtn').disabled = n === 0;
+  $('#dirtyHint').textContent = n > 0 ? `แก้ไข ${n} รายการ (ยังไม่บันทึก)` : '';
+}
+
+async function doSave() {
+  const changes = Object.keys(dirty).map(key => {
+    const [cat_id, group_idx, item_idx] = key.split(':');
+    return Object.assign({cat_id, group_idx: Number(group_idx), item_idx: Number(item_idx)}, dirty[key]);
+  });
+  $('#saveBtn').disabled = true;
+  $('#saveBtn').textContent = 'กำลังบันทึก...';
+  const r = await api('/promos', {method: 'POST', body: JSON.stringify({changes})});
+  if (r.success) {
+    loadEditor(true);
+  } else {
+    $('#saveBtn').disabled = false;
+    $('#saveBtn').textContent = 'บันทึกการเปลี่ยนแปลง';
+    alert('บันทึกไม่สำเร็จ: ' + (r.error || 'unknown error'));
+  }
+}
+
+async function loadEditor(justSaved) {
+  const r = await api('/promos');
+  if (r.success) {
+    renderEditor(r.categories);
+    if (justSaved) {
+      const hint = document.createElement('div');
+      hint.className = 'msg ok';
+      hint.style.marginTop = '14px';
+      hint.textContent = 'บันทึกสำเร็จ ✓';
+      $('.wrap').insertBefore(hint, $('.cat-title'));
+    }
+  } else {
+    localStorage.removeItem(pinKey);
+    boot();
+  }
+}
+
+async function boot() {
+  const cfg = await api('/config').catch(() => ({success: false}));
+  if (!cfg.success) {
+    $('#app').innerHTML = '<div class="wrap"><div class="card msg err">ไม่พบร้านนี้</div></div>';
+    return;
+  }
+  if (!cfg.configured) {
+    $('#app').innerHTML = `<div class="wrap"><div class="card msg err">ร้านนี้ยังไม่ได้ตั้งค่าระบบแก้ราคาเอง ติดต่อผู้ดูแลระบบ</div></div>`;
+    return;
+  }
+  if (localStorage.getItem(pinKey)) {
+    loadEditor();
+  } else {
+    renderLogin(cfg.biz_name);
+  }
+}
+
+boot();
+</script>
+</body>
+</html>

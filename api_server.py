@@ -628,6 +628,148 @@ def dialysis_tomorrow():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+# ---------- Shop Admin — หน้าจัดการโปรโมชั่นเอง (25 ก.ค. 2026, งานลูกค้า Lullabell ฿6,000) ----------
+# PIN เก็บใน cfg["admin_pin"] เอง (ไม่ใช่ env var) ให้ scale ไปร้านอื่นได้โดยไม่ต้อง redeploy ต่อร้าน
+# ต่างจาก _pin_ok() ของ dialysis ตรงที่ "ไม่ตั้ง PIN" ต้องปิดเสมอ (403) ไม่ fallback เป็นเปิดฟรี
+# เพราะ endpoint นี้แก้ราคาที่ลูกค้าจริงเห็นในบอท ไม่ใช่เครื่องมือภายในแบบพยาบาล
+
+def _shop_admin_pin_ok(cfg: dict) -> bool:
+    admin_pin = cfg.get("admin_pin", "")
+    if not admin_pin:
+        return False
+    return request.headers.get("X-Shop-Admin-Pin", "") == admin_pin
+
+
+def _shop_admin_promo_categories(cfg: dict) -> list:
+    """คืนเฉพาะ categories ล้วนๆ (ไม่มี admin_pin/ข้อมูลอื่นปนมา) พร้อม idx ต่อ item
+    ให้ frontend อ้างอิงตำแหน่งตอน save ได้ตรงๆ ไม่ต้องพึ่งชื่อ (ชื่อซ้ำกันได้)"""
+    out = []
+    for cat in cfg.get("categories", []):
+        groups = []
+        for g_idx, grp in enumerate(cat.get("groups", [])):
+            items = []
+            for i_idx, it in enumerate(grp.get("items", [])):
+                items.append({"idx": i_idx, "n": it.get("n", ""), "p": it.get("p", ""), "d": it.get("d", "")})
+            groups.append({"group_idx": g_idx, "name": grp.get("name", ""), "hot": bool(grp.get("hot")), "items": items})
+        out.append({"id": cat.get("id", ""), "name": cat.get("name", ""), "emoji": cat.get("emoji", ""), "groups": groups})
+    return out
+
+
+@app.route("/api/shop-admin/<slug>/config", methods=["GET"])
+def shop_admin_config(slug):
+    """บอก frontend ว่าร้านนี้ตั้งค่า admin ไว้หรือยัง — public ไม่ต้องใส่ PIN (เหมือน dialysis_config)"""
+    try:
+        cfg = meta_bot.load_cfg(slug)
+    except Exception:
+        return jsonify({"success": False, "error": "ไม่พบร้านนี้"}), 404
+    return jsonify({
+        "success": True,
+        "biz_name": cfg.get("biz_name", ""),
+        "configured": bool(cfg.get("admin_pin")),
+        "pin_required": True,
+    })
+
+
+@app.route("/api/shop-admin/<slug>/login", methods=["POST"])
+def shop_admin_login(slug):
+    try:
+        cfg = meta_bot.load_cfg(slug)
+    except Exception:
+        return jsonify({"success": False, "error": "ไม่พบร้านนี้"}), 404
+    admin_pin = cfg.get("admin_pin", "")
+    if not admin_pin:
+        return jsonify({"success": False, "error": "ร้านนี้ยังไม่ได้ตั้งค่าระบบแก้ราคาเอง ติดต่อผู้ดูแลระบบ"}), 403
+    d = request.get_json(force=True) or {}
+    pin = str(d.get("pin", ""))
+    if pin != admin_pin:
+        return jsonify({"success": False, "error": "รหัสไม่ถูกต้อง"}), 401
+    return jsonify({"success": True})
+
+
+@app.route("/api/shop-admin/<slug>/promos", methods=["GET"])
+def shop_admin_get_promos(slug):
+    try:
+        cfg = meta_bot.load_cfg(slug)
+    except Exception:
+        return jsonify({"success": False, "error": "ไม่พบร้านนี้"}), 404
+    if not _shop_admin_pin_ok(cfg):
+        return jsonify({"success": False, "error": "unauthorized"}), 403
+    return jsonify({"success": True, "categories": _shop_admin_promo_categories(cfg)})
+
+
+@app.route("/api/shop-admin/<slug>/promos", methods=["POST"])
+def shop_admin_save_promos(slug):
+    """แก้เฉพาะ p (ราคา) และ d (รายละเอียด) ของ item เดิม — ห้ามแก้ n/เพิ่ม-ลบ group/category
+    (กัน scope creep ตามแผน — ลูกค้าจ่ายค่าแก้ราคาเอง ไม่ใช่ page builder เต็มรูปแบบ)"""
+    try:
+        cfg = meta_bot.load_cfg(slug)
+    except Exception:
+        return jsonify({"success": False, "error": "ไม่พบร้านนี้"}), 404
+    if not _shop_admin_pin_ok(cfg):
+        return jsonify({"success": False, "error": "unauthorized"}), 403
+    d = request.get_json(force=True) or {}
+    changes = d.get("changes", [])
+    if not isinstance(changes, list) or not changes:
+        return jsonify({"success": False, "error": "ไม่มีรายการที่แก้ไข"}), 400
+    cats_by_id = {c.get("id"): c for c in cfg.get("categories", [])}
+    for ch in changes:
+        cat = cats_by_id.get(ch.get("cat_id"))
+        if cat is None:
+            return jsonify({"success": False, "error": f"ไม่พบหมวด {ch.get('cat_id')}"}), 400
+        groups = cat.get("groups", [])
+        g_idx = ch.get("group_idx")
+        if not isinstance(g_idx, int) or not (0 <= g_idx < len(groups)):
+            return jsonify({"success": False, "error": "ตำแหน่งหมวดย่อยไม่ถูกต้อง (หน้าอาจไม่ตรงกับข้อมูลล่าสุด ลองโหลดใหม่)"}), 400
+        items = groups[g_idx].get("items", [])
+        i_idx = ch.get("item_idx")
+        if not isinstance(i_idx, int) or not (0 <= i_idx < len(items)):
+            return jsonify({"success": False, "error": "ตำแหน่งรายการไม่ถูกต้อง (หน้าอาจไม่ตรงกับข้อมูลล่าสุด ลองโหลดใหม่)"}), 400
+        new_p = str(ch.get("p", "")).strip()[:120]
+        if not new_p:
+            return jsonify({"success": False, "error": "ราคาห้ามเว้นว่าง"}), 400
+        items[i_idx]["p"] = new_p
+        items[i_idx]["d"] = str(ch.get("d", "")).strip()[:300]
+    ok, err = meta_bot.save_config(slug, cfg)
+    if not ok:
+        traceback.print_exc()
+        return jsonify({"success": False, "error": f"บันทึกไม่สำเร็จ: {err}"}), 502
+    return jsonify({"success": True})
+
+
+@app.route("/api/shop-admin/<slug>/seed-from-file", methods=["POST"])
+def shop_admin_seed_from_file(slug):
+    """ขั้นตอนครั้งเดียวก่อนส่งมอบลูกค้า — ย้ายราคาจากไฟล์ configs/{slug}.json เข้า Supabase shop_configs
+    แล้วตั้ง admin_pin ให้ครั้งแรก ป้องกันไม่ให้ทับร้านที่ seed ไปแล้ว (guard สำคัญ กันเผลอรีเซ็ต PIN/ข้อมูลจริง)
+    ใช้ META_VERIFY_TOKEN คนละสิทธิ์กับ PIN ของเจ้าของร้าน — นี่คือ dev-only operation ครั้งเดียว"""
+    token = request.headers.get("X-Admin-Pin", "")
+    if not token or token != META_VERIFY_TOKEN:
+        return jsonify({"success": False, "error": "unauthorized"}), 403
+    if meta_bot._load_cfg_from_db(slug) is not None:
+        return jsonify({"success": False, "error": f"'{slug}' seed ไปแล้ว ป้องกันการเผลอทับข้อมูล/PIN เดิม"}), 409
+    d = request.get_json(force=True) or {}
+    pin = str(d.get("pin", "")).strip()
+    if not pin:
+        return jsonify({"success": False, "error": "ต้องระบุ pin ที่จะตั้งให้เจ้าของร้าน"}), 400
+    try:
+        cfg = meta_bot._load_cfg_from_file(slug)
+    except FileNotFoundError:
+        return jsonify({"success": False, "error": f"ไม่พบไฟล์ configs/{slug}.json"}), 404
+    cfg["admin_pin"] = pin
+    ok, err = meta_bot.save_config(slug, cfg)
+    if not ok:
+        traceback.print_exc()
+        return jsonify({"success": False, "error": f"seed ไม่สำเร็จ: {err}"}), 502
+    return jsonify({"success": True, "categories": _shop_admin_promo_categories(cfg)})
+
+
+@app.route("/shop-admin/<slug>")
+def shop_admin_page(slug):
+    _track_visit()
+    p = os.path.join(os.path.dirname(__file__), "shop-admin.html")
+    with open(p, "r", encoding="utf-8") as f:
+        return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
 @app.route("/demo/<biz>")
 def demo_by_biz(biz):
     """Demo ตามประเภทธุรกิจ: /demo/beauty /demo/clinic /demo/restaurant /demo/spa"""
