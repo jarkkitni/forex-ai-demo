@@ -15,7 +15,7 @@ SKILL_KEYWORDS = [
     "bot", "บอท", "chatbot", "แชทบอท", "ai", "เอไอ", "ปัญญาประดิษฐ์",
     "line", "ไลน์", "oa",
     # automation
-    "automation", "automate", "ออโต้", "อัตโนมัติ", "n8n", "workflow", "zapier", "make.com",
+    "automation", "automate", "อัตโนมัติ", "n8n", "workflow", "zapier", "make.com",
     # dev — เฉพาะที่บ่งชี้จองคิว/booking ตรงสาย เก็บไว้เป็น A
     "ระบบจอง", "จองคิว", "booking",
     # จากรีเสิร์ช Garuda 18 ก.ค. — แพทเทิร์นงานที่เคยพลาด (เช่น AI Agent ฿5,000 ตอนเปิดมี 0 ผู้เสนอ)
@@ -35,6 +35,11 @@ SKILL_KEYWORDS = [
 # เกรด B — เฉียดสกิล (แจ้งเตือนแบบสรุปสั้น ให้ตัดสินใจเอง)
 GRADE_B_KEYWORDS = [
     "google sheet", "google sheets", "กูเกิลชีท", "excel", "เอ็กเซล",
+    # 25 ก.ค. 2026 — ย้าย "ออโต้" มาจากเกรด A เพราะเป็นคำพูดทั่วไป ไม่ใช่ศัพท์เทคนิค
+    # เจอจริง: งาน "VBA - Macro" ฿1,000 (หมวด Excel ที่นกน้อยล่าเหยื่อสั่งห้ามล่า) หลุดเป็น
+    # เกรด A เพราะโพสต์เขียนว่า "สร้างข้อมูลซ้ำแบบออโต้" — คนไทยพูดคำนี้กับอะไรก็ได้
+    # ("เกียร์ออโต้", "เติมเงินออโต้") ต่างจาก automation/n8n/workflow ที่บ่งชี้สายเราจริง
+    "ออโต้",
     # 24 ก.ค. 2026 — ย้ายมาจาก SKILL_KEYWORDS (เกรด A) เพราะทั่วไปเกินไป ไม่บ่งชี้สายบอท/LINE/
     # automation โดยเฉพาะ (ดู comment ที่ SKILL_KEYWORDS)
     "web app", "เว็บแอป", "api", "ระบบหลังบ้าน", "python", "supabase",
@@ -58,6 +63,13 @@ EXCLUDE_KEYWORDS = [
     # ปนมาด้วย ถ้าไม่กันตรงนี้จะยังหลุดผ่านมาทาง keyword อื่น
     "forex", "เทรด", "trading", "mt4", "mt5", "indicator", "คริปโต", "crypto",
     "หุ้น", "ลงทุน", "binary option", "สัญญาณเทรด", "copy trade", "ea ",
+    # 25 ก.ค. 2026 — งาน VBA/Macro: ไม่รับตามกลยุทธ์ "นกน้อยล่าเหยื่อ" (หมวด Excel/คีย์ข้อมูล
+    # 6,852 คู่แข่ง แข่งราคาจนพัง + เป็นงานที่รันบนเครื่องลูกค้า ไม่ใช่เซิร์ฟเวอร์เรา = ซัพพอร์ตยาว
+    # ตามบทเรียนลูกค้าเชฟ 22 ก.ค.) ใส่ EXCLUDE ไม่ใช่แค่ไม่ใส่ SKILL เพราะโพสต์พวกนี้มักมี
+    # "ออโต้/อัตโนมัติ/ฟอร์ม/ดึงข้อมูล" ปนมา ถ้าไม่กันตรงนี้จะหลุดผ่านมาทาง keyword อื่นอยู่ดี
+    # ⚠️ ไม่ใส่ "excel" เดี่ยวๆ ใน EXCLUDE — ด่านนี้ทำงานก่อนทุกด่าน จะฆ่างานบอท LINE ที่บังเอิญ
+    # พูดถึง Excel ("ส่งข้อมูลลง Excel") ทิ้งไปด้วย ให้ "excel" อยู่เกรด B ตามเดิม
+    "vba", "macro", "มาโคร",
 ]
 
 _seen_job_ids: set = set()
@@ -156,9 +168,15 @@ def _kw_hit(kw: str, text: str) -> bool:
 
 def _match_skills(job: dict) -> tuple:
     """คืน (grade, matched_keywords) — grade: 'A' / 'B' / None"""
+    # 25 ก.ค. 2026 — เพิ่ม title เข้าด่านคัด (เดิมอ่านแค่ description + tag)
+    # เจอจริง: งาน "ฉันหาคนทำ VBA - Macro" ฿1,000 — คำ VBA/Macro อยู่ใน "หัวข้อ" เท่านั้น
+    # ตัว description เขียนแค่ "สร้างฟอร์ม fill ข้อมูล..." → EXCLUDE มองไม่เห็น กันไม่ได้
+    # ขาที่แพงกว่าคือทางกลับกัน: งานที่หัวข้อบอกชัด ("รับทำ LINE Bot") แต่ description เขียนสั้น
+    # ไม่มี keyword เลย = หลุดหายเงียบทั้งงาน (ญาติกับบั๊ก 21 ก.ค. ที่งานตรงสกิลหายไปโดยไม่มีใครรู้)
+    title = (job.get("title") or "").lower()
     text = (job.get("description") or "").lower()
     tag = ((job.get("tag") or {}).get("name") or "").lower()
-    full = f"{text} {tag}"
+    full = f"{title} {text} {tag}"
 
     for bad in EXCLUDE_KEYWORDS:
         if _kw_hit(bad, full):
