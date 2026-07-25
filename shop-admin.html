@@ -27,6 +27,10 @@
   .item-row label{font-size:11px;color:var(--muted);display:block;margin-bottom:3px}
   .save-bar{position:sticky;bottom:0;background:var(--bg);padding:16px 0;border-top:1px solid var(--line);margin-top:24px;display:flex;justify-content:flex-end;gap:10px;align-items:center}
   .hint{color:var(--muted);font-size:13px}
+  .help-banner{background:rgba(61,220,151,.08);border:1px solid var(--accent);border-radius:12px;padding:16px 40px 16px 16px;margin-bottom:20px;position:relative;font-size:14px}
+  .help-banner ol{margin:8px 0 0 18px}
+  .help-banner li{margin-bottom:4px;color:var(--text)}
+  .help-banner .close-x{position:absolute;top:10px;right:12px;background:none;border:none;color:var(--muted);font-size:18px;padding:2px 6px;line-height:1}
 </style>
 </head>
 <body>
@@ -107,16 +111,34 @@ function renderEditor(categories) {
       }).join('')}
     `).join('')}
   `).join('');
+  const helpKey = 'shopadmin_help_dismissed_' + SLUG;
+  const showHelp = !localStorage.getItem(helpKey);
   $('#app').innerHTML = `
     <div class="wrap">
       <h1>จัดการราคา</h1>
       <div class="sub">แก้ราคา/รายละเอียดแล้วกด "บันทึกการเปลี่ยนแปลง" — ชื่อรายการแก้ในนี้ไม่ได้ ติดต่อผู้ดูแลระบบถ้าต้องการเพิ่ม/ลบรายการ</div>
+      ${showHelp ? `
+      <div class="help-banner" id="helpBanner">
+        <button class="close-x" id="helpClose" title="ปิด">✕</button>
+        <b>วิธีใช้งาน</b>
+        <ol>
+          <li>เลื่อนหารายการที่ต้องการแก้ (จัดกลุ่มตามหมวด: ทำผม / ทำเล็บ / สปามือ-เท้า)</li>
+          <li>แก้ตัวเลขในช่อง "ราคา" หรือข้อความในช่อง "รายละเอียด" ได้เลย</li>
+          <li>กดปุ่ม "บันทึกการเปลี่ยนแปลง" ด้านล่างขวา — บอทจะตอบราคาใหม่ให้ลูกค้าทันที ไม่ต้องรอทีมพัฒนา</li>
+        </ol>
+      </div>` : ''}
       ${catsHtml}
       <div class="save-bar">
         <span class="hint" id="dirtyHint"></span>
         <button id="saveBtn" disabled>บันทึกการเปลี่ยนแปลง</button>
       </div>
     </div>`;
+  if (showHelp) {
+    $('#helpClose').onclick = () => {
+      localStorage.setItem(helpKey, '1');
+      $('#helpBanner').remove();
+    };
+  }
   document.querySelectorAll('.item-row').forEach(row => {
     const key = row.dataset.key;
     const pInput = row.querySelector('.p-input');
