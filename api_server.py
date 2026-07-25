@@ -699,8 +699,8 @@ def shop_admin_get_promos(slug):
 
 @app.route("/api/shop-admin/<slug>/promos", methods=["POST"])
 def shop_admin_save_promos(slug):
-    """แก้เฉพาะ p (ราคา) และ d (รายละเอียด) ของ item เดิม — ห้ามแก้ n/เพิ่ม-ลบ group/category
-    (กัน scope creep ตามแผน — ลูกค้าจ่ายค่าแก้ราคาเอง ไม่ใช่ page builder เต็มรูปแบบ)"""
+    """แก้ n (ชื่อ), p (ราคา), d (รายละเอียด) ของ item เดิม — ห้ามเพิ่ม/ลบ item หรือ group/category
+    (ยังกัน scope creep ส่วนเพิ่ม/ลบเมนูตามแผนเดิม — ลูกค้าขอเพิ่มแก้ชื่อรายการที่มีอยู่แล้วภายหลัง อนุมัติแล้ว)"""
     try:
         cfg = meta_bot.load_cfg(slug)
     except Exception:
@@ -724,9 +724,13 @@ def shop_admin_save_promos(slug):
         i_idx = ch.get("item_idx")
         if not isinstance(i_idx, int) or not (0 <= i_idx < len(items)):
             return jsonify({"success": False, "error": "ตำแหน่งรายการไม่ถูกต้อง (หน้าอาจไม่ตรงกับข้อมูลล่าสุด ลองโหลดใหม่)"}), 400
+        new_n = str(ch.get("n", "")).strip()[:120]
+        if not new_n:
+            return jsonify({"success": False, "error": "ชื่อรายการห้ามเว้นว่าง"}), 400
         new_p = str(ch.get("p", "")).strip()[:120]
         if not new_p:
             return jsonify({"success": False, "error": "ราคาห้ามเว้นว่าง"}), 400
+        items[i_idx]["n"] = new_n
         items[i_idx]["p"] = new_p
         items[i_idx]["d"] = str(ch.get("d", "")).strip()[:300]
     ok, err = meta_bot.save_config(slug, cfg)

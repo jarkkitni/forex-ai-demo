@@ -23,7 +23,7 @@
   .hot-tag{background:rgba(61,220,151,.14);color:var(--accent);font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;margin-left:6px}
   .item-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}
   .item-row:last-child{border-bottom:none}
-  .item-name{grid-column:1/-1;font-size:14px;color:var(--text);margin-bottom:2px}
+  .item-name{grid-column:1/-1}
   .item-row label{font-size:11px;color:var(--muted);display:block;margin-bottom:3px}
   .save-bar{position:sticky;bottom:0;background:var(--bg);padding:16px 0;border-top:1px solid var(--line);margin-top:24px;display:flex;justify-content:flex-end;gap:10px;align-items:center}
   .hint{color:var(--muted);font-size:13px}
@@ -95,10 +95,13 @@ function renderEditor(categories) {
       <div class="grp-name">${esc(grp.name)}${grp.hot ? '<span class="hot-tag">โปรฮอต</span>' : ''}</div>
       ${grp.items.map(it => {
         const key = itemKey(cat.id, grp.group_idx, it.idx);
-        originalItems[key] = {p: it.p, d: it.d};
+        originalItems[key] = {n: it.n, p: it.p, d: it.d};
         return `
         <div class="item-row" data-key="${esc(key)}">
-          <div class="item-name">${esc(it.n)}</div>
+          <div class="item-name">
+            <label>ชื่อรายการ</label>
+            <input type="text" class="n-input" value="${esc(it.n)}">
+          </div>
           <div>
             <label>ราคา</label>
             <input type="text" class="p-input" value="${esc(it.p)}">
@@ -141,17 +144,19 @@ function renderEditor(categories) {
   }
   document.querySelectorAll('.item-row').forEach(row => {
     const key = row.dataset.key;
+    const nInput = row.querySelector('.n-input');
     const pInput = row.querySelector('.p-input');
     const dInput = row.querySelector('.d-input');
     const onChange = () => {
       const orig = originalItems[key];
-      if (pInput.value !== orig.p || dInput.value !== orig.d) {
-        dirty[key] = {p: pInput.value, d: dInput.value};
+      if (nInput.value !== orig.n || pInput.value !== orig.p || dInput.value !== orig.d) {
+        dirty[key] = {n: nInput.value, p: pInput.value, d: dInput.value};
       } else {
         delete dirty[key];
       }
       updateSaveBar();
     };
+    nInput.addEventListener('input', onChange);
     pInput.addEventListener('input', onChange);
     dInput.addEventListener('input', onChange);
   });
