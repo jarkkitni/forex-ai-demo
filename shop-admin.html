@@ -24,6 +24,7 @@
   .item-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}
   .item-row:last-child{border-bottom:none}
   .item-name{grid-column:1/-1}
+  .link-btn{background:none;border:none;color:var(--accent);font-size:13px;padding:0;cursor:pointer;text-decoration:underline}
   .item-row label{font-size:11px;color:var(--muted);display:block;margin-bottom:3px}
   .save-bar{position:sticky;bottom:0;background:var(--bg);padding:16px 0;border-top:1px solid var(--line);margin-top:24px;display:flex;justify-content:flex-end;gap:10px;align-items:center}
   .hint{color:var(--muted);font-size:13px}
@@ -116,32 +117,39 @@ function renderEditor(categories) {
   `).join('');
   const helpKey = 'shopadmin_help_dismissed_' + SLUG;
   const showHelp = !localStorage.getItem(helpKey);
-  $('#app').innerHTML = `
-    <div class="wrap">
-      <h1>จัดการราคา</h1>
-      <div class="sub">แก้ราคา/รายละเอียดแล้วกด "บันทึกการเปลี่ยนแปลง" — ชื่อรายการแก้ในนี้ไม่ได้ ติดต่อผู้ดูแลระบบถ้าต้องการเพิ่ม/ลบรายการ</div>
-      ${showHelp ? `
+  const helpBannerHtml = `
       <div class="help-banner" id="helpBanner">
         <button class="close-x" id="helpClose" title="ปิด">✕</button>
         <b>วิธีใช้งาน</b>
         <ol>
           <li>เลื่อนหารายการที่ต้องการแก้ (จัดกลุ่มตามหมวด: ทำผม / ทำเล็บ / สปามือ-เท้า)</li>
-          <li>แก้ตัวเลขในช่อง "ราคา" หรือข้อความในช่อง "รายละเอียด" ได้เลย</li>
-          <li>กดปุ่ม "บันทึกการเปลี่ยนแปลง" ด้านล่างขวา — บอทจะตอบราคาใหม่ให้ลูกค้าทันที ไม่ต้องรอทีมพัฒนา</li>
+          <li>แก้ชื่อรายการ ราคา หรือรายละเอียดในช่องนั้นๆ ได้เลย</li>
+          <li>กดปุ่ม "บันทึกการเปลี่ยนแปลง" ด้านล่างขวา — บอทจะตอบข้อมูลใหม่ให้ลูกค้าทันที ไม่ต้องรอทีมพัฒนา</li>
         </ol>
-      </div>` : ''}
+      </div>`;
+  $('#app').innerHTML = `
+    <div class="wrap">
+      <h1>จัดการราคา</h1>
+      <div class="sub">แก้ชื่อ/ราคา/รายละเอียดแล้วกด "บันทึกการเปลี่ยนแปลง" — <button id="helpReopen" class="link-btn">ดูวิธีใช้งาน</button></div>
+      <div id="helpBannerSlot">${showHelp ? helpBannerHtml : ''}</div>
       ${catsHtml}
       <div class="save-bar">
         <span class="hint" id="dirtyHint"></span>
         <button id="saveBtn" disabled>บันทึกการเปลี่ยนแปลง</button>
       </div>
     </div>`;
-  if (showHelp) {
+  const bindHelpClose = () => {
     $('#helpClose').onclick = () => {
       localStorage.setItem(helpKey, '1');
       $('#helpBanner').remove();
     };
-  }
+  };
+  if (showHelp) bindHelpClose();
+  $('#helpReopen').onclick = () => {
+    if ($('#helpBanner')) return;
+    $('#helpBannerSlot').innerHTML = helpBannerHtml;
+    bindHelpClose();
+  };
   document.querySelectorAll('.item-row').forEach(row => {
     const key = row.dataset.key;
     const nInput = row.querySelector('.n-input');
