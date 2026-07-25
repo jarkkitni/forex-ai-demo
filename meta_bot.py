@@ -148,6 +148,19 @@ def _is_promo_query(text: str) -> bool:
     return bool(_PROMO_QUERY_RE.search(text or ""))
 
 
+def _detect_promo_category(text: str, cfg: dict) -> str:
+    """เดาว่าลูกค้าถามโปรของหมวดไหนเจาะจง (เช่น "ทำผม"/"ทำเล็บ") จากชื่อหมวด (cat['name']) ที่ปรากฏ
+    ในข้อความตรงๆ — คืน category id ถ้าเจาะจง หรือ "" ถ้าไม่เจาะจง/ถามรวมทุกหมวด (25 ก.ค. 2026 — เจอเคสจริง
+    ลูกค้าถามโปรทำผมแต่ _render_promo_list เดิมโชว์รวมทุกหมวดปนกัน เพราะ regex จับแค่คำว่า "โปร" ล้วนๆ
+    ไม่มองบริบทหมวดเลย) ใช้ชื่อหมวดจาก config ตรงๆ แทนการ hardcode คำ กันพังถ้าเพิ่ม/เปลี่ยนหมวดในอนาคต"""
+    t = text or ""
+    for cat in cfg.get("categories", []):
+        name = cat.get("name", "")
+        if name and name in t:
+            return cat.get("id", "")
+    return ""
+
+
 _BOLD_DIGIT_MAP = str.maketrans("0123456789", "𝟎𝟏𝟐𝟑𝟒𝟓𝟔𝟕𝟖𝟗")
 
 
@@ -517,12 +530,16 @@ def _menu_text(cfg: dict) -> str:
     return "\n".join(out)
 
 
-def _render_promo_list(cfg: dict) -> str:
-    """แสดงรายการโปรโมชั่น "ฮอต" (groups ที่ hot=true) ทุกหมวด แบบ template ตรงจากข้อมูล — ไม่ผ่าน AI เลย
+def _render_promo_list(cfg: dict, only_category: str = "") -> str:
+    """แสดงรายการโปรโมชั่น "ฮอต" (groups ที่ hot=true) แบบ template ตรงจากข้อมูล — ไม่ผ่าน AI เลย
     ใช้ตอนลูกค้ากดปุ่ม/ถาม "ดูราคา/โปรโมชั่นทั้งหมด" การันตีราคาไม่มีวันเพี้ยน (ไม่ต้องพึ่งความแม่นของ AI/Groq fallback)
-    และไม่เสีย API token เลยสักครั้ง เพราะเป็นการต่อสตริงจาก config ล้วนๆ"""
+    และไม่เสีย API token เลยสักครั้ง เพราะเป็นการต่อสตริงจาก config ล้วนๆ
+    only_category: ถ้าใส่ (ได้จาก _detect_promo_category) จะโชว์แค่หมวดนั้นหมวดเดียว ไม่ปนกับหมวดอื่น
+    (25 ก.ค. 2026 — เดิมโชว์ทุกหมวดเสมอ ทำให้ลูกค้าถามโปรทำผมแต่ได้ราคาทำเล็บมาปนด้วย ไม่ตรงคำถาม)"""
     lines = []
     for cat in cfg.get("categories", []):
+        if only_category and cat.get("id") != only_category:
+            continue
         hot_items = []
         for grp in cat.get("groups", []):
             if grp.get("hot"):
@@ -542,8 +559,11 @@ def _render_promo_list(cfg: dict) -> str:
                 line += f"\n   ({d})"
             lines.append(line)
             lines.append("")
-    # เอาหมายเหตุของหมวด "hair" (มักมีข้อความสำคัญ เช่น ส่งรูปประเมินราคา) มาแปะท้ายสุด ถ้ามี
-    hair_note = next((c.get("note") for c in cfg.get("categories", []) if c.get("id") == "hair" and c.get("note")), "")
+    # เอาหมายเหตุของหมวด "hair" (มักมีข้อความสำคัญ เช่น ส่งรูปประเมินราคา) มาแปะท้ายสุด ถ้ามี — เฉพาะตอนที่
+    # หมวด hair ถูกโชว์จริงเท่านั้น (only_category ระบุหมวดอื่นอยู่ = ไม่ต้องแปะโน้ตของ hair ที่ไม่เกี่ยวมาให้งง)
+    hair_note = ""
+    if not only_category or only_category == "hair":
+        hair_note = next((c.get("note") for c in cfg.get("categories", []) if c.get("id") == "hair" and c.get("note")), "")
     if hair_note:
         lines.append(f"📌 {hair_note}")
     text = "\n".join(lines).strip()
@@ -974,7 +994,7 @@ def handle_line(data: dict, client, channel_token: str, slug: str = "lullabell",
         # ถามโปรโมชั่นตรงๆ (เช่น "มีโปรอะไรบ้างคะ", "ขอทราบโปรโมชั่น") — ตอบจาก template ตรงจาก config
         # เลย ไม่ผ่าน AI เช่นเดียวกับ handle() (FB/IG) การันตีคำตอบ 100% ไม่มีวันเงียบ/ตอบห้วน (21 ก.ค. 2026)
         if _is_promo_query(user_text) and _is_thai(user_text):
-            reply = _render_promo_list(cfg)
+            reply = _render_promo_list(cfg, only_category=_detect_promo_category(user_text, cfg))
             _remember_turn(history_key, user_text, reply)
             send_line_reply(channel_token, reply_token, reply)
             result["replied"] += 1
@@ -1126,7 +1146,7 @@ def handle(data: dict, client, page_token: str, slug: str = "lullabell",
                 # token แม้แต่บาทเดียว (คำถามราคาที่พิมพ์เองแบบเจาะจง เช่น "ทำสีราคาเท่าไหร่" ไม่มีคำว่า "โปร"
                 # เลย ไม่โดนจับ ยังให้ AI ตอบตามเดิม เพราะต้องใช้ความเข้าใจบริบท)
                 if (effective_payload == "IB_PRICE" or _is_promo_query(user_text)) and _is_thai(user_text):
-                    reply = _render_promo_list(cfg)
+                    reply = _render_promo_list(cfg, only_category=_detect_promo_category(user_text, cfg))
                     _remember_turn(sender, user_text, reply)
                     _send_with_quick_replies(page_token, sender, reply, quick_replies=default_qr)
                     result["replied"] += 1
