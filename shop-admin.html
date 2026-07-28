@@ -32,6 +32,14 @@
   .help-banner ol{margin:8px 0 0 18px}
   .help-banner li{margin-bottom:4px;color:var(--text)}
   .help-banner .close-x{position:absolute;top:10px;right:12px;background:none;border:none;color:var(--muted);font-size:18px;padding:2px 6px;line-height:1}
+  .bot-toggle-card{display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .toggle-switch{position:relative;width:46px;height:26px;flex-shrink:0}
+  .toggle-switch input{opacity:0;width:0;height:0;position:absolute}
+  .toggle-slider{position:absolute;inset:0;background:#39414f;border-radius:999px;cursor:pointer;transition:background .15s}
+  .toggle-slider:before{content:'';position:absolute;width:20px;height:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .15s}
+  .toggle-switch input:checked + .toggle-slider{background:var(--accent)}
+  .toggle-switch input:checked + .toggle-slider:before{transform:translateX(20px)}
+  .toggle-switch input:disabled + .toggle-slider{opacity:.5;cursor:not-allowed}
 </style>
 </head>
 <body>
@@ -87,7 +95,7 @@ let dirty = {};
 
 function itemKey(catId, gIdx, iIdx) { return catId + ':' + gIdx + ':' + iIdx; }
 
-function renderEditor(categories) {
+function renderEditor(categories, botEnabled) {
   originalItems = {};
   dirty = {};
   const catsHtml = categories.map(cat => `
@@ -131,6 +139,18 @@ function renderEditor(categories) {
     <div class="wrap">
       <h1>จัดการราคา</h1>
       <div class="sub">แก้ชื่อ/ราคา/รายละเอียดแล้วกด "บันทึกการเปลี่ยนแปลง" — <button id="helpReopen" class="link-btn">ดูวิธีใช้งาน</button></div>
+      <div class="card bot-toggle-card">
+        <div>
+          <div style="font-weight:700;margin-bottom:4px">บอทตอบลูกค้าอัตโนมัติ</div>
+          <div class="hint" id="botToggleStatus">${botEnabled
+            ? 'เปิดอยู่ — บอทตอบลูกค้าอัตโนมัติตามปกติ'
+            : 'ปิดอยู่ — บอทจะไม่ตอบเลย ต้องคอยตอบลูกค้าเองทุกข้อความ'}</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="botToggleInput" ${botEnabled ? 'checked' : ''}>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
       <div id="helpBannerSlot">${showHelp ? helpBannerHtml : ''}</div>
       ${catsHtml}
       <div class="save-bar">
@@ -149,6 +169,23 @@ function renderEditor(categories) {
     if ($('#helpBanner')) return;
     $('#helpBannerSlot').innerHTML = helpBannerHtml;
     bindHelpClose();
+  };
+  $('#botToggleInput').onchange = async (e) => {
+    const wantEnabled = e.target.checked;
+    const input = e.target;
+    const statusEl = $('#botToggleStatus');
+    input.disabled = true;
+    statusEl.textContent = 'กำลังบันทึก...';
+    const r = await api('/bot-toggle', {method: 'POST', body: JSON.stringify({enabled: wantEnabled})});
+    input.disabled = false;
+    if (r.success) {
+      statusEl.textContent = r.bot_enabled
+        ? 'เปิดอยู่ — บอทตอบลูกค้าอัตโนมัติตามปกติ'
+        : 'ปิดอยู่ — บอทจะไม่ตอบเลย ต้องคอยตอบลูกค้าเองทุกข้อความ';
+    } else {
+      input.checked = !wantEnabled;
+      statusEl.textContent = 'บันทึกไม่สำเร็จ: ' + (r.error || 'ลองใหม่อีกครั้ง');
+    }
   };
   document.querySelectorAll('.item-row').forEach(row => {
     const key = row.dataset.key;
@@ -198,7 +235,7 @@ async function doSave() {
 async function loadEditor(justSaved) {
   const r = await api('/promos');
   if (r.success) {
-    renderEditor(r.categories);
+    renderEditor(r.categories, r.bot_enabled);
     if (justSaved) {
       const hint = document.createElement('div');
       hint.className = 'msg ok';

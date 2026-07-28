@@ -694,7 +694,8 @@ def shop_admin_get_promos(slug):
         return jsonify({"success": False, "error": "ไม่พบร้านนี้"}), 404
     if not _shop_admin_pin_ok(cfg):
         return jsonify({"success": False, "error": "unauthorized"}), 403
-    return jsonify({"success": True, "categories": _shop_admin_promo_categories(cfg)})
+    return jsonify({"success": True, "categories": _shop_admin_promo_categories(cfg),
+                     "bot_enabled": cfg.get("bot_enabled", True)})
 
 
 @app.route("/api/shop-admin/<slug>/promos", methods=["POST"])
@@ -738,6 +739,25 @@ def shop_admin_save_promos(slug):
         traceback.print_exc()
         return jsonify({"success": False, "error": f"บันทึกไม่สำเร็จ: {err}"}), 502
     return jsonify({"success": True})
+
+
+@app.route("/api/shop-admin/<slug>/bot-toggle", methods=["POST"])
+def shop_admin_bot_toggle(slug):
+    """สวิตช์เปิด/ปิดบอทตอบอัตโนมัติทั้งร้าน — ปิดอยู่ = handle() ข้ามทุกข้อความเงียบๆ ให้แอดมินตอบเอง
+    (28 ก.ค. 2026 — ลูกค้าขอเป็นทางออกเวลาแอดมินอยากคุยเองสด ไม่อยากให้บอทแทรก/ถามซ้ำที่คุยกันไปแล้ว)"""
+    try:
+        cfg = meta_bot.load_cfg(slug)
+    except Exception:
+        return jsonify({"success": False, "error": "ไม่พบร้านนี้"}), 404
+    if not _shop_admin_pin_ok(cfg):
+        return jsonify({"success": False, "error": "unauthorized"}), 403
+    d = request.get_json(force=True) or {}
+    cfg["bot_enabled"] = bool(d.get("enabled", True))
+    ok, err = meta_bot.save_config(slug, cfg)
+    if not ok:
+        traceback.print_exc()
+        return jsonify({"success": False, "error": f"บันทึกไม่สำเร็จ: {err}"}), 502
+    return jsonify({"success": True, "bot_enabled": cfg["bot_enabled"]})
 
 
 @app.route("/api/shop-admin/<slug>/seed-from-file", methods=["POST"])
