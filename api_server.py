@@ -27,6 +27,30 @@ ANTHROPIC_API_KEY   = os.environ.get("ANTHROPIC_API_KEY", "")
 LINE_TOKEN          = os.environ.get("LINE_TOKEN", "")
 LINE_USER_ID        = os.environ.get("LINE_USER_ID", "")
 LINE_CHANNEL_SECRET = os.environ.get("LINE_CHANNEL_SECRET", "")
+# ---- ที่อยู่สาธารณะของเซิร์ฟเวอร์นี้ ----
+# เดิมเขียน URL ตายตัวไว้ 8 จุดกระจายทั้งไฟล์ พอจะเปลี่ยนโดเมนทีต้องไล่แก้ทีละที่
+# และมีจุดที่ลืมง่ายมาก (เช็ก Referer ของ seo_tracker) รวบมาไว้ตัวเดียวตรงนี้
+# ค่าเริ่มต้น = URL เดิมเป๊ะ ถ้าไม่ตั้ง env อะไรเลย พฤติกรรมเหมือนเดิมทุกอย่าง
+# เปลี่ยนโดเมนเมื่อไหร่: ตั้ง PUBLIC_BASE_URL บน Render อย่างเดียว ไม่ต้องแตะโค้ด
+BASE_URL  = os.environ.get("PUBLIC_BASE_URL", "https://forex-ai-demo.onrender.com").rstrip("/")
+BASE_HOST = BASE_URL.split("://", 1)[-1]     # ใช้ตอนพิมพ์ให้คนอ่าน ไม่ต้องมี https://
+
+
+def _is_own_referer(referer: str | None) -> bool:
+    """คนที่กดมาจากหน้าอื่นของเว็บเราเอง (ไม่ใช่มาจาก Google/FB ข้างนอก)
+
+    ใช้ตัดสินว่าจะเขียนคุกกี้ 'มาจากไหน' ของ seo_tracker ไหม — ถ้ามาจากหน้าเราเอง
+    ไม่ต้องเขียนทับ ไม่งั้นแหล่งที่มาจริงตอนเข้าครั้งแรกจะหายไป
+
+    เทียบกับ host ที่กำลังให้บริการอยู่จริง (request.host) ไม่ใช่ชื่อโดเมนตายตัว
+    เพราะ Render ให้ผูกได้หลายโดเมนพร้อมกัน — ทั้ง *.onrender.com เดิมและโดเมนใหม่
+    ชี้มาที่ service เดียวกันได้ ถ้าเช็กแค่ชื่อเดียวจะนับ traffic ข้ามโดเมนของตัวเอง
+    เป็น traffic จากข้างนอก
+    """
+    if not referer:
+        return False
+    host = referer.split("://", 1)[-1].split("/", 1)[0].lower()
+    return host in {request.host.lower(), BASE_HOST.lower()}
 # ---- session secret (สำหรับ TikTok OAuth state/PKCE) — ตั้ง FLASK_SECRET_KEY บน Render ถ้ามี ไม่งั้น derive จาก ANTHROPIC_API_KEY ชั่วคราว ----
 app.secret_key = os.environ.get("FLASK_SECRET_KEY") or hashlib.sha256((ANTHROPIC_API_KEY or "forex-ai-demo-fallback").encode()).hexdigest()
 # ---- TikTok Content Posting API (แอป Claude ใน TikTok Developer Portal) ----
@@ -219,7 +243,7 @@ def line_webhook():
                 "✅ ลงทะเบียนเรียบร้อย\n\n"
                 "🤖 เรารับทำ LINE Bot / บอทตอบแชท Facebook-Instagram\n"
                 "ระบบจองคิว และงาน automation ให้ธุรกิจ\n\n"
-                "💡 ดูตัวอย่างผลงานจริง: forex-ai-demo.onrender.com/portfolio\n"
+                f"💡 ดูตัวอย่างผลงานจริง: {BASE_HOST}/portfolio\n"
                 "สนใจแบบไหน พิมพ์บอกได้เลยครับ",
             )
 
@@ -233,7 +257,7 @@ def line_webhook():
                         reply_token,
                         "✅ ลงทะเบียนเรียบร้อย!\n\n"
                         "🤖 รับทำ LINE Bot · บอทตอบแชท FB/IG · ระบบจองคิว · automation\n\n"
-                        "💡 ผลงานจริง: forex-ai-demo.onrender.com/portfolio",
+                        f"💡 ผลงานจริง: {BASE_HOST}/portfolio",
                     )
                 elif already_reg:
                     _reply_line(reply_token, "✅ คุณลงทะเบียนไว้แล้วครับ — สนใจงานแบบไหน พิมพ์บอกได้เลย")
@@ -241,7 +265,7 @@ def line_webhook():
                 _reply_line(
                     reply_token,
                     "🤖 รับทำ LINE Bot & AI Agent สำหรับธุรกิจ\n\n"
-                    "ดูผลงาน: forex-ai-demo.onrender.com/portfolio\n"
+                    f"ดูผลงาน: {BASE_HOST}/portfolio\n"
                     "พิมพ์ /start เพื่อลงทะเบียน",
                 )
 
@@ -890,7 +914,7 @@ SRC_LABEL = {
 }
 
 
-BASE_URL = "https://forex-ai-demo.onrender.com"
+# BASE_URL ย้ายไปนิยามที่หัวไฟล์ (ENV CONFIG) แล้ว
 
 # หน้า landing ตามคำค้นหา (SEO) — เนื้อหาต่างกัน แต่ชี้มาที่ /botkit
 SEO_PAGES = {
@@ -1920,7 +1944,7 @@ def _stamp_source(resp):
     try:
         if not request.cookies.get(seo_tracker.SRC_COOKIE) and not request.path.startswith("/api"):
             src = seo_tracker.classify(request.headers.get("Referer", "") or "")
-            if "forex-ai-demo.onrender.com" not in (request.headers.get("Referer") or ""):
+            if not _is_own_referer(request.headers.get("Referer")):
                 resp.set_cookie(seo_tracker.SRC_COOKIE, src, max_age=86400 * seo_tracker.COOKIE_DAYS,
                                 samesite="Lax", secure=True)
     except Exception:
@@ -3017,9 +3041,9 @@ def botkit_order():
         seo_tracker.log_order(src, order["plan"])   # นับ conversion
 
         biz = BIZ_LABEL.get(order["biz_type"], order["biz_type"] or "-")
-        demo_url = (f"https://forex-ai-demo.onrender.com/demo/{order['biz_type']}"
+        demo_url = (f"{BASE_URL}/demo/{order['biz_type']}"
                     if order["biz_type"] in ("beauty", "clinic", "spa", "restaurant")
-                    else "https://forex-ai-demo.onrender.com/botkit")
+                    else f"{BASE_URL}/botkit")
 
         msg = (
             f"🔥 ลูกค้าใหม่จาก BotKit!\n"
@@ -3161,7 +3185,7 @@ def botkit_provision():
         if not ok:
             return jsonify({"success": False, "error": f"บันทึกไม่สำเร็จ: {err}"}), 502
 
-        base_url = "https://forex-ai-demo.onrender.com"
+        base_url = BASE_URL
         chat_url = f"{base_url}/demo/chat/{slug}"
         contact_name = str(d.get("contact_name", "")).strip()
         contact = str(d.get("contact_phone", "")).strip() or cfg["contact"]["line"] or cfg["contact"]["phone"]

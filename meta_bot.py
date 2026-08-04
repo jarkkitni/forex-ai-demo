@@ -17,9 +17,10 @@ import seo_tracker  # ใช้ SUPABASE_URL / SUPABASE_KEY ร่วมกั�
 
 GRAPH = "https://graph.facebook.com/v21.0"
 # เก็บ constant นี้แยกจาก BASE_URL ใน api_server.py ตั้งใจ (กัน circular import — api_server import
-# meta_bot อยู่แล้ว) ใช้แค่สร้าง URL ไฟล์เสียง .m4a ที่ส่งให้ LINE fetch เท่านั้น ค่าต้องตรงกับ
-# api_server.py:BASE_URL เสมอถ้าเปลี่ยนโดเมนในอนาคต
-_SELF_BASE_URL = "https://forex-ai-demo.onrender.com"
+# meta_bot อยู่แล้ว) ใช้แค่สร้าง URL ไฟล์เสียง .m4a ที่ส่งให้ LINE fetch เท่านั้น
+# อ่านจาก env ตัวเดียวกับ api_server.py:BASE_URL จึงตรงกันเองอัตโนมัติแม้เปลี่ยนโดเมน
+# ไม่ต้องพึ่งคนจำว่าต้องมาแก้สองที่ (เดิมถ้าลืม เสียงจะเล่นไม่ออกโดยไม่มี error)
+_SELF_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "https://forex-ai-demo.onrender.com").rstrip("/")
 
 # ---- ความจำการสนทนาสั้นๆ ต่อผู้ส่ง (in-memory, รีเซ็ตเมื่อ restart) ----
 _history: dict = {}      # sender_id -> [(role, text), ...]  เก็บ 8 เทิร์นล่าสุด
