@@ -95,7 +95,7 @@ let dirty = {};
 
 function itemKey(catId, gIdx, iIdx) { return catId + ':' + gIdx + ':' + iIdx; }
 
-function renderEditor(categories, botEnabled) {
+function renderEditor(categories, botEnabled, showDetails) {
   originalItems = {};
   dirty = {};
   const catsHtml = categories.map(cat => `
@@ -151,6 +151,18 @@ function renderEditor(categories, botEnabled) {
           <span class="toggle-slider"></span>
         </label>
       </div>
+      <div class="card bot-toggle-card">
+        <div>
+          <div style="font-weight:700;margin-bottom:4px">แสดงรายละเอียดในลิสต์ราคา/โปรโมชั่น</div>
+          <div class="hint" id="detailToggleStatus">${showDetails
+            ? 'เปิดอยู่ — ลิสต์ราคา/โปรแสดงรายละเอียดใต้แต่ละรายการ'
+            : 'ปิดอยู่ — ลูกค้าเห็นแค่ชื่อ+ราคา รายละเอียดใช้ตอบเฉพาะตอนลูกค้าถามเจาะจงบริการนั้น'}</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="detailToggleInput" ${showDetails ? 'checked' : ''}>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
       <div id="helpBannerSlot">${showHelp ? helpBannerHtml : ''}</div>
       ${catsHtml}
       <div class="save-bar">
@@ -182,6 +194,23 @@ function renderEditor(categories, botEnabled) {
       statusEl.textContent = r.bot_enabled
         ? 'เปิดอยู่ — บอทตอบลูกค้าอัตโนมัติตามปกติ'
         : 'ปิดอยู่ — บอทจะไม่ตอบเลย ต้องคอยตอบลูกค้าเองทุกข้อความ';
+    } else {
+      input.checked = !wantEnabled;
+      statusEl.textContent = 'บันทึกไม่สำเร็จ: ' + (r.error || 'ลองใหม่อีกครั้ง');
+    }
+  };
+  $('#detailToggleInput').onchange = async (e) => {
+    const wantEnabled = e.target.checked;
+    const input = e.target;
+    const statusEl = $('#detailToggleStatus');
+    input.disabled = true;
+    statusEl.textContent = 'กำลังบันทึก...';
+    const r = await api('/promo-details-toggle', {method: 'POST', body: JSON.stringify({enabled: wantEnabled})});
+    input.disabled = false;
+    if (r.success) {
+      statusEl.textContent = r.promo_show_details
+        ? 'เปิดอยู่ — ลิสต์ราคา/โปรแสดงรายละเอียดใต้แต่ละรายการ'
+        : 'ปิดอยู่ — ลูกค้าเห็นแค่ชื่อ+ราคา รายละเอียดใช้ตอบเฉพาะตอนลูกค้าถามเจาะจงบริการนั้น';
     } else {
       input.checked = !wantEnabled;
       statusEl.textContent = 'บันทึกไม่สำเร็จ: ' + (r.error || 'ลองใหม่อีกครั้ง');
@@ -235,7 +264,7 @@ async function doSave() {
 async function loadEditor(justSaved) {
   const r = await api('/promos');
   if (r.success) {
-    renderEditor(r.categories, r.bot_enabled);
+    renderEditor(r.categories, r.bot_enabled, r.promo_show_details);
     if (justSaved) {
       const hint = document.createElement('div');
       hint.className = 'msg ok';
