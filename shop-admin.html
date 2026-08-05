@@ -26,6 +26,12 @@
   .item-name{grid-column:1/-1}
   .link-btn{background:none;border:none;color:var(--accent);font-size:13px;padding:0;cursor:pointer;text-decoration:underline}
   .item-row label{font-size:11px;color:var(--muted);display:block;margin-bottom:3px}
+  .name-line{display:flex;gap:8px;align-items:center}
+  .name-line input{flex:1}
+  .del-btn{background:none;border:1px solid var(--danger);color:var(--danger);border-radius:8px;padding:8px 12px;font-size:13px;cursor:pointer;flex-shrink:0}
+  .item-row.deleting input{opacity:.45;text-decoration:line-through}
+  .item-row.new-item{border-left:3px solid var(--accent);padding-left:10px;border-bottom:1px solid var(--line)}
+  .add-item-btn{margin:10px 0 2px;font-size:14px}
   .save-bar{position:sticky;bottom:0;background:var(--bg);padding:16px 0;border-top:1px solid var(--line);margin-top:24px;display:flex;justify-content:flex-end;gap:10px;align-items:center}
   .hint{color:var(--muted);font-size:13px}
   .help-banner{background:rgba(61,220,151,.08);border:1px solid var(--accent);border-radius:12px;padding:16px 40px 16px 16px;margin-bottom:20px;position:relative;font-size:14px}
@@ -92,12 +98,17 @@ async function doLogin() {
 
 let originalItems = {};   // "cat_id:group_idx:item_idx" -> {p, d}
 let dirty = {};
+let added = {};           // "newN" -> {cat_id, group_idx, n, p, d} (แถวที่ผู้ใช้กดเพิ่ม ยังไม่บันทึก)
+let deleted = {};         // itemKey -> ชื่อเดิมจากเซิร์ฟเวอร์ (ส่งเป็น expected_n กันลบผิดตัว)
+let newRowSeq = 0;
 
 function itemKey(catId, gIdx, iIdx) { return catId + ':' + gIdx + ':' + iIdx; }
 
 function renderEditor(categories, botEnabled, showDetails) {
   originalItems = {};
   dirty = {};
+  added = {};
+  deleted = {};
   const catsHtml = categories.map(cat => `
     <div class="cat-title">${esc(cat.emoji)} ${esc(cat.name)}</div>
     ${cat.groups.map(grp => `
@@ -109,7 +120,10 @@ function renderEditor(categories, botEnabled, showDetails) {
         <div class="item-row" data-key="${esc(key)}">
           <div class="item-name">
             <label>ชื่อรายการ</label>
-            <input type="text" class="n-input" value="${esc(it.n)}">
+            <div class="name-line">
+              <input type="text" class="n-input" value="${esc(it.n)}">
+              <button class="del-btn" type="button">ลบ</button>
+            </div>
           </div>
           <div>
             <label>ราคา</label>
@@ -121,6 +135,8 @@ function renderEditor(categories, botEnabled, showDetails) {
           </div>
         </div>`;
       }).join('')}
+      <div class="add-slot" data-slot="${esc(cat.id)}:${grp.group_idx}"></div>
+      <div><button class="link-btn add-item-btn" type="button" data-cat="${esc(cat.id)}" data-gidx="${grp.group_idx}">＋ เพิ่มรายการ</button></div>
     `).join('')}
   `).join('');
   const helpKey = 'shopadmin_help_dismissed_' + SLUG;
@@ -132,6 +148,7 @@ function renderEditor(categories, botEnabled, showDetails) {
         <ol>
           <li>เลื่อนหารายการที่ต้องการแก้ (จัดกลุ่มตามหมวด: ทำผม / ทำเล็บ / สปามือ-เท้า)</li>
           <li>แก้ชื่อรายการ ราคา หรือรายละเอียดในช่องนั้นๆ ได้เลย</li>
+          <li>กด "＋ เพิ่มรายการ" ท้ายหมวดเพื่อเพิ่มบริการใหม่ · กดปุ่ม "ลบ" ข้างชื่อเพื่อเอารายการออก</li>
           <li>กดปุ่ม "บันทึกการเปลี่ยนแปลง" ด้านล่างขวา — บอทจะตอบข้อมูลใหม่ให้ลูกค้าทันที ไม่ต้องรอทีมพัฒนา</li>
         </ol>
       </div>`;
@@ -233,22 +250,121 @@ function renderEditor(categories, botEnabled, showDetails) {
     nInput.addEventListener('input', onChange);
     pInput.addEventListener('input', onChange);
     dInput.addEventListener('input', onChange);
+    const delBtn = row.querySelector('.del-btn');
+    delBtn.onclick = () => {
+      if (deleted[key] !== undefined) {           // เลิกลบ — คืนสภาพแถว
+        delete deleted[key];
+        row.classList.remove('deleting');
+        nInput.disabled = pInput.disabled = dInput.disabled = false;
+        delBtn.textContent = 'ลบ';
+        onChange();                               // ค่าบนจออาจต่างจากต้นฉบับอยู่ ให้ dirty กลับมาตรงจริง
+      } else {
+        const orig = originalItems[key];
+        if (!confirm('ลบ 「' + orig.n + '」?\nรายการจะหายจากเมนูที่บอทตอบ หลังกด "บันทึกการเปลี่ยนแปลง"')) return;
+        deleted[key] = {n: orig.n, p: orig.p};    // ชื่อ+ราคาจากเซิร์ฟเวอร์ = expected_* กันลบผิดตัวตอนข้อมูลค้าง
+        delete dirty[key];                        // ลบชนะแก้ — ไม่ส่ง edit ของแถวที่กำลังจะลบ
+        row.classList.add('deleting');
+        nInput.disabled = pInput.disabled = dInput.disabled = true;
+        delBtn.textContent = 'เลิกลบ';
+        updateSaveBar();
+      }
+    };
+  });
+  document.querySelectorAll('.add-item-btn').forEach(btn => {
+    btn.onclick = () => addNewRow(btn.dataset.cat, Number(btn.dataset.gidx));
   });
   $('#saveBtn').onclick = doSave;
   updateSaveBar();
 }
 
+function addNewRow(catId, gIdx) {
+  const slot = document.querySelector('.add-slot[data-slot="' + catId + ':' + gIdx + '"]');
+  if (!slot) return;
+  const id = 'new' + (++newRowSeq);
+  const div = document.createElement('div');
+  div.className = 'item-row new-item';
+  div.dataset.newId = id;
+  div.innerHTML = `
+    <div class="item-name">
+      <label>ชื่อรายการ (ใหม่)</label>
+      <div class="name-line">
+        <input type="text" class="n-input" placeholder="เช่น ทรีทเมนต์เคราติน">
+        <button class="del-btn" type="button">เอาออก</button>
+      </div>
+    </div>
+    <div>
+      <label>ราคา</label>
+      <input type="text" class="p-input" placeholder="เช่น เริ่มต้น 1,590.-">
+    </div>
+    <div>
+      <label>รายละเอียด (ไม่บังคับ)</label>
+      <input type="text" class="d-input">
+    </div>`;
+  slot.appendChild(div);
+  added[id] = {cat_id: catId, group_idx: gIdx, n: '', p: '', d: ''};
+  const nInput = div.querySelector('.n-input'), pInput = div.querySelector('.p-input'), dInput = div.querySelector('.d-input');
+  const sync = () => {
+    added[id].n = nInput.value;
+    added[id].p = pInput.value;
+    added[id].d = dInput.value;
+  };
+  nInput.addEventListener('input', sync);
+  pInput.addEventListener('input', sync);
+  dInput.addEventListener('input', sync);
+  div.querySelector('.del-btn').onclick = () => {
+    delete added[id];
+    div.remove();
+    updateSaveBar();
+  };
+  updateSaveBar();
+  nInput.focus();
+}
+
 function updateSaveBar() {
-  const n = Object.keys(dirty).length;
-  $('#saveBtn').disabled = n === 0;
-  $('#dirtyHint').textContent = n > 0 ? `แก้ไข ${n} รายการ (ยังไม่บันทึก)` : '';
+  const ne = Object.keys(dirty).length, na = Object.keys(added).length, nd = Object.keys(deleted).length;
+  $('#saveBtn').disabled = (ne + na + nd) === 0;
+  const parts = [];
+  if (ne) parts.push(`แก้ไข ${ne}`);
+  if (na) parts.push(`เพิ่ม ${na}`);
+  if (nd) parts.push(`ลบ ${nd}`);
+  $('#dirtyHint').textContent = parts.length ? parts.join(' · ') + ' รายการ (ยังไม่บันทึก)' : '';
 }
 
 async function doSave() {
+  // แถวใหม่: ว่างสนิท = ตัดทิ้งเงียบๆ · กรอกครึ่งเดียว = บล็อกพร้อมบอกเหตุผล
+  const addOps = [];
+  for (const id of Object.keys(added)) {
+    const a = added[id];
+    const n = a.n.trim(), p = a.p.trim(), dv = a.d.trim();
+    if (!n && !p && !dv) {
+      delete added[id];
+      const el = document.querySelector('[data-new-id="' + id + '"]');
+      if (el) el.remove();
+      continue;
+    }
+    if (!n || !p) {
+      alert('รายการใหม่ต้องกรอก "ชื่อรายการ" และ "ราคา" ให้ครบก่อนบันทึกครับ');
+      updateSaveBar();
+      return;
+    }
+    addOps.push({op: 'add', cat_id: a.cat_id, group_idx: a.group_idx, n: n, p: p, d: dv});
+  }
+  // แนบ expected_n/expected_p (ค่าเดิมจากเซิร์ฟเวอร์) ทั้งตอนแก้และตอนลบ — server ใช้เช็คว่า
+  // หน้าที่เรากดอยู่ยังตรงกับข้อมูลจริง ไม่แก้/ลบผิดตัวตอนมีการเปลี่ยนจากเครื่องอื่น
   const changes = Object.keys(dirty).map(key => {
     const [cat_id, group_idx, item_idx] = key.split(':');
-    return Object.assign({cat_id, group_idx: Number(group_idx), item_idx: Number(item_idx)}, dirty[key]);
-  });
+    const orig = originalItems[key];
+    return Object.assign({cat_id, group_idx: Number(group_idx), item_idx: Number(item_idx),
+                          expected_n: orig.n, expected_p: orig.p}, dirty[key]);
+  }).concat(Object.keys(deleted).map(key => {
+    const [cat_id, group_idx, item_idx] = key.split(':');
+    return {op: 'del', cat_id, group_idx: Number(group_idx), item_idx: Number(item_idx),
+            expected_n: deleted[key].n, expected_p: deleted[key].p};
+  })).concat(addOps);
+  if (!changes.length) {
+    updateSaveBar();
+    return;
+  }
   $('#saveBtn').disabled = true;
   $('#saveBtn').textContent = 'กำลังบันทึก...';
   const r = await api('/promos', {method: 'POST', body: JSON.stringify({changes})});

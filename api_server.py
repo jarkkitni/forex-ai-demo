@@ -723,10 +723,109 @@ def shop_admin_get_promos(slug):
                      "promo_show_details": cfg.get("promo_show_details", True)})
 
 
+_PROMO_ITEMS_PER_GROUP_MAX = 30  # กันเมนูบวมจนข้อความลิสต์โปรยาวเกินลิมิต Messenger
+
+
+def _apply_promo_ops(cfg: dict, changes: list):
+    """ปรับเมนูใน cfg ตาม changes — แต่ละตัวมี op: "edit" (default) / "add" / "del"
+    แยกเป็นฟังก์ชัน pure (ไม่แตะ DB/request) เพื่อเทสออฟไลน์ได้ · mutate cfg ตรงๆ แล้วคืน (ok, error)
+    ผู้เรียกต้องส่ง cfg ที่ deep-copy มาแล้วเท่านั้น — ถ้า batch พังกลางทางให้ทิ้งสำเนาไปทั้งก้อน
+
+    ลำดับประมวลผล: edit → del (item_idx มาก→น้อย) → add
+    edit ไม่ขยับตำแหน่ง · del เรียงถอยหลังทำให้ index จาก snapshot หน้าเว็บยังชี้ถูกตัวเสมอ
+    · add ต่อท้าย group ไม่ชนใคร"""
+    cats_by_id = {c.get("id"): c for c in cfg.get("categories", [])}
+
+    def _group_of(ch):
+        cat = cats_by_id.get(ch.get("cat_id"))
+        if cat is None:
+            return None, f"ไม่พบหมวด {ch.get('cat_id')}"
+        groups = cat.get("groups", [])
+        g_idx = ch.get("group_idx")
+        if not isinstance(g_idx, int) or not (0 <= g_idx < len(groups)):
+            return None, "ตำแหน่งหมวดย่อยไม่ถูกต้อง (หน้าอาจไม่ตรงกับข้อมูลล่าสุด ลองโหลดใหม่)"
+        return groups[g_idx], None
+
+    def _clean_npd(ch):
+        n = str(ch.get("n", "")).strip()[:120]
+        if not n:
+            return None, "ชื่อรายการห้ามเว้นว่าง"
+        p = str(ch.get("p", "")).strip()[:120]
+        if not p:
+            return None, "ราคาห้ามเว้นว่าง"
+        return {"n": n, "p": p, "d": str(ch.get("d", "")).strip()[:300]}, None
+
+    edits, dels, adds = [], [], []
+    for ch in changes:
+        if not isinstance(ch, dict):
+            return False, "รูปแบบรายการแก้ไขไม่ถูกต้อง"
+        op = ch.get("op", "edit")
+        if op == "edit":
+            edits.append(ch)
+        elif op == "del":
+            dels.append(ch)
+        elif op == "add":
+            adds.append(ch)
+        else:
+            return False, f"ไม่รู้จักคำสั่ง '{op}'"
+
+    for ch in edits:
+        grp, err = _group_of(ch)
+        if err:
+            return False, err
+        items = grp.get("items", [])
+        i_idx = ch.get("item_idx")
+        if not isinstance(i_idx, int) or not (0 <= i_idx < len(items)):
+            return False, "ตำแหน่งรายการไม่ถูกต้อง (หน้าอาจไม่ตรงกับข้อมูลล่าสุด ลองโหลดใหม่)"
+        # กันแก้ผิดตัวตอนหน้าเว็บค้าง snapshot เก่า — พอมี del แล้ว index ขยับได้ หน้าเว็บรุ่นใหม่จึงแนบ
+        # ชื่อ/ราคาเดิมมาเทียบ ไม่ตรง = ปัดทั้ง batch · หน้ารุ่นเก่าไม่แนบมา = ข้ามเช็ค (backward compat)
+        if "expected_n" in ch and items[i_idx].get("n", "") != str(ch["expected_n"]):
+            return False, "รายการที่แก้ไม่ตรงกับข้อมูลล่าสุด (อาจถูกแก้/ลบจากที่อื่น) โหลดหน้าใหม่แล้วลองอีกครั้ง"
+        if "expected_p" in ch and items[i_idx].get("p", "") != str(ch["expected_p"]):
+            return False, "รายการที่แก้ไม่ตรงกับข้อมูลล่าสุด (อาจถูกแก้/ลบจากที่อื่น) โหลดหน้าใหม่แล้วลองอีกครั้ง"
+        vals, err = _clean_npd(ch)
+        if err:
+            return False, err
+        items[i_idx].update(vals)
+
+    # เรียง index มาก→น้อยก่อนลบ: pop ตัวท้ายก่อนแล้ว index ตัวหน้าจาก snapshot เดิมยังชี้ถูกตัว
+    # (ต่างกลุ่มกันเรียงปนกันได้ ไม่กระทบ เพราะ items เป็นคนละ list)
+    for ch in sorted(dels, key=lambda c: c.get("item_idx") if isinstance(c.get("item_idx"), int) else -1,
+                     reverse=True):
+        grp, err = _group_of(ch)
+        if err:
+            return False, err
+        items = grp.get("items", [])
+        i_idx = ch.get("item_idx")
+        if not isinstance(i_idx, int) or not (0 <= i_idx < len(items)):
+            return False, "ตำแหน่งรายการไม่ถูกต้อง (หน้าอาจไม่ตรงกับข้อมูลล่าสุด ลองโหลดใหม่)"
+        # กันลบผิดตัวตอนหน้าเว็บค้างข้อมูลเก่า: ชื่อ+ราคาที่หน้าเว็บเห็นตอนกดลบ ต้องตรงของจริงตอนนี้
+        # เช็คชื่ออย่างเดียวไม่พอ — ชื่อซ้ำกันได้ (เหตุผลเดียวกับที่ _shop_admin_promo_categories ใช้ idx)
+        # เช่นมี "ทำสีผม 500.-" กับ "ทำสีผม 800.-" ลบตัวแรกจากสองเครื่องพร้อมกัน จะพลาดลบตัว 800 ตามไปด้วย
+        if items[i_idx].get("n", "") != str(ch.get("expected_n", "")):
+            return False, "รายการที่จะลบไม่ตรงกับข้อมูลล่าสุด (อาจถูกแก้จากที่อื่น) โหลดหน้าใหม่แล้วลองอีกครั้ง"
+        if "expected_p" in ch and items[i_idx].get("p", "") != str(ch["expected_p"]):
+            return False, "รายการที่จะลบไม่ตรงกับข้อมูลล่าสุด (อาจถูกแก้จากที่อื่น) โหลดหน้าใหม่แล้วลองอีกครั้ง"
+        items.pop(i_idx)
+
+    for ch in adds:
+        grp, err = _group_of(ch)
+        if err:
+            return False, err
+        items = grp.setdefault("items", [])
+        if len(items) >= _PROMO_ITEMS_PER_GROUP_MAX:
+            return False, f"หมวดย่อยนี้มีรายการครบ {_PROMO_ITEMS_PER_GROUP_MAX} แล้ว ลบรายการที่ไม่ใช้ก่อนจึงเพิ่มใหม่ได้"
+        vals, err = _clean_npd(ch)
+        if err:
+            return False, err
+        items.append(vals)
+    return True, None
+
+
 @app.route("/api/shop-admin/<slug>/promos", methods=["POST"])
 def shop_admin_save_promos(slug):
-    """แก้ n (ชื่อ), p (ราคา), d (รายละเอียด) ของ item เดิม — ห้ามเพิ่ม/ลบ item หรือ group/category
-    (ยังกัน scope creep ส่วนเพิ่ม/ลบเมนูตามแผนเดิม — ลูกค้าขอเพิ่มแก้ชื่อรายการที่มีอยู่แล้วภายหลัง อนุมัติแล้ว)"""
+    """แก้/เพิ่ม/ลบรายการเมนูผ่าน changes[].op: edit (default, backward compat) / add / del
+    (4 ส.ค. 2026 — เปิดเพิ่ม/ลบตามที่ลูกค้า Lullabell ขอ จากเดิมล็อกไว้แก้ค่า item เดิมอย่างเดียว)"""
     try:
         cfg = meta_bot.load_cfg(slug)
     except Exception:
@@ -737,29 +836,13 @@ def shop_admin_save_promos(slug):
     changes = d.get("changes", [])
     if not isinstance(changes, list) or not changes:
         return jsonify({"success": False, "error": "ไม่มีรายการที่แก้ไข"}), 400
-    cats_by_id = {c.get("id"): c for c in cfg.get("categories", [])}
-    for ch in changes:
-        cat = cats_by_id.get(ch.get("cat_id"))
-        if cat is None:
-            return jsonify({"success": False, "error": f"ไม่พบหมวด {ch.get('cat_id')}"}), 400
-        groups = cat.get("groups", [])
-        g_idx = ch.get("group_idx")
-        if not isinstance(g_idx, int) or not (0 <= g_idx < len(groups)):
-            return jsonify({"success": False, "error": "ตำแหน่งหมวดย่อยไม่ถูกต้อง (หน้าอาจไม่ตรงกับข้อมูลล่าสุด ลองโหลดใหม่)"}), 400
-        items = groups[g_idx].get("items", [])
-        i_idx = ch.get("item_idx")
-        if not isinstance(i_idx, int) or not (0 <= i_idx < len(items)):
-            return jsonify({"success": False, "error": "ตำแหน่งรายการไม่ถูกต้อง (หน้าอาจไม่ตรงกับข้อมูลล่าสุด ลองโหลดใหม่)"}), 400
-        new_n = str(ch.get("n", "")).strip()[:120]
-        if not new_n:
-            return jsonify({"success": False, "error": "ชื่อรายการห้ามเว้นว่าง"}), 400
-        new_p = str(ch.get("p", "")).strip()[:120]
-        if not new_p:
-            return jsonify({"success": False, "error": "ราคาห้ามเว้นว่าง"}), 400
-        items[i_idx]["n"] = new_n
-        items[i_idx]["p"] = new_p
-        items[i_idx]["d"] = str(ch.get("d", "")).strip()[:300]
-    ok, err = meta_bot.save_config(slug, cfg)
+    # ทำงานบน "สำเนา" เสมอ — cfg จาก load_cfg คืออ็อบเจกต์ตัวเดียวกับในแคชแรม ถ้า mutate แล้ว
+    # batch พังกลางทาง แคชจะเพี้ยนทั้งที่ DB ไม่ถูกบันทึก (ค้างจน TTL 60 วิหมด) — เดิมมี wart นี้อยู่
+    new_cfg = json.loads(json.dumps(cfg))
+    ok, err = _apply_promo_ops(new_cfg, changes)
+    if not ok:
+        return jsonify({"success": False, "error": err}), 400
+    ok, err = meta_bot.save_config(slug, new_cfg)
     if not ok:
         traceback.print_exc()
         return jsonify({"success": False, "error": f"บันทึกไม่สำเร็จ: {err}"}), 502

@@ -581,7 +581,9 @@ def _render_promo_list(cfg: dict, only_category: str = "") -> str:
     hair_note = ""
     if not only_category or only_category == "hair":
         hair_note = next((c.get("note") for c in cfg.get("categories", []) if c.get("id") == "hair" and c.get("note")), "")
-    if hair_note:
+    # แปะโน้ตเฉพาะตอนมีรายการโชว์จริง — ตั้งแต่ร้านลบรายการเองได้ อาจลบโปรจนหมด ถ้าไม่กันไว้
+    # ข้อความจะเหลือแค่ "📌 ..." ลอยๆ แทนที่จะเข้า fallback "ยังไม่มีโปรโมชั่นพิเศษ" ตามที่ควร
+    if hair_note and lines:
         lines.append(f"📌 {hair_note}")
     text = "\n".join(lines).strip()
     return text or "ตอนนี้ยังไม่มีโปรโมชั่นพิเศษค่ะ สอบถามราคาปกติได้เลยนะคะ 🤍"
