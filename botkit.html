@@ -390,7 +390,30 @@ async function submitOrder(e){
     const j=await r.json();
     if(j.success){
       msg.className='ok'; msg.style.display='block';
-      msg.innerHTML='✅ <b>ส่งเรียบร้อยแล้วครับ!</b><br>เราจะทักกลับภายใน 24 ชม. พร้อมตัวอย่างบอทของร้านคุณ<br>ระหว่างรอ ลองเล่น demo ด้านบนได้เลยครับ 😊';
+      if(j.pay){
+        // มี QR = จ่ายได้เลยทันที ไม่ต้องรอเราทักกลับก่อน
+        window.__payAmount = j.pay.amount;
+        window.__payShop   = data.shop_name || '';
+        msg.innerHTML =
+          '✅ <b>รับคำสั่งซื้อแล้วครับ!</b><br>สแกนจ่ายด้วยแอปธนาคารได้เลย ระบบเริ่มงานทันทีที่เงินเข้า'
+          + '<div style="text-align:center;margin-top:14px">'
+          +   '<img src="'+j.pay.qr_image+'" alt="QR พร้อมเพย์" '
+          +        'style="width:230px;max-width:80%;border-radius:12px;background:#fff;padding:10px">'
+          +   '<div style="font-size:30px;font-weight:800;color:var(--green);margin-top:10px">฿'
+          +      Number(j.pay.amount).toLocaleString('th-TH',{minimumFractionDigits:2}) + '</div>'
+          +   '<div style="font-size:13px;line-height:1.7;margin-top:6px;opacity:.85">'
+          +     '⚠️ <b>โอนให้ตรงทศนิยม</b> — เศษสตางค์คือเลขอ้างอิงของออเดอร์คุณ<br>'
+          +     'ถ้าโอนยอดกลม เราจะแยกไม่ออกว่าเป็นของใคร'
+          +   '</div>'
+          +   '<button type="button" id="slipbtn" onclick="notifySlip()" '
+          +          'style="margin-top:14px;padding:12px 22px;border-radius:10px;font-weight:700;'
+          +          'cursor:pointer;background:var(--green);color:#03130b;border:0">'
+          +     'โอนแล้ว — แจ้งให้ทราบ</button>'
+          +   '<div id="slipmsg" style="font-size:13px;margin-top:10px"></div>'
+          + '</div>';
+      } else {
+        msg.innerHTML='✅ <b>ส่งเรียบร้อยแล้วครับ!</b><br>เราจะทักกลับภายใน 24 ชม. พร้อมตัวอย่างบอทของร้านคุณ<br>ระหว่างรอ ลองเล่น demo ด้านบนได้เลยครับ 😊';
+      }
       document.getElementById('f').reset();
       btn.textContent='ส่งแล้ว ✓';
     } else { throw new Error(j.error||'ส่งไม่สำเร็จ'); }
@@ -400,6 +423,25 @@ async function submitOrder(e){
     btn.disabled=false; btn.textContent='ส่งคำขอ — ให้เราทักกลับพร้อมตัวอย่าง';
   }
   return false;
+}
+
+// ลูกค้ากด "โอนแล้ว" — แค่สะกิดเตือนเราไปเช็คแอปธนาคาร ไม่ใช่การยืนยันว่าเงินเข้าแล้ว
+async function notifySlip(){
+  const b=document.getElementById('slipbtn'), m=document.getElementById('slipmsg');
+  if(!b||!window.__payAmount) return;
+  b.disabled=true; b.textContent='กำลังแจ้ง...';
+  try{
+    const r=await fetch('/api/pay/slip',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({amount:window.__payAmount, shop_name:window.__payShop})});
+    const j=await r.json();
+    if(!j.success) throw new Error(j.error||'แจ้งไม่สำเร็จ');
+    b.textContent='แจ้งแล้ว ✓';
+    m.innerHTML='📩 แจ้งเรียบร้อยครับ เราจะตรวจยอดแล้วทักกลับไปเริ่มงานให้เร็วที่สุด';
+  }catch(err){
+    b.disabled=false; b.textContent='โอนแล้ว — แจ้งให้ทราบ';
+    m.innerHTML='❌ แจ้งไม่สำเร็จ ทักมาที่ Facebook: Jark Krit ได้เลยครับ';
+  }
 }
 </script>
 </body>
