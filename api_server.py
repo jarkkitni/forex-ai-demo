@@ -18,6 +18,7 @@ import dialysis_api
 import seo_tracker
 import ai_guard
 import meta_bot
+import promptpay
 
 app  = Flask(__name__)
 CORS(app)
@@ -34,6 +35,10 @@ LINE_CHANNEL_SECRET = os.environ.get("LINE_CHANNEL_SECRET", "")
 # เปลี่ยนโดเมนเมื่อไหร่: ตั้ง PUBLIC_BASE_URL บน Render อย่างเดียว ไม่ต้องแตะโค้ด
 BASE_URL  = os.environ.get("PUBLIC_BASE_URL", "https://forex-ai-demo.onrender.com").rstrip("/")
 BASE_HOST = BASE_URL.split("://", 1)[-1]     # ใช้ตอนพิมพ์ให้คนอ่าน ไม่ต้องมี https://
+# ---- รับเงินด้วย PromptPay ----
+# เบอร์มือถือหรือเลขบัตรประชาชนที่ผูกพร้อมเพย์ไว้ — ตั้งบน Render เป็น env ห้าม hardcode
+# ไม่ตั้ง = ระบบจ่ายเงินปิดเงียบ ๆ (ฟอร์มสั่งซื้อยังทำงานเหมือนเดิมทุกอย่าง)
+PROMPTPAY_ID = os.environ.get("PROMPTPAY_ID", "").strip()
 
 
 def _is_own_referer(referer: str | None) -> bool:
@@ -939,19 +944,66 @@ def demo_by_biz(biz):
 botkit_orders = []  # cache ในแรม — source of truth จริงคือ Supabase table botkit_orders (กันหายเวลา restart)
 
 
+_ORDER_CORE_FIELDS = ("source", "shop_name", "biz_type", "contact_name",
+                      "contact", "plan", "page", "need", "status")
+_ORDER_PAY_FIELDS = ("pay_amount", "pay_status", "pay_note")
+
+
 def _save_botkit_order(order: dict) -> None:
-    """เขียน order ลง Supabase ทันที — best-effort ไม่บล็อกการแจ้ง LINE"""
+    """เขียน order ลง Supabase ทันที — best-effort ไม่บล็อกการแจ้ง LINE
+
+    ⚠️ ถ้าตารางยังไม่มีคอลัมน์ฝั่งจ่ายเงิน (pay_amount/pay_status/pay_note) PostgREST
+    จะปฏิเสธ **ทั้งแถว** ไม่ใช่แค่เมินคอลัมน์ที่ไม่รู้จัก → order หายทั้งใบทั้งที่ลูกค้ากรอกมาแล้ว
+    จึงลองบันทึกแบบเต็มก่อน ถ้าไม่ผ่านค่อยถอยไปบันทึกเฉพาะฟิลด์เดิมที่มีแน่ ๆ
+    และ print บอกให้ชัดว่าต้องไปเพิ่มคอลัมน์ (ไม่ปล่อยพังเงียบ)
+    """
     if not _sb_ready():
         return
+    url = f"{seo_tracker.SUPABASE_URL}/rest/v1/botkit_orders"
+    full = {k: order.get(k) for k in _ORDER_CORE_FIELDS + _ORDER_PAY_FIELDS if order.get(k) is not None}
     try:
-        requests.post(f"{seo_tracker.SUPABASE_URL}/rest/v1/botkit_orders",
-                      headers=_sb_headers({"Prefer": "return=minimal"}),
-                      json={k: order.get(k) for k in
-                            ("source", "shop_name", "biz_type", "contact_name",
-                             "contact", "plan", "page", "need", "status")},
-                      timeout=8)
+        r = requests.post(url, headers=_sb_headers({"Prefer": "return=minimal"}), json=full, timeout=8)
+        if r.ok:
+            return
+        print(f"[api_server] บันทึก order แบบเต็มไม่ผ่าน (HTTP {r.status_code}): {r.text[:200]}", flush=True)
+        print("[api_server] ⚠️ ตาราง botkit_orders น่าจะยังไม่มีคอลัมน์ pay_amount/pay_status/pay_note "
+              "— ดู SQL ใน docs/PAYMENT-SETUP.md แล้วรันบน Supabase", flush=True)
+        core = {k: order.get(k) for k in _ORDER_CORE_FIELDS}
+        r2 = requests.post(url, headers=_sb_headers({"Prefer": "return=minimal"}), json=core, timeout=8)
+        if not r2.ok:
+            print(f"[api_server] บันทึกแบบไม่มีฟิลด์จ่ายเงินก็ไม่ผ่าน: {r2.text[:200]}", flush=True)
     except Exception as e:
         print(f"[api_server] บันทึก botkit_order ลง Supabase ล้มเหลว: {e}", flush=True)
+
+
+# ราคาต่อเดือนของแต่ละแพ็กเกจ — ต้องตรงกับที่โชว์ในหน้าขาย (botkit.html)
+PLAN_PRICE = {"Starter": 590, "Pro": 1290, "Business": 2900}
+
+
+def _unique_pay_amount(base: int) -> float:
+    """เติมเศษสตางค์ให้ยอดไม่ซ้ำกับออเดอร์อื่นที่ยังรอจ่ายอยู่
+
+    ทำไมต้องมี: PromptPay แบบเบอร์/เลขบัตร **ไม่มีช่องใส่เลขอ้างอิงที่ธนาคารส่งกลับมาให้เรา**
+    (จะมีได้ต้องเป็น Bill Payment ซึ่งต้องขอ Biller ID จากธนาคารก่อน) เศษสตางค์จึงทำหน้าที่
+    เป็นเลขอ้างอิงแทน — เห็นเงินเข้า 590.37 ในแอปธนาคาร = รู้ทันทีว่าเป็นออเดอร์ไหน
+
+    ข้อจำกัดที่ยอมรับ: ชนกันได้ถ้ามีออเดอร์ค้างจ่ายเกิน 99 ใบ *ของแพ็กเกจเดียวกัน* พร้อมกัน
+    ถ้าสุ่มไม่ได้จริง ๆ คืนยอดเต็มบาท (ยอมให้ซ้ำ ดีกว่าปฏิเสธไม่ให้ลูกค้าจ่าย)
+    """
+    used = set()
+    for o in _load_botkit_orders(50):
+        try:
+            if o.get("pay_status") in ("awaiting", "slip_sent") and o.get("pay_amount"):
+                amt = float(o["pay_amount"])
+                if int(amt) == base:
+                    used.add(round((amt - base) * 100))
+        except (TypeError, ValueError):
+            continue
+    for _ in range(40):
+        cents = _secrets.randbelow(99) + 1
+        if cents not in used:
+            return round(base + cents / 100, 2)
+    return float(base)
 
 
 def _load_botkit_orders(limit: int = 10) -> list:
@@ -3118,6 +3170,27 @@ def botkit_order():
             "need":        str(d.get("need", ""))[:500],
             "status":      "new",
         }
+
+        # ---- ฝั่งจ่ายเงิน: สร้าง QR พร้อมเพย์ให้เลยถ้าตั้ง PROMPTPAY_ID ไว้ ----
+        # ไม่ได้ตั้ง env = ข้ามทั้งก้อน ฟอร์มสั่งซื้อยังทำงานเหมือนเดิมทุกอย่าง (ไม่พังของเก่า)
+        pay = None
+        base_price = PLAN_PRICE.get(order["plan"])
+        if PROMPTPAY_ID and base_price:
+            try:
+                amount = _unique_pay_amount(base_price)
+                qr = promptpay.make_payment_qr(PROMPTPAY_ID, amount)
+                order["pay_amount"] = amount
+                order["pay_status"] = "awaiting"
+                pay = {
+                    "amount": amount,
+                    "base": base_price,
+                    "qr_image": qr["image"],
+                    "note": f"โอนยอด {amount:,.2f} บาท ให้ตรงทศนิยม แล้วกดปุ่มแจ้งโอน",
+                }
+            except Exception as e:
+                # สร้าง QR ไม่ได้ ไม่ควรทำให้ order หลุด — บันทึก order ต่อ แล้วปิดการขายทางแชทแทน
+                print(f"[api_server] สร้าง QR พร้อมเพย์ไม่สำเร็จ: {e}", flush=True)
+
         botkit_orders.insert(0, order)
         del botkit_orders[50:]
         _save_botkit_order(order)                   # persist ลง Supabase กันหายเวลา restart
@@ -3138,12 +3211,14 @@ def botkit_order():
             + (f"📱 เพจ: {order['page']}\n" if order["page"] else "")
             + (f"💬 ต้องการ: {order['need']}\n" if order["need"] else "")
             + f"📡 มาจาก: {SRC_LABEL.get(src, src)}\n"
+            + (f"💰 รอโอน: {order['pay_amount']:,.2f} บาท (เศษสตางค์ = เลขอ้างอิงของออเดอร์นี้)\n"
+               if pay else "")
             + f"━━━━━━━━━━━━\n"
             f"🎪 demo สายนี้: {demo_url}\n"
             f"⏰ ทักกลับภายใน 24 ชม.!"
         )
         _push_line(LINE_USER_ID, msg)
-        return jsonify({"success": True})
+        return jsonify({"success": True, "pay": pay})
     except Exception as e:
         traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
@@ -3154,6 +3229,87 @@ def botkit_order_list():
     """รายการ order ล่าสุด (โชว์ใน NEXUS Monitor) — อ่านจาก Supabase ก่อน fallback cache ในแรม"""
     orders = _load_botkit_orders(10)
     return jsonify({"success": True, "count": len(orders), "orders": orders})
+
+
+def _update_order_pay(amount: float, new_status: str, note: str = "") -> bool:
+    """อัปเดตสถานะการจ่ายของออเดอร์ที่ยอดตรงกัน (ยอด+เศษสตางค์ = ตัวระบุออเดอร์)"""
+    ok = False
+    for o in botkit_orders:                       # cache ในแรมก่อน เผื่อ Supabase ล่ม
+        try:
+            if o.get("pay_amount") and abs(float(o["pay_amount"]) - amount) < 0.005:
+                o["pay_status"] = new_status
+                if note:
+                    o["pay_note"] = note[:200]
+                ok = True
+                break
+        except (TypeError, ValueError):
+            continue
+    if _sb_ready():
+        try:
+            body = {"pay_status": new_status}
+            if note:
+                body["pay_note"] = note[:200]
+            r = requests.patch(
+                f"{seo_tracker.SUPABASE_URL}/rest/v1/botkit_orders?pay_amount=eq.{amount}",
+                headers=_sb_headers({"Prefer": "return=minimal"}), json=body, timeout=8)
+            ok = ok or r.ok
+            if not r.ok:
+                print(f"[api_server] อัปเดตสถานะจ่ายเงินไม่ผ่าน (HTTP {r.status_code}): {r.text[:150]}", flush=True)
+        except Exception as e:
+            print(f"[api_server] อัปเดตสถานะจ่ายเงินล้มเหลว: {e}", flush=True)
+    return ok
+
+
+@app.route("/api/pay/slip", methods=["POST"])
+def pay_slip():
+    """ลูกค้ากด 'โอนแล้ว' — เด้ง LINE บอกเราให้ไปเช็คแอปธนาคาร
+
+    ⚠️ ตั้งใจไม่รับไฟล์สลิปและไม่อ่านสลิปด้วย AI: สลิปปลอมทำง่ายมากและ AI อ่านผิดได้
+    เงินเข้าจริงหรือไม่ต้องดูจากแอปธนาคารเท่านั้น endpoint นี้ทำหน้าที่ 'สะกิดเตือน' เฉย ๆ
+    """
+    try:
+        d = request.get_json(force=True) or {}
+        amount = float(d.get("amount") or 0)
+        if amount <= 0:
+            return jsonify({"success": False, "error": "ไม่มียอดเงิน"}), 400
+        shop = str(d.get("shop_name", ""))[:100]
+        note = str(d.get("note", ""))[:200]
+        _update_order_pay(amount, "slip_sent", note)
+        _push_line(LINE_USER_ID,
+                   f"💸 ลูกค้าแจ้งโอนแล้ว!\n"
+                   f"━━━━━━━━━━━━\n"
+                   f"🏪 {shop or '-'}\n"
+                   f"💰 ยอดที่ต้องเจอในแอปธนาคาร: {amount:,.2f} บาท\n"
+                   + (f"📝 {note}\n" if note else "")
+                   + f"━━━━━━━━━━━━\n"
+                   f"⚠️ เปิดแอปธนาคารเช็คยอดนี้ก่อนเสมอ อย่าเชื่อสลิป\n"
+                   f"✅ เงินเข้าจริงแล้วค่อยยืนยัน")
+        return jsonify({"success": True})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/pay/confirm", methods=["POST"])
+def pay_confirm():
+    """เรายืนยันว่าเงินเข้าจริงแล้ว (หลังเห็นในแอปธนาคาร) — ป้องกันด้วย META_VERIFY_TOKEN เดิม
+    body: {"token": "...", "amount": 590.37}"""
+    body = request.get_json(silent=True) or {}
+    token = request.args.get("token", "") or body.get("token", "")
+    if not token or token != META_VERIFY_TOKEN or not META_VERIFY_TOKEN:
+        return jsonify({"success": False, "error": "unauthorized"}), 403
+    try:
+        amount = float(body.get("amount") or 0)
+        if amount <= 0:
+            return jsonify({"success": False, "error": "ไม่มียอดเงิน"}), 400
+        ok = _update_order_pay(amount, "paid", "ยืนยันจากแอปธนาคาร")
+        if ok:
+            _push_line(LINE_USER_ID, f"✅ ยืนยันรับเงินแล้ว {amount:,.2f} บาท — เริ่มงานให้ลูกค้าได้เลย")
+        return jsonify({"success": ok, "amount": amount,
+                        "error": None if ok else "ไม่พบออเดอร์ที่ยอดตรงกัน"})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @app.route("/botkit/setup")
