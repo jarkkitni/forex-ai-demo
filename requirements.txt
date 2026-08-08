@@ -2,3 +2,4 @@ flask
 flask-cors
 anthropic
 requests
+qrcode[pil]
