@@ -3504,7 +3504,12 @@ def index():
     _track_visit()
     p = os.path.join(os.path.dirname(__file__), "botkit.html")
     with open(p, "r", encoding="utf-8") as f:
-        return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+        html = f.read()
+    # canonical/og:url ใน botkit.html ฮาร์ดโค้ดโดเมนเก่าไว้ → แทนที่ตอนเสิร์ฟให้ตาม BASE_URL เสมอ
+    # ทำตรงนี้ที่เดียว เปลี่ยนโดเมนครั้งหน้าตั้ง PUBLIC_BASE_URL อย่างเดียว ไม่ต้องไล่แก้ HTML อีก
+    # (ถ้าไม่ตั้ง env ค่า BASE_URL = โดเมนเดิม การแทนที่จะไม่เปลี่ยนอะไร ปลอดภัย)
+    html = html.replace("https://forex-ai-demo.onrender.com/", f"{BASE_URL}/")
+    return html, 200, {"Content-Type": "text/html; charset=utf-8"}
 
 
 if __name__ == "__main__":
