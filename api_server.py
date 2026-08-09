@@ -462,6 +462,15 @@ def monitor():
         return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
 
 
+@app.route("/chat-demo")
+def chat_demo():
+    """Chat Mockup Maker — เดโมเสนอลูกค้า (สร้างภาพแชทตัวอย่างแบบออฟไลน์)
+    noindex: เป็นหน้าเดโมส่งลูกค้าเฉพาะราย ไม่ใช่หน้าขายสาธารณะ"""
+    p = os.path.join(os.path.dirname(__file__), "chat_mockup_maker.html")
+    with open(p, "r", encoding="utf-8") as f:
+        return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
 @app.route("/pitch/chef")
 def pitch_chef():
     """Demo พรีเซนต์ลูกค้า AI Executive Assistant (Chef/Restaurant) — เปิดได้ทั้ง PC/แท็บเล็ต"""
@@ -2439,6 +2448,7 @@ def robots():
         "Allow: /\n"
         "Disallow: /monitor\n"          # จอภายใน ไม่ให้ index
         "Disallow: /hunter\n"           # เครื่องมือภายใน
+        "Disallow: /chat-demo\n"        # เดโมส่งลูกค้าเฉพาะราย ไม่ใช่หน้าขาย
         "Disallow: /demo/dialysis\n"    # มีข้อมูลคนไข้ ห้าม index เด็ดขาด
         "Disallow: /api/\n"
         f"\nSitemap: {BASE_URL}/sitemap.xml\n"
