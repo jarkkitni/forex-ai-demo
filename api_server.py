@@ -470,6 +470,19 @@ def chat_demo():
     return redirect("/chatapp/", code=302)
 
 
+@app.route("/.well-known/assetlinks.json")
+def assetlinks():
+    """Digital Asset Links — ไฟล์ที่ทำให้แอป APK (TWA) เปิดแบบเต็มจอไม่มีแถบ URL ของเบราว์เซอร์
+    ถ้าไม่มีไฟล์นี้หรือ fingerprint ไม่ตรง แอปจะโชว์แถบ URL คาไว้ หรือแย่กว่านั้นคือเปิดแล้วปิดตัวเอง
+    วิธีใช้: เอาไฟล์ assetlinks.json ที่ได้จาก zip ของ PWABuilder มาวางที่ chatapp/assetlinks.json"""
+    p = os.path.join(os.path.dirname(__file__), "chatapp", "assetlinks.json")
+    if not os.path.exists(p):
+        return ('{"error":"ยังไม่ได้วางไฟล์ assetlinks.json จาก PWABuilder"}', 404,
+                {"Content-Type": "application/json; charset=utf-8"})
+    with open(p, "r", encoding="utf-8") as f:
+        return f.read(), 200, {"Content-Type": "application/json; charset=utf-8"}
+
+
 @app.route("/chatapp/", defaults={"sub": "index.html"})
 @app.route("/chatapp/<path:sub>")
 def chatapp(sub):
