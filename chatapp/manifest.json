@@ -1,0 +1,23 @@
+{
+  "name": "Chat Mockup Maker — สร้างภาพแชทตัวอย่าง",
+  "short_name": "Chat Mockup",
+  "description": "เครื่องมือสร้างภาพแชทตัวอย่างสำหรับงานนำเสนอ ทำงานในเครื่องล้วน ไม่ส่งข้อมูลออกอินเทอร์เน็ต",
+  "lang": "th",
+  "start_url": "./",
+  "scope": "./",
+  "id": "/chatapp/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#12151c",
+  "theme_color": "#06c755",
+  "categories": ["productivity", "utilities", "graphics"],
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

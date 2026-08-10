@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Chat Mockup Maker — สร้างภาพแชทตัวอย่าง (ออฟไลน์ 100%)</title>
+
+<!-- ===== ติดตั้งเป็นแอปได้ทั้ง Android และ iPhone ===== -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#06c755">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Chat Mockup">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon-64.png" sizes="64x64" type="image/png">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#12151c; --panel:#1a1f29; --line:#2a3140; --txt:#e7ecf3; --dim:#8d98ab;
+    --accent:#06c755; --accent2:#2f6df6; --danger:#e05260;
+  }
+  body{
+    font-family:"Leelawadee UI","Sarabun","Segoe UI",-apple-system,"Helvetica Neue",sans-serif;
+    background:var(--bg); color:var(--txt); height:100vh; overflow:hidden;
+  }
+  .app{display:flex; height:100vh}
+
+  /* ---------- แผงควบคุม ---------- */
+  .panel{
+    width:400px; flex:none; background:var(--panel); border-right:1px solid var(--line);
+    overflow-y:auto; padding:16px 16px 60px;
+  }
+  .brand{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+  .brand .dot{width:26px;height:26px;border-radius:8px;background:var(--accent);
+    display:grid;place-items:center;font-size:15px}
+  .brand h1{font-size:16px;font-weight:700;letter-spacing:.2px}
+  .brand small{display:block;color:var(--dim);font-size:11px;font-weight:400}
+
+  .sec{margin-top:18px;border-top:1px solid var(--line);padding-top:14px}
+  .sec>h2{font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
+
+  label.f{display:block;margin-bottom:10px;font-size:12px;color:var(--dim)}
+  label.f>span{display:block;margin-bottom:4px}
+  input[type=text],input[type=time],select,textarea{
+    width:100%;background:#0f131b;border:1px solid var(--line);color:var(--txt);
+    border-radius:8px;padding:8px 10px;font:inherit;font-size:13px;outline:none;
+  }
+  input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+  textarea{resize:vertical;min-height:52px;line-height:1.45}
+  .row{display:flex;gap:8px}
+  .row>*{flex:1;min-width:0}
+
+  .chk{display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:8px;cursor:pointer;color:var(--txt)}
+  .chk input{accent-color:var(--accent);width:16px;height:16px}
+
+  button{font:inherit;cursor:pointer;border:none;border-radius:8px;transition:.15s}
+  .btn{background:#232b39;color:var(--txt);padding:9px 12px;font-size:13px;border:1px solid var(--line)}
+  .btn:hover{background:#2c3546}
+  .btn.pri{background:var(--accent);color:#04331a;font-weight:700;border-color:transparent}
+  .btn.pri:hover{filter:brightness(1.08)}
+  .btn.blue{background:var(--accent2);color:#fff;border-color:transparent}
+  .btn.wide{width:100%}
+  .addbar{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+
+  /* รายการข้อความ */
+  .msg{background:#151a23;border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:9px}
+  .msg.r{border-left:3px solid var(--accent)}
+  .msg.l{border-left:3px solid #6b7688}
+  .msg.d{border-left:3px solid #c9922f}
+  .mhead{display:flex;align-items:center;gap:6px;margin-bottom:7px}
+  .mhead .tag{font-size:10px;padding:2px 7px;border-radius:99px;background:#232b39;color:var(--dim)}
+  .mhead .sp{flex:1}
+  .ico{width:26px;height:26px;display:grid;place-items:center;background:#232b39;
+    border:1px solid var(--line);border-radius:7px;color:var(--dim);font-size:12px;line-height:1}
+  .ico:hover{background:#2c3546;color:var(--txt)}
+  .ico.del:hover{background:var(--danger);color:#fff;border-color:transparent}
+  .thumb{width:100%;height:74px;object-fit:cover;border-radius:7px;margin-top:6px;border:1px solid var(--line)}
+  .skgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:2px}
+  .skbtn{background:#0f131b;border:1px solid var(--line);border-radius:9px;padding:3px;cursor:pointer;line-height:0}
+  .skbtn:hover{background:#1b2230}
+  .skbtn.on{border-color:var(--accent);background:#12231a}
+  .skbtn img{width:100%;display:block}
+
+  .avwrap{display:flex;align-items:center;gap:10px}
+  .avprev{width:46px;height:46px;border-radius:50%;background:#0f131b;border:1px solid var(--line);
+    object-fit:cover;flex:none}
+  .swatches{display:flex;gap:6px;flex-wrap:wrap}
+  .sw{width:28px;height:28px;border-radius:7px;border:2px solid transparent;cursor:pointer}
+  .sw.on{border-color:#fff}
+
+  .note{font-size:11px;line-height:1.6;color:var(--dim);background:#0f131b;border:1px solid var(--line);
+    border-radius:8px;padding:9px 10px;margin-top:12px}
+
+  /* ---------- เวที/พรีวิว ---------- */
+  .stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+    overflow:auto;padding:22px;background:
+      radial-gradient(900px 500px at 50% -10%,#1d2634 0%,var(--bg) 70%)}
+  .stagebar{display:flex;gap:8px;align-items:center;margin-bottom:14px}
+  #cv{border-radius:18px;box-shadow:0 24px 60px rgba(0,0,0,.55);background:#8cabd8}
+  .hint{color:var(--dim);font-size:11px;margin-top:12px;text-align:center;line-height:1.7}
+  input[type=file]{display:none}
+
+  /* ---------- มือถือ ---------- */
+  .fab{position:fixed;right:14px;bottom:16px;z-index:60;display:none;border:none;
+       background:var(--accent);color:#04331a;font-weight:700;font-size:14px;
+       padding:13px 20px;border-radius:99px;box-shadow:0 8px 24px rgba(0,0,0,.45)}
+  @media(max-width:900px){
+    .app{flex-direction:column;height:auto;overflow:auto}
+    body{overflow:auto;padding-bottom:env(safe-area-inset-bottom)}
+    .panel{width:100%;border-right:none;border-bottom:1px solid var(--line);
+           padding:14px 14px 20px;padding-top:calc(14px + env(safe-area-inset-top))}
+    .stage{padding:16px 10px 90px;min-height:auto}
+    .addbar{grid-template-columns:1fr 1fr}
+    .fab{display:block}
+    .btn,.ico,button{min-height:38px}      /* นิ้วกดโดนแน่ */
+    textarea,input[type=text]{font-size:16px}  /* กัน iOS ซูมเองตอนโฟกัสช่องพิมพ์ */
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ แผงควบคุม ============ -->
+  <aside class="panel">
+    <div class="brand">
+      <div class="dot">💬</div>
+      <div>
+        <h1>Chat Mockup Maker</h1>
+        <small>สร้างภาพแชทตัวอย่าง · ทำงานออฟไลน์ 100%</small>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h2>หน้าจอ</h2>
+      <label class="f"><span>ชื่อคู่สนทนา / ชื่อห้อง</span>
+        <input type="text" id="room" value="คุณสมชาย ใจดี"></label>
+      <div class="row">
+        <label class="f"><span>เวลาบนสถานะ</span><input type="text" id="clock" value="09:41"></label>
+        <label class="f"><span>สมาชิก (เว้นว่าง=แชทเดี่ยว)</span><input type="text" id="member" placeholder="เช่น 4"></label>
+      </div>
+      <label class="f"><span>รูปโปรไฟล์คู่สนทนา</span></label>
+      <div class="avwrap">
+        <img class="avprev" id="avPrev" alt="">
+        <div style="flex:1">
+          <button class="btn wide" id="avBtn">📷 เลือกรูปโปรไฟล์</button>
+          <button class="btn wide" id="avClr" style="margin-top:6px">ลบรูป</button>
+        </div>
+      </div>
+      <input type="file" id="avFile" accept="image/*">
+
+      <label class="f" style="margin-top:12px"><span>สีพื้นหลังแชท</span></label>
+      <div class="swatches" id="walls"></div>
+    </div>
+
+    <div class="sec">
+      <h2>บทสนทนา</h2>
+      <div class="addbar">
+        <button class="btn" data-add="l">＋ ข้อความ (ฝั่งซ้าย)</button>
+        <button class="btn" data-add="r">＋ ข้อความ (ฝั่งขวา)</button>
+        <button class="btn" data-add="date">＋ ป้ายวันที่</button>
+        <button class="btn" data-add="img">＋ ส่งรูปภาพ</button>
+        <button class="btn" data-add="sticker">＋ สติกเกอร์</button>
+        <button class="btn" data-add="mysticker">＋ สติกเกอร์ของฉัน</button>
+      </div>
+      <div id="list"></div>
+    </div>
+
+    <div class="sec">
+      <h2>ตัวเลือก</h2>
+      <label class="chk"><input type="checkbox" id="optRead" checked> แสดง "อ่านแล้ว" ที่ข้อความฝั่งขวา</label>
+      <label class="chk"><input type="checkbox" id="optName"> แสดงชื่อเหนือฟองข้อความฝั่งซ้าย</label>
+      <label class="chk"><input type="checkbox" id="optMark" checked> ใส่ป้าย "ภาพจำลอง" ที่มุมภาพ</label>
+      <div class="row" style="margin-top:10px">
+        <button class="btn pri" id="dl">⬇ บันทึกเป็น PNG</button>
+        <button class="btn blue" id="demo">โหลดตัวอย่าง</button>
+      </div>
+      <button class="btn wide" id="clr" style="margin-top:8px">ล้างบทสนทนาทั้งหมด</button>
+      <div class="note">
+        <b style="color:#e7ecf3">โปรแกรมนี้ใช้ “สร้างภาพแชท” ไม่ใช่แอปส่งข้อความ</b><br>
+        พิมพ์เองได้ทั้งสองฝั่งในเครื่องเดียว แล้วบันทึกออกมาเป็นรูป — ข้อความไม่ได้ถูกส่งหาใคร
+        และไม่วิ่งข้ามเครื่อง เพราะไม่ต่ออินเทอร์เน็ตเลย · ดับเน็ตแล้วเปิดใช้ได้ปกติ
+        รูปทุกใบอยู่ในเครื่องคุณล้วน ไม่มีการอัปโหลดไปไหน
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ พรีวิว ============ -->
+  <main class="stage">
+    <div class="stagebar">
+      <button class="btn" id="zoomOut">−</button>
+      <span id="zoomTxt" style="font-size:12px;color:var(--dim);min-width:52px;text-align:center">100%</span>
+      <button class="btn" id="zoomIn">＋</button>
+      <button class="btn pri" id="dl2">⬇ บันทึก PNG</button>
+    </div>
+    <canvas id="cv"></canvas>
+    <div class="hint">ภาพส่งออกความละเอียด ×3 (1170 px กว้าง) — คมพอสำหรับลงโฆษณา/พรีเซนต์</div>
+  </main>
+</div>
+<button class="fab" id="fab">👁 ดูภาพ</button>
+
+<script>
+/* =========================================================
+   Chat Mockup Maker — วาดทุกอย่างด้วย Canvas 2D
+   ไม่มีไลบรารีภายนอก · ไม่มีการเรียกเน็ต · ตัดคำไทยด้วย Intl.Segmenter
+   ========================================================= */
+
+const cv  = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const DPR = 3;                     // ส่งออก ×3 ให้คมชัด
+
+/* ---------- ค่าคงที่ของหน้าจอ (หน่วย logical px) ---------- */
+const W        = 390;              // กว้างเท่าจอมือถือมาตรฐาน
+const H_MIN    = 844;
+const ST_H     = 44;               // แถบสถานะ
+const HD_H     = 54;               // หัวห้องแชท
+const IN_H     = 58;               // แถบพิมพ์ข้อความ
+const PAD      = 12;
+const AV       = 36;               // ขนาดรูปโปรไฟล์ในแชท
+const AV_GAP   = 8;
+const BUB_MAXW = 232;
+const BUB_PX   = 12, BUB_PY = 9;
+const F_MSG    = 15, LH = 21;
+const F_NAME   = 12, F_TIME = 11;
+const GAP_SAME = 5, GAP_DIFF = 13;
+const R_BIG    = 18, R_SMALL = 5;
+
+const FONT = '"Leelawadee UI","Sarabun","Segoe UI",-apple-system,"Helvetica Neue",sans-serif';
+const f = (sz, w) => (w ? w + ' ' : '') + sz + 'px ' + FONT;
+
+const WALLS = ['#8cabd8','#7f9dc4','#b8d0e6','#dfe6ec','#2b3441','#a8c8a0','#e8d5c4','#c9b8d8'];
+
+/* =========================================================
+   สติกเกอร์ — วาดขึ้นใหม่ทั้งหมดด้วย SVG ในไฟล์นี้
+   ⚠️ ห้ามใช้ตัวละครของแพลตฟอร์มใด ๆ (หมีบราวน์/โคนี่ ฯลฯ เป็นลิขสิทธิ์ของ LINE)
+   ชุดนี้เป็นตัวการ์ตูนที่วาดเอง ใช้ในงานขายได้โดยไม่ติดลิขสิทธิ์ใคร
+   ========================================================= */
+const SK_FACE = '#3f2d1c';
+function skWrap(inner, text, bg){
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 160">
+    <rect width="150" height="160" fill="none"/>
+    ${inner}
+    ${text ? `<text x="75" y="150" text-anchor="middle" font-family="Leelawadee UI,Sarabun,sans-serif"
+       font-size="19" font-weight="700" fill="${bg||'#5a4632'}">${text}</text>` : ''}
+  </svg>`;
+}
+/* ส่วนประกอบร่วม */
+const skEyesOpen  = (y=62)=>`<circle cx="60" cy="${y}" r="4.6" fill="${SK_FACE}"/><circle cx="90" cy="${y}" r="4.6" fill="${SK_FACE}"/>
+  <circle cx="61.6" cy="${y-1.6}" r="1.5" fill="#fff"/><circle cx="91.6" cy="${y-1.6}" r="1.5" fill="#fff"/>`;
+const skEyesShut  = (y=62)=>`<path d="M54 ${y} q6 6 12 0" stroke="${SK_FACE}" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M84 ${y} q6 6 12 0" stroke="${SK_FACE}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+const skBlush = (y=74)=>`<ellipse cx="47" cy="${y}" rx="8" ry="5" fill="#f6a8a0" opacity=".65"/>
+  <ellipse cx="103" cy="${y}" rx="8" ry="5" fill="#f6a8a0" opacity=".65"/>`;
+const skSmile = (y=76)=>`<path d="M64 ${y} q11 10 22 0" stroke="${SK_FACE}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+const skBearEars = (c1,c2,y=38)=>`<circle cx="45" cy="${y}" r="15" fill="${c1}"/><circle cx="105" cy="${y}" r="15" fill="${c1}"/>
+  <circle cx="45" cy="${y}" r="8" fill="${c2}"/><circle cx="105" cy="${y}" r="8" fill="${c2}"/>`;
+const skCatEars = (c1,c2)=>`<path d="M42 46 L38 20 L62 34 Z" fill="${c1}"/><path d="M108 46 L112 20 L88 34 Z" fill="${c1}"/>
+  <path d="M45 42 L43 27 L57 35 Z" fill="${c2}"/><path d="M105 42 L107 27 L93 35 Z" fill="${c2}"/>`;
+const skBunnyEars = (c1,c2)=>`<ellipse cx="56" cy="24" rx="9" ry="24" fill="${c1}"/><ellipse cx="94" cy="24" rx="9" ry="24" fill="${c1}"/>
+  <ellipse cx="56" cy="26" rx="4.5" ry="16" fill="${c2}"/><ellipse cx="94" cy="26" rx="4.5" ry="16" fill="${c2}"/>`;
+const skHead = c => `<ellipse cx="75" cy="68" rx="36" ry="33" fill="${c}"/>`;
+const skMuzzle = ()=>`<ellipse cx="75" cy="80" rx="15" ry="11" fill="#fff" opacity=".55"/>
+  <ellipse cx="75" cy="73" rx="5" ry="3.6" fill="${SK_FACE}"/>`;
+
+const BEAR='#d7a878', BEAR_D='#c08e5f', CAT='#f0c674', CAT_D='#dba94f', BUN='#f2e3e6', BUN_D='#e8bfc8';
+
+const STICKERS = [
+  { id:'thanks', name:'ขอบคุณ', svg: skWrap(
+      `${skBearEars(BEAR_D,'#e8c4a0',46)}<ellipse cx="75" cy="74" rx="36" ry="31" fill="${BEAR}"/>
+       ${skEyesShut(70)}${skBlush(82)}${skMuzzle()}
+       <path d="M30 104 q10 -14 22 -8" stroke="${BEAR_D}" stroke-width="9" fill="none" stroke-linecap="round"/>
+       <path d="M120 104 q-10 -14 -22 -8" stroke="${BEAR_D}" stroke-width="9" fill="none" stroke-linecap="round"/>`,
+      'ขอบคุณครับ') },
+  { id:'hello', name:'สวัสดี', svg: skWrap(
+      `${skBearEars(BEAR_D,'#e8c4a0')}${skHead(BEAR)}${skEyesOpen()}${skBlush()}${skSmile()}
+       <path d="M112 62 q16 -10 14 -24" stroke="${BEAR_D}" stroke-width="9" fill="none" stroke-linecap="round"/>
+       <circle cx="126" cy="34" r="7" fill="${BEAR}"/>`,
+      'สวัสดีครับ') },
+  { id:'ok', name:'โอเค', svg: skWrap(
+      `${skBearEars(BEAR_D,'#e8c4a0')}${skHead(BEAR)}${skEyesOpen()}${skBlush()}${skSmile()}
+       <circle cx="120" cy="66" r="13" fill="${BEAR}"/>
+       <rect x="116" y="44" width="9" height="20" rx="4.5" fill="${BEAR}"/>`,
+      'โอเคครับ') },
+  { id:'love', name:'ถูกใจ', svg: skWrap(
+      `${skCatEars(CAT_D,'#f7d9a0')}${skHead(CAT)}${skEyesShut()}${skBlush()}${skSmile()}
+       <path d="M75 108 c-9 -11 -22 -4 -18 7 c3 8 18 15 18 15 c0 0 15 -7 18 -15 c4 -11 -9 -18 -18 -7 z" fill="#f0576b"/>`,
+      'ถูกใจ') },
+  { id:'yes', name:'รับทราบ', svg: skWrap(
+      `${skCatEars(CAT_D,'#f7d9a0')}${skHead(CAT)}${skEyesOpen()}${skBlush()}
+       <path d="M66 78 q9 7 18 0" stroke="${SK_FACE}" stroke-width="3" fill="none" stroke-linecap="round"/>
+       <path d="M104 100 l10 10 l20 -22" stroke="#25b04f" stroke-width="9" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+      'รับทราบ') },
+  { id:'sorry', name:'ขอโทษ', svg: skWrap(
+      `${skBunnyEars(BUN_D,'#f6dde2')}${skHead(BUN)}${skEyesShut()}
+       <ellipse cx="47" cy="74" rx="8" ry="5" fill="#f6a8a0" opacity=".8"/>
+       <ellipse cx="103" cy="74" rx="8" ry="5" fill="#f6a8a0" opacity=".8"/>
+       <path d="M66 82 q9 -7 18 0" stroke="${SK_FACE}" stroke-width="3" fill="none" stroke-linecap="round"/>
+       <path d="M56 76 q-3 12 0 18" stroke="#79c7ef" stroke-width="4" fill="none" stroke-linecap="round"/>`,
+      'ขอโทษครับ') },
+  { id:'wow', name:'ตกใจ', svg: skWrap(
+      `${skBunnyEars(BUN_D,'#f6dde2')}${skHead(BUN)}
+       <circle cx="60" cy="62" r="6.5" fill="${SK_FACE}"/><circle cx="90" cy="62" r="6.5" fill="${SK_FACE}"/>
+       <circle cx="62" cy="59.5" r="2" fill="#fff"/><circle cx="92" cy="59.5" r="2" fill="#fff"/>
+       <ellipse cx="75" cy="82" rx="7" ry="9" fill="${SK_FACE}"/>
+       <text x="120" y="40" font-family="sans-serif" font-size="30" font-weight="700" fill="#f0a500">!</text>`,
+      'จริงเหรอ') },
+  { id:'bye', name:'ราตรีสวัสดิ์', svg: skWrap(
+      `${skBearEars(BEAR_D,'#e8c4a0')}${skHead(BEAR)}${skEyesShut()}${skBlush()}
+       <ellipse cx="75" cy="80" rx="6" ry="8" fill="${SK_FACE}" opacity=".8"/>
+       <text x="112" y="44" font-family="sans-serif" font-size="20" font-weight="700" fill="#7a8ba8">z</text>
+       <text x="124" y="30" font-family="sans-serif" font-size="14" font-weight="700" fill="#7a8ba8">z</text>`,
+      'ฝันดีครับ') }
+];
+const SK_IMG = {};                       // เก็บรูปที่โหลดแล้ว
+function loadStickers(cb){
+  let left = STICKERS.length;
+  STICKERS.forEach(s=>{
+    const im = new Image();
+    im.onload = ()=>{ SK_IMG[s.id]=im; if(--left===0 && cb) cb(); };
+    im.onerror= ()=>{ if(--left===0 && cb) cb(); };
+    im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s.svg);
+  });
+}
+
+/* ---------- สถานะทั้งหมดของภาพ ---------- */
+const S = {
+  room:'คุณสมชาย ใจดี', clock:'09:41', member:'',
+  wall:WALLS[0], avatar:null,
+  showRead:true, showName:false, showMark:true,
+  msgs:[]
+};
+let uid = 1;
+let zoom = 1;
+
+/* =========================================================
+   ตัดบรรทัด — ใช้ตัวตัดคำไทยของเบราว์เซอร์ถ้ามี
+   ========================================================= */
+let segmenter = null;
+try { segmenter = new Intl.Segmenter('th', {granularity:'word'}); } catch(e) {}
+
+function wrap(text, maxW, font){
+  ctx.font = font;
+  const out = [];
+  for (const para of String(text).split('\n')){
+    if (para === ''){ out.push(''); continue; }
+    let segs;
+    if (segmenter) segs = [...segmenter.segment(para)].map(s => s.segment);
+    else           segs = para.split(/(\s+)/).filter(s => s !== '');
+    let cur = '';
+    for (const seg of segs){
+      if (!cur && /^\s+$/.test(seg)) continue;             // ไม่ขึ้นบรรทัดด้วยช่องว่าง
+      if (ctx.measureText(cur + seg).width <= maxW){ cur += seg; continue; }
+      if (cur){ out.push(cur); cur = ''; }
+      if (/^\s+$/.test(seg)) continue;
+      if (ctx.measureText(seg).width > maxW){              // คำเดียวยาวเกินบรรทัด → ตัดทีละอักขระ
+        for (const ch of seg){
+          if (ctx.measureText(cur + ch).width <= maxW) cur += ch;
+          else { out.push(cur); cur = ch; }
+        }
+      } else cur = seg;
+    }
+    if (cur) out.push(cur);
+  }
+  return out.length ? out : [''];
+}
+
+/* ---------- helper วาดรูปทรง ---------- */
+function rr(x, y, w, h, r){
+  const rad = (typeof r === 'number') ? {tl:r,tr:r,br:r,bl:r} : r;
+  ctx.beginPath();
+  ctx.moveTo(x + rad.tl, y);
+  ctx.lineTo(x + w - rad.tr, y);          ctx.quadraticCurveTo(x + w, y, x + w, y + rad.tr);
+  ctx.lineTo(x + w, y + h - rad.br);      ctx.quadraticCurveTo(x + w, y + h, x + w - rad.br, y + h);
+  ctx.lineTo(x + rad.bl, y + h);          ctx.quadraticCurveTo(x, y + h, x, y + h - rad.bl);
+  ctx.lineTo(x, y + rad.tl);              ctx.quadraticCurveTo(x, y, x + rad.tl, y);
+  ctx.closePath();
+}
+function circleImg(img, x, y, d){
+  ctx.save(); ctx.beginPath(); ctx.arc(x + d/2, y + d/2, d/2, 0, Math.PI*2); ctx.clip();
+  const s = Math.max(d / img.width, d / img.height);
+  const w = img.width * s, h = img.height * s;
+  ctx.drawImage(img, x + (d - w)/2, y + (d - h)/2, w, h);
+  ctx.restore();
+}
+function defaultAvatar(x, y, d){
+  ctx.save();
+  ctx.fillStyle = '#c8d2de'; ctx.beginPath(); ctx.arc(x+d/2, y+d/2, d/2, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#8d9bab';
+  ctx.beginPath(); ctx.arc(x+d/2, y+d*0.38, d*0.17, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x+d/2, y+d*0.92, d*0.30, Math.PI, 0); ctx.fill();
+  ctx.restore();
+}
+
+/* =========================================================
+   คำนวณ layout ของทุกข้อความ (ยังไม่วาด) → รู้ความสูงรวม
+   ========================================================= */
+function layout(){
+  const items = [];
+  let h = S.showMark ? 34 : 10;                 // เว้นบนสุด (กันชนป้าย "ภาพจำลอง")
+  let prevSide = null;
+
+  S.msgs.forEach((m, i) => {
+    if (m.kind === 'date'){
+      ctx.font = f(12);
+      const wpx = ctx.measureText(m.text || '').width + 24;
+      items.push({m, y:h + 8, type:'date', w:wpx, h:24});
+      h += 8 + 24 + 10; prevSide = null; return;
+    }
+
+    const first = (prevSide !== m.side);        // ข้อความแรกของกลุ่ม → โชว์รูป/ชื่อ
+    h += (prevSide === null) ? 0 : (first ? GAP_DIFF : GAP_SAME);
+
+    let nameH = 0;
+    if (m.side === 'l' && S.showName && first) nameH = 17;
+
+    if (m.kind === 'sticker'){
+      const SZ = 116;                       // สติกเกอร์ไม่มีฟองข้อความ วางลอยเหมือนแอปแชทจริง
+      items.push({m, y:h + nameH, type:'sticker', first, nameH, w:SZ, h:SZ});
+      h += nameH + SZ;
+    } else if (m.kind === 'img'){
+      const box = fitImg(m.img);
+      items.push({m, y:h + nameH, type:'img', first, nameH, w:box.w, h:box.h});
+      h += nameH + box.h;
+    } else {
+      const lines = wrap(m.text || '', BUB_MAXW - BUB_PX*2, f(F_MSG));
+      let tw = 0;
+      ctx.font = f(F_MSG);
+      lines.forEach(l => tw = Math.max(tw, ctx.measureText(l).width));
+      const bw = Math.max(tw + BUB_PX*2, 42);
+      const bh = lines.length * LH + BUB_PY*2;
+      items.push({m, y:h + nameH, type:'text', first, nameH, lines, w:bw, h:bh});
+      h += nameH + bh;
+    }
+    prevSide = m.side;
+  });
+
+  return {items, contentH: h + 14};
+}
+function fitImg(img){
+  if (!img) return {w:180, h:130};
+  const MW = 200, MH = 260;
+  const s = Math.min(MW / img.width, MH / img.height, 1);
+  return {w: Math.max(60, img.width * s), h: Math.max(60, img.height * s)};
+}
+
+/* =========================================================
+   วาดจริง
+   ========================================================= */
+function render(){
+  const {items, contentH} = layout();
+  const chatMin = H_MIN - ST_H - HD_H - IN_H;
+  const chatH   = Math.max(chatMin, contentH);
+  const H       = ST_H + HD_H + chatH + IN_H;
+
+  cv.width  = W * DPR;  cv.height = H * DPR;
+  cv.style.width  = (W * zoom) + 'px';
+  cv.style.height = (H * zoom) + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.textBaseline = 'alphabetic';
+
+  const dark = isDark(S.wall);
+
+  /* พื้นหลังแชท */
+  ctx.fillStyle = S.wall;
+  ctx.fillRect(0, 0, W, H);
+
+  /* ---- ข้อความ (จัดชิดล่างเมื่อเนื้อหาน้อย) ---- */
+  const top = ST_H + HD_H + Math.max(0, chatH - contentH);
+  ctx.save();
+  ctx.translate(0, top);
+  items.forEach(it => drawItem(it));
+  ctx.restore();
+
+  drawStatusBar();
+  drawHeader();
+  drawInputBar(H);
+  if (S.showMark) drawMark(H);
+}
+
+function isDark(hex){
+  const c = hex.replace('#','');
+  const r = parseInt(c.substr(0,2),16), g = parseInt(c.substr(2,2),16), b = parseInt(c.substr(4,2),16);
+  return (r*299 + g*587 + b*114) / 1000 < 140;
+}
+
+function drawItem(it){
+  const m = it.m;
+
+  /* ป้ายวันที่ */
+  if (it.type === 'date'){
+    const x = (W - it.w) / 2;
+    ctx.fillStyle = 'rgba(0,0,0,.22)';
+    rr(x, it.y, it.w, it.h, 12); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = f(12); ctx.textAlign = 'center';
+    ctx.fillText(m.text || '', W/2, it.y + 16);
+    ctx.textAlign = 'left';
+    return;
+  }
+
+  const right = (m.side === 'r');
+  const metaCol = isDark(S.wall) ? 'rgba(255,255,255,.75)' : 'rgba(255,255,255,.95)';
+
+  /* รูปโปรไฟล์ + ชื่อ (เฉพาะฝั่งซ้าย ข้อความแรกของกลุ่ม) */
+  let bx;
+  if (right){
+    bx = W - PAD - it.w;
+  } else {
+    bx = PAD + AV + AV_GAP;
+    if (it.first){
+      const ay = it.y + it.nameH;
+      if (S.avatar) circleImg(S.avatar, PAD, ay, AV); else defaultAvatar(PAD, ay, AV);
+    }
+    if (it.nameH){
+      ctx.fillStyle = metaCol; ctx.font = f(F_NAME);
+      ctx.fillText(S.room, bx + 2, it.y - 4);
+    }
+  }
+
+  /* ตัวฟอง */
+  const radius = right
+    ? {tl:R_BIG, tr:(it.first ? R_SMALL : R_BIG), br:R_BIG, bl:R_BIG}
+    : {tl:(it.first ? R_SMALL : R_BIG), tr:R_BIG, br:R_BIG, bl:R_BIG};
+
+  if (it.type === 'sticker'){
+    const img = (m.st === 'custom') ? m.img : SK_IMG[m.st];
+    if (img) ctx.drawImage(img, bx, it.y, it.w, it.h);
+    else {
+      ctx.fillStyle = 'rgba(255,255,255,.45)'; rr(bx, it.y, it.w, it.h, 14); ctx.fill();
+      ctx.fillStyle = '#7a8697'; ctx.font = f(13); ctx.textAlign = 'center';
+      ctx.fillText('เลือกสติกเกอร์', bx + it.w/2, it.y + it.h/2 + 5); ctx.textAlign = 'left';
+    }
+  } else if (it.type === 'img'){
+    ctx.save(); rr(bx, it.y, it.w, it.h, 14); ctx.clip();
+    if (m.img) ctx.drawImage(m.img, bx, it.y, it.w, it.h);
+    else { ctx.fillStyle = '#dfe4ea'; ctx.fillRect(bx, it.y, it.w, it.h);
+           ctx.fillStyle = '#9aa5b1'; ctx.font = f(13); ctx.textAlign = 'center';
+           ctx.fillText('เลือกรูปภาพ', bx + it.w/2, it.y + it.h/2 + 5); ctx.textAlign = 'left'; }
+    ctx.restore();
+  } else {
+    ctx.fillStyle = right ? '#06c755' : '#ffffff';
+    rr(bx, it.y, it.w, it.h, radius); ctx.fill();
+    ctx.fillStyle = right ? '#062f14' : '#111318';
+    ctx.font = f(F_MSG);
+    it.lines.forEach((ln, i) => ctx.fillText(ln, bx + BUB_PX, it.y + BUB_PY + LH*(i+1) - 6));
+  }
+
+  /* เวลา + อ่านแล้ว (อยู่นอกฟอง ชิดขอบล่าง) */
+  ctx.font = f(F_TIME);
+  ctx.fillStyle = metaCol;
+  const baseY = it.y + it.h - 2;
+  if (right){
+    const tw = ctx.measureText(m.time || '').width;
+    if (m.time) ctx.fillText(m.time, bx - 6 - tw, baseY);
+    if (S.showRead && m.read !== false){
+      const rw = ctx.measureText('อ่านแล้ว').width;
+      ctx.fillText('อ่านแล้ว', bx - 6 - rw, baseY - (m.time ? 14 : 0));
+    }
+  } else if (m.time){
+    ctx.fillText(m.time, bx + it.w + 6, baseY);
+  }
+}
+
+/* แถบสถานะ: เวลา / สัญญาณ / wifi / แบตเตอรี่ */
+function drawStatusBar(){
+  ctx.save();
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, ST_H);
+  ctx.fillStyle = '#111318';
+  ctx.font = f(15, '600'); ctx.textAlign = 'center';
+  ctx.fillText(S.clock, 58, 28);
+  ctx.textAlign = 'left';
+
+  let x = W - 30;
+  // แบตเตอรี่
+  ctx.strokeStyle = 'rgba(17,19,24,.4)'; ctx.lineWidth = 1;
+  rr(x, 16, 22, 11, 3); ctx.stroke();
+  ctx.fillStyle = '#111318';
+  rr(x + 1.5, 17.5, 15, 8, 2); ctx.fill();
+  ctx.fillRect(x + 23, 19, 1.6, 5);
+  // wifi
+  x -= 26; ctx.strokeStyle = '#111318'; ctx.lineWidth = 1.7;
+  for (let i = 0; i < 3; i++){
+    ctx.beginPath();
+    ctx.arc(x + 8, 27, 3 + i*3.4, Math.PI*1.25, Math.PI*1.75);
+    ctx.stroke();
+  }
+  ctx.beginPath(); ctx.arc(x + 8, 26.5, 1.2, 0, Math.PI*2); ctx.fillStyle = '#111318'; ctx.fill();
+  // สัญญาณ
+  x -= 24;
+  for (let i = 0; i < 4; i++){
+    const bh = 4 + i*2.6;
+    ctx.fillRect(x + i*5, 26 - bh, 3.4, bh);
+  }
+  ctx.restore();
+}
+
+/* หัวห้องแชท */
+function drawHeader(){
+  ctx.save();
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, ST_H, W, HD_H);
+  ctx.strokeStyle = 'rgba(0,0,0,.08)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, ST_H + HD_H - .5); ctx.lineTo(W, ST_H + HD_H - .5); ctx.stroke();
+
+  const cy = ST_H + HD_H/2;
+  // ลูกศรย้อนกลับ
+  ctx.strokeStyle = '#111318'; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.moveTo(22, cy - 6); ctx.lineTo(15, cy); ctx.lineTo(22, cy + 6); ctx.stroke();
+
+  // ชื่อ + จำนวนสมาชิก
+  ctx.fillStyle = '#111318'; ctx.font = f(16, '600');
+  const name = S.room || '';
+  ctx.fillText(name, 36, cy + (S.member ? 0 : 6));
+  if (S.member){
+    ctx.fillStyle = '#8d98ab'; ctx.font = f(11);
+    ctx.fillText(S.member + ' คน', 36, cy + 15);
+  }
+
+  // ไอคอนขวา: โทร / วิดีโอ / เมนู
+  ctx.strokeStyle = '#111318'; ctx.lineWidth = 1.8;
+  let x = W - 108;
+  // โทรศัพท์
+  ctx.beginPath();
+  ctx.moveTo(x, cy - 7); ctx.lineTo(x + 5, cy - 7); ctx.lineTo(x + 7, cy - 2);
+  ctx.lineTo(x + 4, cy);  ctx.quadraticCurveTo(x + 7, cy + 5, x + 12, cy + 8);
+  ctx.lineTo(x + 14, cy + 5); ctx.lineTo(x + 19, cy + 7); ctx.lineTo(x + 19, cy + 12);
+  ctx.quadraticCurveTo(x + 6, cy + 12, x, cy - 7);
+  ctx.stroke();
+  // กล้อง
+  x += 36;
+  rr(x, cy - 7, 15, 14, 3); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + 17, cy - 4); ctx.lineTo(x + 23, cy - 7);
+  ctx.lineTo(x + 23, cy + 7); ctx.lineTo(x + 17, cy + 4); ctx.closePath(); ctx.stroke();
+  // เมนู 3 ขีด
+  x += 38;
+  for (let i = 0; i < 3; i++){
+    ctx.beginPath(); ctx.moveTo(x, cy - 6 + i*6); ctx.lineTo(x + 17, cy - 6 + i*6); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/* แถบพิมพ์ข้อความล่างสุด */
+function drawInputBar(H){
+  const y = H - IN_H;
+  ctx.save();
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, y, W, IN_H);
+  ctx.strokeStyle = 'rgba(0,0,0,.07)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, y + .5); ctx.lineTo(W, y + .5); ctx.stroke();
+
+  const cy = y + IN_H/2 - 4;
+  ctx.strokeStyle = '#5b6472'; ctx.lineWidth = 1.8; ctx.lineCap = 'round';
+  // เครื่องหมาย +
+  ctx.beginPath(); ctx.moveTo(20, cy); ctx.lineTo(34, cy); ctx.moveTo(27, cy - 7); ctx.lineTo(27, cy + 7); ctx.stroke();
+  // กล้อง
+  rr(46, cy - 7, 18, 14, 3); ctx.stroke();
+  ctx.beginPath(); ctx.arc(55, cy, 3.6, 0, Math.PI*2); ctx.stroke();
+  // ไมค์
+  rr(78, cy - 8, 8, 12, 4); ctx.stroke();
+  ctx.beginPath(); ctx.arc(82, cy + 1, 6.5, 0, Math.PI); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(82, cy + 8); ctx.lineTo(82, cy + 11); ctx.stroke();
+  // ช่องพิมพ์
+  ctx.fillStyle = '#f1f2f4';
+  rr(98, cy - 13, W - 98 - 46, 26, 13); ctx.fill();
+  ctx.fillStyle = '#a7aeb9'; ctx.font = f(14);
+  ctx.fillText('Aa', 110, cy + 5);
+  // หน้ายิ้ม
+  ctx.strokeStyle = '#5b6472';
+  ctx.beginPath(); ctx.arc(W - 26, cy, 9, 0, Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(W - 26, cy + 1, 4.5, .15*Math.PI, .85*Math.PI); ctx.stroke();
+  ctx.beginPath(); ctx.arc(W - 29.5, cy - 3, .9, 0, Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(W - 22.5, cy - 3, .9, 0, Math.PI*2); ctx.stroke();
+  // ขีดล่างแบบ home indicator
+  ctx.fillStyle = 'rgba(0,0,0,.55)';
+  rr(W/2 - 60, H - 9, 120, 4, 2); ctx.fill();
+  ctx.restore();
+}
+
+/* ป้ายกำกับว่าเป็นภาพจำลอง */
+function drawMark(H){
+  ctx.save();
+  ctx.font = f(10, '600');
+  const t = 'ภาพจำลอง / MOCKUP';
+  const w = ctx.measureText(t).width + 14;
+  const y = ST_H + HD_H + 8;                    // ใต้หัวห้องแชท — พื้นที่ที่ไม่มีฟองข้อความ
+  ctx.fillStyle = 'rgba(0,0,0,.30)';
+  rr(W - w - 8, y, w, 18, 9); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.92)';
+  ctx.fillText(t, W - w - 1, y + 13);
+  ctx.restore();
+}
+
+/* =========================================================
+   แผงควบคุม (DOM)
+   ========================================================= */
+const listEl = document.getElementById('list');
+
+function addMsg(kind){
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2,'0'), mm = String(now.getMinutes()).padStart(2,'0');
+  if (kind === 'date'){
+    S.msgs.push({id:uid++, kind:'date', text:'วันนี้'});
+  } else if (kind === 'img'){
+    S.msgs.push({id:uid++, kind:'img', side:'r', img:null, time:hh+':'+mm, read:true});
+  } else if (kind === 'sticker'){
+    S.msgs.push({id:uid++, kind:'sticker', side:'r', st:STICKERS[0].id, time:hh+':'+mm, read:true});
+  } else if (kind === 'mysticker'){
+    S.msgs.push({id:uid++, kind:'sticker', side:'r', st:'custom', img:null, time:hh+':'+mm, read:true});
+  } else {
+    S.msgs.push({id:uid++, kind:'text', side:kind, text:'', time:hh+':'+mm, read:true});
+  }
+  paintList(); render();
+}
+
+function paintList(){
+  listEl.innerHTML = '';
+  S.msgs.forEach((m, i) => {
+    const el = document.createElement('div');
+    el.className = 'msg ' + (m.kind === 'date' ? 'd' : m.side);
+
+    const head = document.createElement('div');
+    head.className = 'mhead';
+    const tag = document.createElement('span');
+    tag.className = 'tag';
+    tag.textContent = m.kind === 'date' ? '📅 ป้ายวันที่'
+                    : (m.side === 'r' ? '➡ ฝั่งขวา (เรา)' : '⬅ ฝั่งซ้าย (คู่สนทนา)');
+    head.appendChild(tag);
+    head.appendChild(Object.assign(document.createElement('span'), {className:'sp'}));
+
+    if (m.kind !== 'date'){
+      const sw = document.createElement('button');
+      sw.className = 'ico'; sw.title = 'สลับฝั่ง'; sw.textContent = '⇄';
+      sw.onclick = () => { m.side = (m.side === 'r' ? 'l' : 'r'); paintList(); render(); };
+      head.appendChild(sw);
+    }
+    const up = document.createElement('button');
+    up.className = 'ico'; up.title = 'เลื่อนขึ้น'; up.textContent = '↑';
+    up.onclick = () => { if (i > 0){ [S.msgs[i-1], S.msgs[i]] = [S.msgs[i], S.msgs[i-1]]; paintList(); render(); } };
+    const dn = document.createElement('button');
+    dn.className = 'ico'; dn.title = 'เลื่อนลง'; dn.textContent = '↓';
+    dn.onclick = () => { if (i < S.msgs.length-1){ [S.msgs[i+1], S.msgs[i]] = [S.msgs[i], S.msgs[i+1]]; paintList(); render(); } };
+    const del = document.createElement('button');
+    del.className = 'ico del'; del.title = 'ลบ'; del.textContent = '✕';
+    del.onclick = () => { S.msgs.splice(i,1); paintList(); render(); };
+    head.append(up, dn, del);
+    el.appendChild(head);
+
+    if (m.kind === 'date'){
+      const inp = document.createElement('input');
+      inp.type = 'text'; inp.value = m.text; inp.placeholder = 'เช่น วันนี้ / 9 ส.ค. 2026';
+      inp.oninput = () => { m.text = inp.value; render(); };
+      el.appendChild(inp);
+
+    } else if (m.kind === 'img'){
+      const b = document.createElement('button');
+      b.className = 'btn wide'; b.textContent = m.img ? '🖼 เปลี่ยนรูป' : '🖼 เลือกรูปที่จะส่ง';
+      const fi = document.createElement('input'); fi.type = 'file'; fi.accept = 'image/*';
+      b.onclick = () => fi.click();
+      fi.onchange = () => loadImage(fi.files[0], img => { m.img = img; paintList(); render(); });
+      el.append(b, fi);
+      if (m.img){
+        const t = document.createElement('img'); t.className = 'thumb'; t.src = m.img.src; el.appendChild(t);
+      }
+      el.appendChild(timeRow(m));
+
+    } else if (m.kind === 'sticker'){
+      if (m.st === 'custom'){
+        const b = document.createElement('button');
+        b.className = 'btn wide'; b.textContent = m.img ? '🎨 เปลี่ยนสติกเกอร์' : '🎨 เลือกไฟล์สติกเกอร์ของคุณ';
+        const fi = document.createElement('input'); fi.type = 'file'; fi.accept = 'image/*';
+        b.onclick = () => fi.click();
+        fi.onchange = () => loadImage(fi.files[0], img => { m.img = img; paintList(); render(); });
+        el.append(b, fi);
+        if (m.img){ const t=document.createElement('img'); t.className='thumb'; t.src=m.img.src; el.appendChild(t); }
+      } else {
+        const g = document.createElement('div'); g.className = 'skgrid';
+        STICKERS.forEach(s=>{
+          const btn = document.createElement('button');
+          btn.className = 'skbtn' + (m.st === s.id ? ' on' : '');
+          btn.title = s.name;
+          const im = document.createElement('img');
+          im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s.svg);
+          btn.appendChild(im);
+          btn.onclick = () => { m.st = s.id; paintList(); render(); };
+          g.appendChild(btn);
+        });
+        el.appendChild(g);
+      }
+      el.appendChild(timeRow(m));
+
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = m.text; ta.placeholder = 'พิมพ์ข้อความ… (Enter = ขึ้นบรรทัดใหม่)';
+      ta.oninput = () => { m.text = ta.value; render(); };
+      el.appendChild(ta);
+      el.appendChild(timeRow(m));
+    }
+    listEl.appendChild(el);
+  });
+
+  if (!S.msgs.length){
+    listEl.innerHTML = '<div class="note">ยังไม่มีข้อความ — กดปุ่มด้านบนเพื่อเพิ่ม หรือกด “โหลดตัวอย่าง”</div>';
+  }
+}
+
+function timeRow(m){
+  const row = document.createElement('div');
+  row.className = 'row'; row.style.marginTop = '7px'; row.style.alignItems = 'center';
+  const t = document.createElement('input');
+  t.type = 'text'; t.value = m.time || ''; t.placeholder = 'เวลา เช่น 14:05';
+  t.oninput = () => { m.time = t.value; render(); };
+  row.appendChild(t);
+  if (m.side === 'r'){
+    const lb = document.createElement('label');
+    lb.className = 'chk'; lb.style.margin = '0';
+    const c = document.createElement('input');
+    c.type = 'checkbox'; c.checked = m.read !== false;
+    c.onchange = () => { m.read = c.checked; render(); };
+    lb.append(c, document.createTextNode('อ่านแล้ว'));
+    row.appendChild(lb);
+  }
+  return row;
+}
+
+function loadImage(file, cb){
+  if (!file) return;
+  const fr = new FileReader();
+  fr.onload = () => { const im = new Image(); im.onload = () => cb(im); im.src = fr.result; };
+  fr.readAsDataURL(file);
+}
+
+/* ---------- ผูก event ---------- */
+const bind = (id, ev, fn) => document.getElementById(id).addEventListener(ev, fn);
+bind('room','input', e => { S.room = e.target.value; render(); });
+bind('clock','input', e => { S.clock = e.target.value; render(); });
+bind('member','input', e => { S.member = e.target.value.trim(); render(); });
+bind('optRead','change', e => { S.showRead = e.target.checked; render(); });
+bind('optName','change', e => { S.showName = e.target.checked; render(); });
+bind('optMark','change', e => { S.showMark = e.target.checked; render(); });
+
+document.querySelectorAll('[data-add]').forEach(b =>
+  b.addEventListener('click', () => addMsg(b.dataset.add)));
+
+bind('avBtn','click', () => document.getElementById('avFile').click());
+document.getElementById('avFile').addEventListener('change', e =>
+  loadImage(e.target.files[0], img => {
+    S.avatar = img; document.getElementById('avPrev').src = img.src; render();
+  }));
+bind('avClr','click', () => { S.avatar = null; document.getElementById('avPrev').removeAttribute('src'); render(); });
+
+const wallsEl = document.getElementById('walls');
+WALLS.forEach(c => {
+  const b = document.createElement('button');
+  b.className = 'sw' + (c === S.wall ? ' on' : '');
+  b.style.background = c;
+  b.onclick = () => {
+    S.wall = c;
+    [...wallsEl.children].forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); render();
+  };
+  wallsEl.appendChild(b);
+});
+
+/* บันทึกรูป — ต้องรองรับ 3 สภาพแวดล้อมที่ทำงานคนละแบบ
+   1) คอมพิวเตอร์ / Android Chrome → ดาวน์โหลดตรงด้วย <a download>
+   2) iPhone (โดยเฉพาะตอนเปิดเป็นแอปจากหน้าจอโฮม) → <a download> ไม่ทำงาน ต้องใช้แผงแชร์ของ iOS
+   3) เผื่อทั้งสองทางไม่ได้ → เปิดรูปในแท็บใหม่ ให้ผู้ใช้กดค้างเพื่อบันทึกลงคลังรูป */
+function download(){
+  cv.toBlob(async blob => {
+    if(!blob){ alert('สร้างรูปไม่สำเร็จ ลองใหม่อีกครั้ง'); return; }
+    const file = new File([blob], 'chat-mockup.png', {type:'image/png'});
+
+    // (2) แผงแชร์ — บนมือถือจะมีตัวเลือก "บันทึกรูปภาพ" ให้เลย
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      try{ await navigator.share({files:[file], title:'ภาพแชท'}); return; }
+      catch(err){ if(err && err.name === 'AbortError') return; }   // ผู้ใช้กดยกเลิกเอง
+    }
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    // (1) ทางปกติ
+    if('download' in a && !isIOS()){
+      a.href = url; a.download = 'chat-mockup.png';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      return;
+    }
+    // (3) ทางสำรอง
+    const w = window.open(url, '_blank');
+    if(!w) alert('กรุณาอนุญาตให้เปิดหน้าต่างใหม่ แล้วกดค้างที่รูปเพื่อบันทึกลงเครื่อง');
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }, 'image/png');
+}
+const isIOS = () => /iP(hone|ad|od)/.test(navigator.userAgent) ||
+                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+bind('dl','click', download);
+bind('dl2','click', download);
+/* ปุ่มลอยบนมือถือ: สลับไปดูภาพ ↔ กลับมาแก้ไข */
+(function(){
+  const fab = document.getElementById('fab');
+  let atImage = false;
+  fab.addEventListener('click', ()=>{
+    if(atImage){ window.scrollTo({top:0, behavior:'smooth'}); fab.textContent='👁 ดูภาพ'; }
+    else { document.getElementById('cv').scrollIntoView({behavior:'smooth', block:'start'}); fab.textContent='✎ กลับไปแก้'; }
+    atImage = !atImage;
+  });
+})();
+bind('clr','click', () => { S.msgs = []; paintList(); render(); });
+
+const zt = document.getElementById('zoomTxt');
+function setZoom(z){ zoom = Math.min(1.6, Math.max(.45, z)); zt.textContent = Math.round(zoom*100)+'%'; render(); }
+bind('zoomIn','click', () => setZoom(zoom + .1));
+bind('zoomOut','click', () => setZoom(zoom - .1));
+
+/* ---------- บทสนทนาตัวอย่าง ---------- */
+function loadDemo(){
+  S.msgs = [
+    {id:uid++, kind:'date', text:'วันนี้'},
+    {id:uid++, kind:'text', side:'l', text:'สวัสดีค่ะ สนใจสั่งเค้กวันเกิด 2 ปอนด์ ส่งวันเสาร์นี้ได้ไหมคะ', time:'09:12'},
+    {id:uid++, kind:'text', side:'r', text:'สวัสดีครับ ได้เลยครับ 2 ปอนด์ 850 บาท ส่งเสาร์ช่วงบ่ายนะครับ', time:'09:14', read:true},
+    {id:uid++, kind:'text', side:'l', text:'ขอเป็นครีมสดรสวานิลลา เขียนหน้าเค้กว่า "สุขสันต์วันเกิดแม่" ค่ะ', time:'09:15'},
+    {id:uid++, kind:'text', side:'r', text:'รับทราบครับ 👍\nสรุปออเดอร์:\n• เค้กครีมสด 2 ปอนด์\n• เขียนหน้าเค้ก: สุขสันต์วันเกิดแม่\n• ส่ง เสาร์ 12 ส.ค. 13:00-15:00\nรวม 850 บาทครับ', time:'09:17', read:true},
+    {id:uid++, kind:'text', side:'l', text:'โอนแล้วนะคะ รบกวนตรวจสอบด้วยค่ะ', time:'09:21'},
+    {id:uid++, kind:'text', side:'r', text:'ได้รับยอดเรียบร้อยครับ ขอบคุณมากครับ 🙏', time:'09:22', read:true}
+  ];
+  S.room = 'คุณสมชาย ใจดี';
+  document.getElementById('room').value = S.room;
+  paintList(); render();
+}
+bind('demo','click', loadDemo);
+
+/* เริ่มต้น — โหลดสติกเกอร์ให้เสร็จก่อนวาดครั้งแรก ไม่งั้นช่องสติกเกอร์จะว่างในภาพที่บันทึก */
+loadDemo();
+loadStickers(()=>render());
+
+/* ติดตั้งเป็นแอปได้ (ข้ามตอนเปิดจากไฟล์ในเครื่อง เพราะ service worker ใช้ได้เฉพาะบนเว็บ) */
+if(location.protocol.startsWith('http') && 'serviceWorker' in navigator){
+  window.addEventListener('load', ()=> navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+/* บนมือถือ ย่อภาพให้พอดีจอ — ต้องคำนวณซ้ำตอนหมุนจอ/เปลี่ยนขนาด
+   (ถ้าคำนวณครั้งเดียวตอนสคริปต์รัน จะได้ค่าผิดเพราะจอยังตั้งขนาดไม่เสร็จ) */
+let userZoomed = false;
+function autoFit(){
+  if(userZoomed) return;
+  if(window.innerWidth < 820){
+    setZoom(Math.max(.4, Math.min(1, (window.innerWidth - 24) / W)));
+  }
+}
+autoFit();
+window.addEventListener('load', autoFit);
+window.addEventListener('resize', autoFit);
+window.addEventListener('orientationchange', ()=> setTimeout(autoFit, 350));
+document.getElementById('zoomIn').addEventListener('click', ()=> userZoomed = true);
+document.getElementById('zoomOut').addEventListener('click', ()=> userZoomed = true);
+</script>
+</body>
+</html>

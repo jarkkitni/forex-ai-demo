@@ -464,11 +464,27 @@ def monitor():
 
 @app.route("/chat-demo")
 def chat_demo():
-    """Chat Mockup Maker — เดโมเสนอลูกค้า (สร้างภาพแชทตัวอย่างแบบออฟไลน์)
-    noindex: เป็นหน้าเดโมส่งลูกค้าเฉพาะราย ไม่ใช่หน้าขายสาธารณะ"""
-    p = os.path.join(os.path.dirname(__file__), "chat_mockup_maker.html")
-    with open(p, "r", encoding="utf-8") as f:
-        return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+    """ลิงก์เดิมที่ส่งลูกค้าไปแล้ว — ชี้ต่อไปที่ตัวแอปจริงซึ่งย้ายไป /chatapp/
+    (ต้องมี trailing slash เพื่อให้ manifest/service worker/ไอคอนหาไฟล์แบบ relative เจอ)"""
+    from flask import redirect
+    return redirect("/chatapp/", code=302)
+
+
+@app.route("/chatapp/", defaults={"sub": "index.html"})
+@app.route("/chatapp/<path:sub>")
+def chatapp(sub):
+    """Chat Mockup Maker (PWA) — ติดตั้งเป็นแอปได้ทั้ง Android และ iPhone
+    noindex: เป็นงานส่งลูกค้าเฉพาะราย ไม่ใช่หน้าขายสาธารณะ"""
+    from flask import send_from_directory
+    d = os.path.join(os.path.dirname(__file__), "chatapp")
+    resp = send_from_directory(d, sub)
+    if sub.endswith("sw.js"):
+        # service worker ต้องไม่ถูกแคชนาน ไม่งั้นผู้ใช้ค้างเวอร์ชันเก่าถาวร
+        resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        resp.headers["Service-Worker-Allowed"] = "/chatapp/"
+    elif sub.endswith("manifest.json"):
+        resp.headers["Content-Type"] = "application/manifest+json; charset=utf-8"
+    return resp
 
 
 @app.route("/pitch/chef")
@@ -2449,6 +2465,7 @@ def robots():
         "Disallow: /monitor\n"          # จอภายใน ไม่ให้ index
         "Disallow: /hunter\n"           # เครื่องมือภายใน
         "Disallow: /chat-demo\n"        # เดโมส่งลูกค้าเฉพาะราย ไม่ใช่หน้าขาย
+        "Disallow: /chatapp/\n"         # ตัวแอปจริงของลูกค้ารายนี้
         "Disallow: /demo/dialysis\n"    # มีข้อมูลคนไข้ ห้าม index เด็ดขาด
         "Disallow: /api/\n"
         f"\nSitemap: {BASE_URL}/sitemap.xml\n"
