@@ -208,7 +208,22 @@
 
 const cv  = document.getElementById('cv');
 const ctx = cv.getContext('2d');
-const DPR = 3;                     // ส่งออก ×3 ให้คมชัด
+
+/* ความละเอียดที่ส่งออก — ปกติ ×3 ให้คมชัด
+   ⚠️ Safari บน iPhone มีเพดานขนาด canvas: ด้านยาวสุดไม่เกิน ~4096 px และพื้นที่รวมไม่เกิน ~16.7 ล้านพิกเซล
+   ถ้าเกิน canvas จะว่างเปล่า/ดำ และบันทึกรูปไม่ได้เลย (แชทยาว ๆ ชนเพดานนี้ได้ง่ายมาก)
+   จึงต้องลดความละเอียดลงอัตโนมัติเมื่อภาพยาว แทนที่จะปล่อยให้พัง */
+const MAX_SIDE = 4096, MAX_AREA = 16.7e6;
+let DPR = 3, TOO_LONG = false;
+function fitDPR(w, h){
+  TOO_LONG = false;
+  for(const d of [3, 2.5, 2, 1.5, 1]){
+    if(h*d <= MAX_SIDE && w*d <= MAX_SIDE && (w*d)*(h*d) <= MAX_AREA) return d;
+  }
+  // ยาวเกินกว่าจะพอดีเพดานแม้ที่ ×1 → ย่อลงอีกเพื่อให้ยัง "บันทึกได้" แต่ต้องเตือนผู้ใช้
+  TOO_LONG = true;
+  return Math.max(0.3, MAX_SIDE / h);
+}
 
 /* ---------- ค่าคงที่ของหน้าจอ (หน่วย logical px) ---------- */
 const W        = 390;              // กว้างเท่าจอมือถือมาตรฐาน
@@ -226,7 +241,9 @@ const F_NAME   = 12, F_TIME = 11;
 const GAP_SAME = 5, GAP_DIFF = 13;
 const R_BIG    = 18, R_SMALL = 5;
 
-const FONT = '"Leelawadee UI","Sarabun","Segoe UI",-apple-system,"Helvetica Neue",sans-serif';
+/* ฟอนต์ต้องครอบคลุมทุกเครื่อง: Windows(Leelawadee) · Android(Noto Sans Thai) · iOS(Thonburi/SF)
+   ถ้าไม่ใส่ของมือถือ ตัวอักษรไทยจะตกไปใช้ฟอนต์สำรองที่สระลอย */
+const FONT = '"Leelawadee UI","Noto Sans Thai","Sarabun","Thonburi",-apple-system,"Segoe UI","Helvetica Neue",sans-serif';
 const f = (sz, w) => (w ? w + ' ' : '') + sz + 'px ' + FONT;
 
 const WALLS = ['#8cabd8','#7f9dc4','#b8d0e6','#dfe6ec','#2b3441','#a8c8a0','#e8d5c4','#c9b8d8'];
@@ -453,10 +470,22 @@ function render(){
   const chatH   = Math.max(chatMin, contentH);
   const H       = ST_H + HD_H + chatH + IN_H;
 
+  DPR = fitDPR(W, H);                       // ลดความละเอียดเองถ้าภาพยาวจนชนเพดานของ iPhone
   cv.width  = W * DPR;  cv.height = H * DPR;
   cv.style.width  = (W * zoom) + 'px';
   cv.style.height = (H * zoom) + 'px';
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const hintEl = document.querySelector('.hint');
+  if (hintEl){
+    if (TOO_LONG){
+      hintEl.innerHTML = `<b style="color:#ffb020">⚠️ แชทยาวเกินไป (${cv.width} × ${cv.height} px)</b><br>
+        ภาพจะไม่คมชัดและอาจบันทึกไม่ได้บน iPhone — แนะนำให้แบ่งเป็น 2 ภาพ โดยลบข้อความส่วนท้ายออกแล้วบันทึกทีละช่วง`;
+    } else {
+      hintEl.textContent = `ภาพที่บันทึกได้ ${cv.width} × ${cv.height} px (×${DPR})` +
+        (DPR < 3 ? ' — ลดความละเอียดอัตโนมัติเพราะแชทยาว เพื่อให้บันทึกได้ทุกเครื่อง'
+                 : ' — คมพอสำหรับลงโฆษณา/พรีเซนต์');
+    }
+  }
   ctx.textBaseline = 'alphabetic';
 
   const dark = isDark(S.wall);
