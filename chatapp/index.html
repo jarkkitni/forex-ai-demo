@@ -163,6 +163,8 @@
         <button class="btn" data-add="img">＋ ส่งรูปภาพ</button>
         <button class="btn" data-add="sticker">＋ สติกเกอร์</button>
         <button class="btn" data-add="mysticker">＋ สติกเกอร์ของฉัน</button>
+        <button class="btn" data-add="call">＋ บันทึกการโทร</button>
+        <button class="btn" data-add="system">＋ ข้อความระบบ</button>
       </div>
       <div id="list"></div>
     </div>
@@ -171,6 +173,8 @@
       <h2>ตัวเลือก</h2>
       <label class="chk"><input type="checkbox" id="optRead" checked> แสดง "อ่านแล้ว" ที่ข้อความฝั่งขวา</label>
       <label class="chk"><input type="checkbox" id="optName"> แสดงชื่อเหนือฟองข้อความฝั่งซ้าย</label>
+      <label class="chk"><input type="checkbox" id="optClouds"> พื้นหลังมีลายเมฆ</label>
+      <label class="chk"><input type="checkbox" id="optLink" checked> ทำเบอร์โทร/ลิงก์ให้เป็นสีน้ำเงินอัตโนมัติ</label>
       <label class="chk"><input type="checkbox" id="optMark" checked> ใส่ป้าย "ภาพจำลอง" ที่มุมภาพ</label>
       <div class="row" style="margin-top:10px">
         <button class="btn pri" id="dl">⬇ บันทึกเป็น PNG</button>
@@ -344,7 +348,7 @@ function loadStickers(cb){
 const S = {
   room:'คุณสมชาย ใจดี', clock:'09:41', member:'',
   wall:WALLS[0], avatar:null,
-  showRead:true, showName:false, showMark:true,
+  showRead:true, showName:false, showMark:true, clouds:false, autoLink:true,
   msgs:[]
 };
 let uid = 1;
@@ -393,6 +397,26 @@ function rr(x, y, w, h, r){
   ctx.lineTo(x, y + rad.tl);              ctx.quadraticCurveTo(x, y, x + rad.tl, y);
   ctx.closePath();
 }
+/* หางฟองข้อความ — ยื่นออกจากมุมบนของฟอง ด้านที่ติดคนพูด
+   เป็นรูปทรงเรขาคณิตทั่วไป ไม่ใช่โลโก้หรือตัวละครของใคร */
+function bubbleTail(x, y, side, color){
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  if (side === 'l'){                 // ฟองฝั่งซ้าย → หางชี้ออกซ้าย
+    ctx.moveTo(x + 1, y);
+    ctx.quadraticCurveTo(x - 4, y - 1, x - 8.5, y + 3.5);
+    ctx.quadraticCurveTo(x - 3.5, y + 4.5, x + 1, y + 12);
+  } else {                           // ฟองฝั่งขวา → หางชี้ออกขวา
+    ctx.moveTo(x - 1, y);
+    ctx.quadraticCurveTo(x + 4, y - 1, x + 8.5, y + 3.5);
+    ctx.quadraticCurveTo(x + 3.5, y + 4.5, x - 1, y + 12);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
 function circleImg(img, x, y, d){
   ctx.save(); ctx.beginPath(); ctx.arc(x + d/2, y + d/2, d/2, 0, Math.PI*2); ctx.clip();
   const s = Math.max(d / img.width, d / img.height);
@@ -431,7 +455,11 @@ function layout(){
     let nameH = 0;
     if (m.side === 'l' && S.showName && first) nameH = 17;
 
-    if (m.kind === 'sticker'){
+    if (m.kind === 'call'){
+      const CW = 212, CH = m.sub ? 86 : 58;   // การ์ดบันทึกการโทร (มีแถบล่างหรือไม่มี)
+      items.push({m, y:h + nameH, type:'call', first, nameH, w:CW, h:CH});
+      h += nameH + CH;
+    } else if (m.kind === 'sticker'){
       const SZ = 116;                       // สติกเกอร์ไม่มีฟองข้อความ วางลอยเหมือนแอปแชทจริง
       items.push({m, y:h + nameH, type:'sticker', first, nameH, w:SZ, h:SZ});
       h += nameH + SZ;
@@ -493,6 +521,7 @@ function render(){
   /* พื้นหลังแชท */
   ctx.fillStyle = S.wall;
   ctx.fillRect(0, 0, W, H);
+  if (S.clouds) drawClouds(H);
 
   /* ---- ข้อความ (จัดชิดล่างเมื่อเนื้อหาน้อย) ---- */
   const top = ST_H + HD_H + Math.max(0, chatH - contentH);
@@ -507,10 +536,56 @@ function render(){
   if (S.showMark) drawMark(H);
 }
 
+/* เมฆพื้นหลัง — วาดเองด้วยไล่เฉดวงกลม ไม่ได้ใช้ไฟล์ภาพของใคร
+   ตำแหน่งคงที่ (ไม่สุ่ม) ไม่งั้นเมฆจะขยับทุกครั้งที่พิมพ์ */
+function drawClouds(H){
+  ctx.save();
+  const puff = (x, y, r) => {
+    const g = ctx.createRadialGradient(x, y, r*0.15, x, y, r);
+    g.addColorStop(0, 'rgba(255,255,255,.46)');
+    g.addColorStop(.55, 'rgba(255,255,255,.22)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+  };
+  const rows = Math.ceil(H / 300);
+  for (let i = 0; i < rows; i++){
+    const y0 = 70 + i*300;
+    puff(62, y0, 52);  puff(112, y0 + 10, 36); puff(152, y0 - 6, 30);
+    puff(300, y0 + 96, 44); puff(345, y0 + 104, 30);
+    puff(40, y0 + 186, 34);
+    puff(215, y0 + 232, 40); puff(258, y0 + 240, 26);
+  }
+  ctx.restore();
+}
+
 function isDark(hex){
   const c = hex.replace('#','');
   const r = parseInt(c.substr(0,2),16), g = parseInt(c.substr(2,2),16), b = parseInt(c.substr(4,2),16);
   return (r*299 + g*587 + b*114) / 1000 < 140;
+}
+
+/* วาดข้อความหนึ่งบรรทัด โดยทำ "เบอร์โทร / ลิงก์" ให้เป็นสีน้ำเงินขีดเส้นใต้
+   เหมือนที่แอปแชทจริงทำอัตโนมัติ (ปิดได้ที่ช่องตัวเลือก) */
+const LINKISH = /(0\d[\d\-\s]{7,11}\d|https?:\/\/\S+|www\.\S+)/g;
+function drawLineWithLinks(line, x, y, color){
+  if (!S.autoLink || !LINKISH.test(line)){
+    LINKISH.lastIndex = 0;
+    ctx.fillStyle = color; ctx.fillText(line, x, y); return;
+  }
+  LINKISH.lastIndex = 0;
+  let cx = x;
+  line.split(LINKISH).forEach(part => {
+    if (!part) return;
+    LINKISH.lastIndex = 0;
+    const isLink = LINKISH.test(part) && part.length > 6;
+    LINKISH.lastIndex = 0;
+    ctx.fillStyle = isLink ? '#1a6fd4' : color;
+    ctx.fillText(part, cx, y);
+    const w = ctx.measureText(part).width;
+    if (isLink){ ctx.fillRect(cx, y + 2.5, w, 1.1); }   // ขีดเส้นใต้
+    cx += w;
+  });
 }
 
 function drawItem(it){
@@ -551,7 +626,51 @@ function drawItem(it){
     ? {tl:R_BIG, tr:(it.first ? R_SMALL : R_BIG), br:R_BIG, bl:R_BIG}
     : {tl:(it.first ? R_SMALL : R_BIG), tr:R_BIG, br:R_BIG, bl:R_BIG};
 
-  if (it.type === 'sticker'){
+  if (it.type === 'call'){
+    const isR = right;
+    ctx.fillStyle = isR ? '#06c755' : '#ffffff';
+    if (it.first) bubbleTail(isR ? bx + it.w : bx, it.y + 3, isR ? 'r' : 'l', ctx.fillStyle);
+    rr(bx, it.y, it.w, it.h, radius); ctx.fill();
+
+    // วงกลมไอคอนหูโทรศัพท์
+    const ccx = bx + 30, ccy = it.y + 29;
+    ctx.fillStyle = isR ? 'rgba(255,255,255,.34)' : '#eef1f4';
+    ctx.beginPath(); ctx.arc(ccx, ccy, 19, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = isR ? '#064d24' : '#3f4854'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(ccx - 7, ccy - 7); ctx.lineTo(ccx - 3, ccy - 7); ctx.lineTo(ccx - 1, ccy - 2);
+    ctx.lineTo(ccx - 4, ccy); ctx.quadraticCurveTo(ccx - 1, ccy + 4, ccx + 3, ccy + 6);
+    ctx.lineTo(ccx + 5, ccy + 3); ctx.lineTo(ccx + 9, ccy + 5); ctx.lineTo(ccx + 9, ccy + 9);
+    ctx.quadraticCurveTo(ccx - 2, ccy + 9, ccx - 7, ccy - 7);
+    ctx.stroke();
+
+    // ข้อความ 2 บรรทัด
+    const tx = bx + 56;
+    ctx.fillStyle = isR ? '#062f14' : '#111318';
+    ctx.font = f(14.5, '700');
+    const lines = wrap(m.text || 'สิ้นสุดการโทรแบบเสียง', it.w - 66, f(14.5, '700'));
+    lines.slice(0, 2).forEach((ln, i) => ctx.fillText(ln, tx, it.y + 22 + i*17));
+    ctx.font = f(13);
+    ctx.fillStyle = isR ? 'rgba(6,47,20,.72)' : '#6b7688';
+    ctx.fillText(m.dur || '00:55', tx, it.y + (lines.length > 1 ? 56 : 41));
+
+    // แถบล่าง (ถ้าเปิด)
+    if (m.sub){
+      ctx.strokeStyle = isR ? 'rgba(255,255,255,.35)' : '#e5e8ec'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(bx + 10, it.y + 58.5); ctx.lineTo(bx + it.w - 10, it.y + 58.5); ctx.stroke();
+      ctx.fillStyle = isR ? '#062f14' : '#3f4854'; ctx.font = f(13);
+      ctx.fillText(m.sub, bx + 30, it.y + 76);
+      // ไอคอนโน้ตดนตรีเล็ก ๆ
+      ctx.fillStyle = isR ? 'rgba(6,47,20,.8)' : '#6b7688';
+      ctx.beginPath(); ctx.arc(bx + 15, it.y + 75, 3, 0, Math.PI*2); ctx.fill();
+      ctx.fillRect(bx + 17, it.y + 66, 1.6, 9);
+      // ลูกศร >
+      ctx.strokeStyle = isR ? 'rgba(6,47,20,.7)' : '#9aa5b1'; ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(bx + it.w - 18, it.y + 68); ctx.lineTo(bx + it.w - 13, it.y + 72.5);
+      ctx.lineTo(bx + it.w - 18, it.y + 77); ctx.stroke();
+    }
+  } else if (it.type === 'sticker'){
     const img = (m.st === 'custom') ? m.img : SK_IMG[m.st];
     if (img) ctx.drawImage(img, bx, it.y, it.w, it.h);
     else {
@@ -568,10 +687,13 @@ function drawItem(it){
     ctx.restore();
   } else {
     ctx.fillStyle = right ? '#06c755' : '#ffffff';
+    // หางออกก่อน แล้วค่อยวางฟองทับ รอยต่อจะเนียนเป็นชิ้นเดียว
+    if (it.first) bubbleTail(right ? bx + it.w : bx, it.y + 3, right ? 'r' : 'l', ctx.fillStyle);
     rr(bx, it.y, it.w, it.h, radius); ctx.fill();
-    ctx.fillStyle = right ? '#062f14' : '#111318';
+    const txtCol = right ? '#062f14' : '#111318';
     ctx.font = f(F_MSG);
-    it.lines.forEach((ln, i) => ctx.fillText(ln, bx + BUB_PX, it.y + BUB_PY + LH*(i+1) - 6));
+    it.lines.forEach((ln, i) =>
+      drawLineWithLinks(ln, bx + BUB_PX, it.y + BUB_PY + LH*(i+1) - 6, txtCol));
   }
 
   /* เวลา + อ่านแล้ว (อยู่นอกฟอง ชิดขอบล่าง) */
@@ -645,25 +767,44 @@ function drawHeader(){
     ctx.fillText(S.member + ' คน', 36, cy + 15);
   }
 
-  // ไอคอนขวา: โทร / วิดีโอ / เมนู
-  ctx.strokeStyle = '#111318'; ctx.lineWidth = 1.8;
-  let x = W - 108;
-  // โทรศัพท์
+  // ไอคอนขวา: ค้นหา · โทร · ปฏิทิน(มีแจ้งเตือน) · เมนู
+  // ทุกตัววาดขึ้นเองจากเส้นพื้นฐาน เป็นสัญลักษณ์สากล ไม่ได้คัดลอกไฟล์ไอคอนของใคร
+  ctx.strokeStyle = '#111318'; ctx.lineWidth = 1.8; ctx.lineCap = 'round';
+
+  // 1) แว่นขยาย
+  let x = W - 152;
+  ctx.beginPath(); ctx.arc(x + 7, cy - 2, 7, 0, Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + 12, cy + 3); ctx.lineTo(x + 16.5, cy + 8); ctx.stroke();
+
+  // 2) หูโทรศัพท์
+  x = W - 116;
   ctx.beginPath();
   ctx.moveTo(x, cy - 7); ctx.lineTo(x + 5, cy - 7); ctx.lineTo(x + 7, cy - 2);
   ctx.lineTo(x + 4, cy);  ctx.quadraticCurveTo(x + 7, cy + 5, x + 12, cy + 8);
   ctx.lineTo(x + 14, cy + 5); ctx.lineTo(x + 19, cy + 7); ctx.lineTo(x + 19, cy + 12);
   ctx.quadraticCurveTo(x + 6, cy + 12, x, cy - 7);
   ctx.stroke();
-  // กล้อง
-  x += 36;
-  rr(x, cy - 7, 15, 14, 3); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(x + 17, cy - 4); ctx.lineTo(x + 23, cy - 7);
-  ctx.lineTo(x + 23, cy + 7); ctx.lineTo(x + 17, cy + 4); ctx.closePath(); ctx.stroke();
-  // เมนู 3 ขีด
-  x += 38;
+
+  // 3) ปฏิทินเลข 31 + จุดแจ้งเตือน
+  x = W - 74;
+  rr(x, cy - 8, 20, 18, 3.5); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x, cy - 2.5); ctx.lineTo(x + 20, cy - 2.5); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x + 5.5, cy - 12); ctx.lineTo(x + 5.5, cy - 6);
+  ctx.moveTo(x + 14.5, cy - 12); ctx.lineTo(x + 14.5, cy - 6);
+  ctx.stroke();
+  ctx.fillStyle = '#111318'; ctx.font = f(9, '700'); ctx.textAlign = 'center';
+  ctx.fillText('31', x + 10, cy + 6); ctx.textAlign = 'left';
+  ctx.fillStyle = '#06c755';
+  ctx.beginPath(); ctx.arc(x + 20, cy - 9, 6.5, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#ffffff'; ctx.font = f(8.5, '700'); ctx.textAlign = 'center';
+  ctx.fillText('N', x + 20, cy - 6); ctx.textAlign = 'left';
+
+  // 4) เมนู 3 ขีด
+  ctx.strokeStyle = '#111318';
+  x = W - 36;
   for (let i = 0; i < 3; i++){
-    ctx.beginPath(); ctx.moveTo(x, cy - 6 + i*6); ctx.lineTo(x + 17, cy - 6 + i*6); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x, cy - 6 + i*6); ctx.lineTo(x + 18, cy - 6 + i*6); ctx.stroke();
   }
   ctx.restore();
 }
@@ -677,27 +818,35 @@ function drawInputBar(H){
   ctx.beginPath(); ctx.moveTo(0, y + .5); ctx.lineTo(W, y + .5); ctx.stroke();
 
   const cy = y + IN_H/2 - 4;
-  ctx.strokeStyle = '#5b6472'; ctx.lineWidth = 1.8; ctx.lineCap = 'round';
-  // เครื่องหมาย +
-  ctx.beginPath(); ctx.moveTo(20, cy); ctx.lineTo(34, cy); ctx.moveTo(27, cy - 7); ctx.lineTo(27, cy + 7); ctx.stroke();
+  ctx.strokeStyle = '#3f4854'; ctx.lineWidth = 1.9; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  // ── ซ้าย: + · กล้อง · รูปภาพ ──
+  ctx.beginPath(); ctx.moveTo(15, cy); ctx.lineTo(31, cy); ctx.moveTo(23, cy - 8); ctx.lineTo(23, cy + 8); ctx.stroke();
   // กล้อง
-  rr(46, cy - 7, 18, 14, 3); ctx.stroke();
-  ctx.beginPath(); ctx.arc(55, cy, 3.6, 0, Math.PI*2); ctx.stroke();
-  // ไมค์
-  rr(78, cy - 8, 8, 12, 4); ctx.stroke();
-  ctx.beginPath(); ctx.arc(82, cy + 1, 6.5, 0, Math.PI); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(82, cy + 8); ctx.lineTo(82, cy + 11); ctx.stroke();
-  // ช่องพิมพ์
+  rr(43, cy - 8, 19, 16, 4); ctx.stroke();
+  ctx.beginPath(); ctx.arc(52.5, cy, 4, 0, Math.PI*2); ctx.stroke();
+  // รูปภาพ (กรอบ + ภูเขา)
+  rr(74, cy - 8, 19, 16, 4); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(77, cy + 5); ctx.lineTo(82, cy - 2); ctx.lineTo(86, cy + 2);
+  ctx.lineTo(88.5, cy - 0.5); ctx.lineTo(90.5, cy + 5);
+  ctx.closePath(); ctx.fillStyle = '#3f4854'; ctx.fill();
+  // ── ช่องพิมพ์ ──
   ctx.fillStyle = '#f1f2f4';
-  rr(98, cy - 13, W - 98 - 46, 26, 13); ctx.fill();
-  ctx.fillStyle = '#a7aeb9'; ctx.font = f(14);
-  ctx.fillText('Aa', 110, cy + 5);
-  // หน้ายิ้ม
-  ctx.strokeStyle = '#5b6472';
-  ctx.beginPath(); ctx.arc(W - 26, cy, 9, 0, Math.PI*2); ctx.stroke();
-  ctx.beginPath(); ctx.arc(W - 26, cy + 1, 4.5, .15*Math.PI, .85*Math.PI); ctx.stroke();
-  ctx.beginPath(); ctx.arc(W - 29.5, cy - 3, .9, 0, Math.PI*2); ctx.stroke();
-  ctx.beginPath(); ctx.arc(W - 22.5, cy - 3, .9, 0, Math.PI*2); ctx.stroke();
+  rr(103, cy - 14, W - 103 - 62, 28, 14); ctx.fill();
+  ctx.fillStyle = '#a7aeb9'; ctx.font = f(14.5);
+  ctx.fillText('Aa', 116, cy + 5);
+  // ── ขวา: หน้ายิ้ม · ไมค์ ──
+  ctx.strokeStyle = '#3f4854';
+  const ex = W - 52;
+  ctx.beginPath(); ctx.arc(ex, cy, 9.5, 0, Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(ex, cy + 1, 4.8, .15*Math.PI, .85*Math.PI); ctx.stroke();
+  ctx.beginPath(); ctx.arc(ex - 3.6, cy - 3, 1, 0, Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(ex + 3.6, cy - 3, 1, 0, Math.PI*2); ctx.stroke();
+  // ไมค์
+  const mx = W - 22;
+  rr(mx - 4, cy - 9, 8, 12.5, 4); ctx.stroke();
+  ctx.beginPath(); ctx.arc(mx, cy + 1, 6.5, 0, Math.PI); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(mx, cy + 7.5); ctx.lineTo(mx, cy + 10.5); ctx.stroke();
   // ขีดล่างแบบ home indicator
   ctx.fillStyle = 'rgba(0,0,0,.55)';
   rr(W/2 - 60, H - 9, 120, 4, 2); ctx.fill();
@@ -730,6 +879,12 @@ function addMsg(kind){
     S.msgs.push({id:uid++, kind:'date', text:'วันนี้'});
   } else if (kind === 'img'){
     S.msgs.push({id:uid++, kind:'img', side:'r', img:null, time:hh+':'+mm, read:true});
+  } else if (kind === 'call'){
+    S.msgs.push({id:uid++, kind:'call', side:'r', text:'สิ้นสุดการโทรแบบเสียง', dur:'00:55',
+                 sub:'เสียงเรียกเข้า & เสียงรอสาย', time:hh+':'+mm, read:true});
+  } else if (kind === 'system'){
+    // ป้ายกลางจอแบบเดียวกับป้ายวันที่ ใช้เขียนข้อความระบบได้ทุกแบบ
+    S.msgs.push({id:uid++, kind:'date', text:'คุณสมชาย เข้าร่วมแชทแล้ว'});
   } else if (kind === 'sticker'){
     S.msgs.push({id:uid++, kind:'sticker', side:'r', st:STICKERS[0].id, time:hh+':'+mm, read:true});
   } else if (kind === 'mysticker'){
@@ -789,6 +944,20 @@ function paintList(){
       if (m.img){
         const t = document.createElement('img'); t.className = 'thumb'; t.src = m.img.src; el.appendChild(t);
       }
+      el.appendChild(timeRow(m));
+
+    } else if (m.kind === 'call'){
+      const mk = (label, key, ph) => {
+        const lb = document.createElement('label'); lb.className = 'f'; lb.style.marginBottom = '7px';
+        const sp = document.createElement('span'); sp.textContent = label;
+        const ip = document.createElement('input'); ip.type = 'text'; ip.value = m[key] || ''; ip.placeholder = ph || '';
+        ip.oninput = () => { m[key] = ip.value; render(); };
+        lb.append(sp, ip); return lb;
+      };
+      el.appendChild(mk('ข้อความ', 'text', 'สิ้นสุดการโทรแบบเสียง'));
+      const row = document.createElement('div'); row.className = 'row';
+      row.append(mk('ระยะเวลา', 'dur', '00:55'), mk('แถบล่าง (เว้นว่าง=ไม่มี)', 'sub', 'เสียงเรียกเข้า & เสียงรอสาย'));
+      el.appendChild(row);
       el.appendChild(timeRow(m));
 
     } else if (m.kind === 'sticker'){
@@ -864,6 +1033,8 @@ bind('clock','input', e => { S.clock = e.target.value; render(); });
 bind('member','input', e => { S.member = e.target.value.trim(); render(); });
 bind('optRead','change', e => { S.showRead = e.target.checked; render(); });
 bind('optName','change', e => { S.showName = e.target.checked; render(); });
+bind('optClouds','change', e => { S.clouds = e.target.checked; render(); });
+bind('optLink','change', e => { S.autoLink = e.target.checked; render(); });
 bind('optMark','change', e => { S.showMark = e.target.checked; render(); });
 
 document.querySelectorAll('[data-add]').forEach(b =>
