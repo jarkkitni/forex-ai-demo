@@ -10,7 +10,7 @@
   "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
   "background_color": "#12151c",
-  "theme_color": "#06c755",
+  "theme_color": "#0ac15c",
   "categories": ["productivity", "utilities", "graphics"],
   "dir": "ltr",
   "prefer_related_applications": false,

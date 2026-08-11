@@ -8,7 +8,7 @@
 
 <!-- ===== ติดตั้งเป็นแอปได้ทั้ง Android และ iPhone ===== -->
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#06c755">
+<meta name="theme-color" content="#0ac15c">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -19,7 +19,7 @@
   *{box-sizing:border-box;margin:0;padding:0}
   :root{
     --bg:#12151c; --panel:#1a1f29; --line:#2a3140; --txt:#e7ecf3; --dim:#8d98ab;
-    --accent:#06c755; --accent2:#2f6df6; --danger:#e05260;
+    --accent:#0ac15c; --accent2:#2f6df6; --danger:#e05260;
   }
   body{
     font-family:"Leelawadee UI","Sarabun","Segoe UI",-apple-system,"Helvetica Neue",sans-serif;
@@ -152,6 +152,8 @@
 
       <label class="f" style="margin-top:12px"><span>สีพื้นหลังแชท</span></label>
       <div class="swatches" id="walls"></div>
+      <label class="f" style="margin-top:12px"><span>ชุดสีฟองข้อความ</span></label>
+      <div class="swatches" id="themes"></div>
     </div>
 
     <div class="sec">
@@ -252,6 +254,16 @@ const f = (sz, w) => (w ? w + ' ' : '') + sz + 'px ' + FONT;
 
 const WALLS = ['#8cabd8','#7f9dc4','#b8d0e6','#dfe6ec','#2b3441','#a8c8a0','#e8d5c4','#c9b8d8'];
 
+/* ชุดสีฟองข้อความ — ตั้งใจ "ไม่ใช้ค่าสีประจำแบรนด์ของผู้ให้บริการแชทรายใดแบบตรงตัวเลข"
+   หน้าตายังคุ้นมือเหมือนเดิม แต่ไม่มีจุดให้อ้างว่าเราสวมเครื่องหมายของใคร */
+const THEMES = [
+  { id:'green', name:'เขียว',  me:'#0ac15c', meText:'#062f14', you:'#ffffff', youText:'#111318' },
+  { id:'blue',  name:'ฟ้า',    me:'#3b8fe8', meText:'#062033', you:'#ffffff', youText:'#111318' },
+  { id:'dark',  name:'เข้ม',   me:'#4b5563', meText:'#f2f5f9', you:'#ffffff', youText:'#111318' },
+  { id:'mint',  name:'มิ้นต์', me:'#2fbf9f', meText:'#04302a', you:'#ffffff', youText:'#111318' }
+];
+const theme = () => THEMES.find(t => t.id === S.theme) || THEMES[0];
+
 /* =========================================================
    สติกเกอร์ — วาดขึ้นใหม่ทั้งหมดด้วย SVG ในไฟล์นี้
    ⚠️ ห้ามใช้ตัวละครของแพลตฟอร์มใด ๆ (หมีบราวน์/โคนี่ ฯลฯ เป็นลิขสิทธิ์ของ LINE)
@@ -348,7 +360,7 @@ function loadStickers(cb){
 const S = {
   room:'คุณสมชาย ใจดี', clock:'09:41', member:'',
   wall:WALLS[0], avatar:null,
-  showRead:true, showName:false, showMark:true, clouds:false, autoLink:true,
+  showRead:true, showName:false, showMark:true, clouds:false, autoLink:true, theme:'green',
   msgs:[]
 };
 let uid = 1;
@@ -627,8 +639,8 @@ function drawItem(it){
     : {tl:(it.first ? R_SMALL : R_BIG), tr:R_BIG, br:R_BIG, bl:R_BIG};
 
   if (it.type === 'call'){
-    const isR = right;
-    ctx.fillStyle = isR ? '#06c755' : '#ffffff';
+    const isR = right, th = theme();
+    ctx.fillStyle = isR ? th.me : th.you;
     if (it.first) bubbleTail(isR ? bx + it.w : bx, it.y + 3, isR ? 'r' : 'l', ctx.fillStyle);
     rr(bx, it.y, it.w, it.h, radius); ctx.fill();
 
@@ -686,11 +698,12 @@ function drawItem(it){
            ctx.fillText('เลือกรูปภาพ', bx + it.w/2, it.y + it.h/2 + 5); ctx.textAlign = 'left'; }
     ctx.restore();
   } else {
-    ctx.fillStyle = right ? '#06c755' : '#ffffff';
+    const th = theme();
+    ctx.fillStyle = right ? th.me : th.you;
     // หางออกก่อน แล้วค่อยวางฟองทับ รอยต่อจะเนียนเป็นชิ้นเดียว
     if (it.first) bubbleTail(right ? bx + it.w : bx, it.y + 3, right ? 'r' : 'l', ctx.fillStyle);
     rr(bx, it.y, it.w, it.h, radius); ctx.fill();
-    const txtCol = right ? '#062f14' : '#111318';
+    const txtCol = right ? th.meText : th.youText;
     ctx.font = f(F_MSG);
     it.lines.forEach((ln, i) =>
       drawLineWithLinks(ln, bx + BUB_PX, it.y + BUB_PY + LH*(i+1) - 6, txtCol));
@@ -795,7 +808,7 @@ function drawHeader(){
   ctx.stroke();
   ctx.fillStyle = '#111318'; ctx.font = f(9, '700'); ctx.textAlign = 'center';
   ctx.fillText('31', x + 10, cy + 6); ctx.textAlign = 'left';
-  ctx.fillStyle = '#06c755';
+  ctx.fillStyle = '#0ac15c';
   ctx.beginPath(); ctx.arc(x + 20, cy - 9, 6.5, 0, Math.PI*2); ctx.fill();
   ctx.fillStyle = '#ffffff'; ctx.font = f(8.5, '700'); ctx.textAlign = 'center';
   ctx.fillText('N', x + 20, cy - 6); ctx.textAlign = 'left';
@@ -1064,6 +1077,19 @@ WALLS.forEach(c => {
    1) คอมพิวเตอร์ / Android Chrome → ดาวน์โหลดตรงด้วย <a download>
    2) iPhone (โดยเฉพาะตอนเปิดเป็นแอปจากหน้าจอโฮม) → <a download> ไม่ทำงาน ต้องใช้แผงแชร์ของ iOS
    3) เผื่อทั้งสองทางไม่ได้ → เปิดรูปในแท็บใหม่ ให้ผู้ใช้กดค้างเพื่อบันทึกลงคลังรูป */
+const themesEl = document.getElementById('themes');
+THEMES.forEach(t => {
+  const b = document.createElement('button');
+  b.className = 'sw' + (t.id === S.theme ? ' on' : '');
+  b.style.background = t.me; b.title = 'ชุดสี' + t.name;
+  b.onclick = () => {
+    S.theme = t.id;
+    [...themesEl.children].forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); render();
+  };
+  themesEl.appendChild(b);
+});
+
 function download(){
   cv.toBlob(async blob => {
     if(!blob){ alert('สร้างรูปไม่สำเร็จ ลองใหม่อีกครั้ง'); return; }
