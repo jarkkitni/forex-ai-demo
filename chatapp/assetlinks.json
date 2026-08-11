@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.thailinebot.chatmockup",
+        "sha256_cert_fingerprints": ["D2:BB:F7:5D:D7:CB:10:63:E7:29:05:4E:B8:22:D5:81:CC:68:E5:C8:54:31:5D:27:1A:24:1D:05:28:10:2F:7E"]
+      }
+    }]
