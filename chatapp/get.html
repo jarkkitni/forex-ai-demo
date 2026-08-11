@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>ติดตั้ง Chat Mockup Maker</title>
+<link rel="icon" href="icons/favicon-64.png" type="image/png">
+<meta name="theme-color" content="#06c755">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Leelawadee UI","Noto Sans Thai","Sarabun","Thonburi",-apple-system,"Segoe UI",sans-serif;
+       background:linear-gradient(180deg,#0f1218 0%,#161b24 100%);color:#e8edf4;min-height:100vh;
+       padding:26px 16px calc(40px + env(safe-area-inset-bottom));line-height:1.65}
+  .wrap{max-width:520px;margin:0 auto}
+  .head{text-align:center;margin-bottom:26px}
+  .head img{width:88px;height:88px;border-radius:22px;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+  .head h1{font-size:22px;margin-top:14px}
+  .head p{color:#8b96a8;font-size:13.5px;margin-top:5px}
+
+  .card{background:#1b212c;border:1px solid #2b3342;border-radius:16px;padding:20px;margin-bottom:15px}
+  .card.hi{border-color:#2c6b45;background:linear-gradient(180deg,#16281d 0%,#1b212c 60%)}
+  .card h2{font-size:16px;display:flex;align-items:center;gap:9px;margin-bottom:4px}
+  .card h2 span.ic{font-size:22px}
+  .card .sub{color:#8b96a8;font-size:12.5px;margin-bottom:14px}
+
+  .btn{display:block;width:100%;text-align:center;text-decoration:none;padding:15px;border-radius:12px;
+       font-weight:700;font-size:15.5px;background:#06c755;color:#04331a;margin-bottom:11px;
+       box-shadow:0 6px 18px rgba(6,199,85,.25)}
+  .btn.alt{background:#2a3342;color:#e8edf4;box-shadow:none;font-weight:600}
+
+  ol{margin:0 0 4px 20px;font-size:14px}
+  ol li{margin-bottom:8px}
+  kbd{background:#2a3342;border:1px solid #3a4457;border-radius:5px;padding:1px 7px;font-size:13px;font-family:inherit}
+  .tip{background:#101620;border:1px solid #2b3342;border-radius:11px;padding:11px 13px;
+       font-size:12.5px;color:#9aa6b8;margin-top:12px}
+  .tip b{color:#e8edf4}
+  .foot{text-align:center;color:#6b7688;font-size:12px;margin-top:24px;line-height:1.9}
+  .hide{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <img src="icons/icon-512.png" alt="">
+    <h1>Chat Mockup Maker</h1>
+    <p>เครื่องมือสร้างภาพแชทตัวอย่าง · ใช้งานได้แม้ไม่มีเน็ต</p>
+  </div>
+
+  <!-- ===== Android ===== -->
+  <div class="card" id="cAndroid">
+    <h2><span class="ic">🤖</span> สำหรับ Android</h2>
+    <div class="sub">ติดตั้งเป็นแอปลงเครื่อง</div>
+    <a class="btn" href="download/ChatMockupMaker.apk" download>⬇ ดาวน์โหลดไฟล์ติดตั้ง (.apk)</a>
+    <ol>
+      <li>กดปุ่มด้านบน รอโหลดเสร็จ แล้วกดที่ไฟล์</li>
+      <li>ถ้าเครื่องถามเรื่อง <kbd>แหล่งที่ไม่รู้จัก</kbd> ให้กด <b>อนุญาต</b> (ถามครั้งเดียว)</li>
+      <li>กด <kbd>ติดตั้ง</kbd> → เสร็จแล้วจะมีไอคอนบนหน้าจอ</li>
+    </ol>
+    <a class="btn alt" href="./">หรือเปิดใช้งานบนเว็บเลย ไม่ต้องติดตั้ง</a>
+  </div>
+
+  <!-- ===== iOS ===== -->
+  <div class="card" id="cIOS">
+    <h2><span class="ic">🍎</span> สำหรับ iPhone / iPad</h2>
+    <div class="sub">ไอโฟนไม่รับไฟล์ .apk — ติดตั้งด้วยวิธีนี้แทน (ได้ผลเหมือนกัน)</div>
+    <a class="btn" href="./">เปิดแอป แล้วทำตาม 3 ขั้นด้านล่าง</a>
+    <ol>
+      <li>ต้องเปิดด้วย <b>Safari</b> เท่านั้น (ถ้าเปิดจากแอปอื่นอยู่ ให้กดเมนู → เปิดใน Safari)</li>
+      <li>กดปุ่ม <b>แชร์</b> ⬆️ ด้านล่างจอ</li>
+      <li>เลื่อนหา <kbd>เพิ่มไปยังหน้าจอโฮม</kbd> → กด <b>เพิ่ม</b></li>
+    </ol>
+    <div class="tip"><b>ได้อะไร:</b> ไอคอนแอปบนหน้าจอ เปิดแล้วเต็มจอไม่มีแถบเบราว์เซอร์ และใช้งานได้แม้ปิดเน็ต เหมือนแอปที่โหลดจาก App Store ทุกอย่าง</div>
+  </div>
+
+  <div class="tip">
+    <b>โปรแกรมนี้ใช้ “สร้างภาพแชท” ไม่ใช่แอปส่งข้อความ</b><br>
+    พิมพ์เองได้ทั้งสองฝั่งในเครื่องเดียว ใส่รูปโปรไฟล์ ตั้งเวลา ใส่สติกเกอร์ แล้วกดบันทึกเป็นรูปภาพ —
+    ข้อความไม่ได้ถูกส่งหาใครและไม่วิ่งข้ามเครื่อง ทุกอย่างอยู่ในเครื่องคุณล้วน
+  </div>
+
+  <div class="foot">
+    หากติดปัญหาการติดตั้ง ทักกลับมาได้เลยครับ<br>
+    Chat Mockup Maker · v1.0
+  </div>
+</div>
+
+<script>
+  // เครื่องไหนเปิด ให้ดันการ์ดของระบบนั้นขึ้นก่อนและไฮไลต์ไว้
+  var ua = navigator.userAgent;
+  var isIOS = /iP(hone|ad|od)/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var isAndroid = /Android/i.test(ua);
+  var wrap = document.querySelector('.wrap');
+  var a = document.getElementById('cAndroid'), i = document.getElementById('cIOS');
+  if (isIOS) { i.classList.add('hi'); wrap.insertBefore(i, a); }
+  else if (isAndroid) { a.classList.add('hi'); }
+</script>
+</body>
+</html>

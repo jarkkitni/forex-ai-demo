@@ -491,7 +491,11 @@ def chatapp(sub):
     from flask import send_from_directory
     d = os.path.join(os.path.dirname(__file__), "chatapp")
     resp = send_from_directory(d, sub)
-    if sub.endswith("sw.js"):
+    if sub.endswith(".apk"):
+        # ถ้าไม่ตั้ง mimetype นี้ Android บางรุ่นจะเปิดไฟล์เป็นข้อความแทนที่จะติดตั้ง
+        resp.headers["Content-Type"] = "application/vnd.android.package-archive"
+        resp.headers["Content-Disposition"] = 'attachment; filename="ChatMockupMaker.apk"'
+    elif sub.endswith("sw.js"):
         # service worker ต้องไม่ถูกแคชนาน ไม่งั้นผู้ใช้ค้างเวอร์ชันเก่าถาวร
         resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         resp.headers["Service-Worker-Allowed"] = "/chatapp/"
