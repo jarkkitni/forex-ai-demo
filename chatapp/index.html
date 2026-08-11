@@ -43,7 +43,7 @@
 
   label.f{display:block;margin-bottom:10px;font-size:12px;color:var(--dim)}
   label.f>span{display:block;margin-bottom:4px}
-  input[type=text],input[type=time],select,textarea{
+  input[type=text],input[type=time],input[type=number],input[type=date],select,textarea{
     width:100%;background:#0f131b;border:1px solid var(--line);color:var(--txt);
     border-radius:8px;padding:8px 10px;font:inherit;font-size:13px;outline:none;
   }
@@ -140,6 +140,10 @@
         <label class="f"><span>เวลาบนสถานะ</span><input type="text" id="clock" value="09:41"></label>
         <label class="f"><span>สมาชิก (เว้นว่าง=แชทเดี่ยว)</span><input type="text" id="member" placeholder="เช่น 4"></label>
       </div>
+      <div class="row">
+        <label class="f"><span>เลขวันบนไอคอนปฏิทิน</span><input type="number" id="calDay" min="1" max="31"></label>
+        <label class="f"><span>ตัวอักษรบนจุดแจ้งเตือน</span><input type="text" id="calBadge" value="N" maxlength="1" placeholder="เว้นว่าง=ไม่มี"></label>
+      </div>
       <label class="f"><span>รูปโปรไฟล์คู่สนทนา</span></label>
       <div class="avwrap">
         <img class="avprev" id="avPrev" alt="">
@@ -177,7 +181,7 @@
       <label class="chk"><input type="checkbox" id="optName"> แสดงชื่อเหนือฟองข้อความฝั่งซ้าย</label>
       <label class="chk"><input type="checkbox" id="optClouds"> พื้นหลังมีลายเมฆ</label>
       <label class="chk"><input type="checkbox" id="optLink" checked> ทำเบอร์โทร/ลิงก์ให้เป็นสีน้ำเงินอัตโนมัติ</label>
-      <label class="chk"><input type="checkbox" id="optMark" checked> ใส่ป้าย "ภาพจำลอง" ที่มุมภาพ</label>
+      <label class="chk"><input type="checkbox" id="optMark"> ใส่ป้าย "ภาพจำลอง" ที่มุมภาพ</label>
       <div class="row" style="margin-top:10px">
         <button class="btn pri" id="dl">⬇ บันทึกเป็น PNG</button>
         <button class="btn blue" id="demo">โหลดตัวอย่าง</button>
@@ -257,7 +261,7 @@ const WALLS = ['#8cabd8','#7f9dc4','#b8d0e6','#dfe6ec','#2b3441','#a8c8a0','#e8d
 /* ชุดสีฟองข้อความ — ตั้งใจ "ไม่ใช้ค่าสีประจำแบรนด์ของผู้ให้บริการแชทรายใดแบบตรงตัวเลข"
    หน้าตายังคุ้นมือเหมือนเดิม แต่ไม่มีจุดให้อ้างว่าเราสวมเครื่องหมายของใคร */
 const THEMES = [
-  { id:'green', name:'เขียว',  me:'#0ac15c', meText:'#062f14', you:'#ffffff', youText:'#111318' },
+  { id:'green', name:'เขียว',  me:'#06c755', meText:'#111318', you:'#ffffff', youText:'#111318' },
   { id:'blue',  name:'ฟ้า',    me:'#3b8fe8', meText:'#062033', you:'#ffffff', youText:'#111318' },
   { id:'dark',  name:'เข้ม',   me:'#4b5563', meText:'#f2f5f9', you:'#ffffff', youText:'#111318' },
   { id:'mint',  name:'มิ้นต์', me:'#2fbf9f', meText:'#04302a', you:'#ffffff', youText:'#111318' }
@@ -360,7 +364,8 @@ function loadStickers(cb){
 const S = {
   room:'คุณสมชาย ใจดี', clock:'09:41', member:'',
   wall:WALLS[0], avatar:null,
-  showRead:true, showName:false, showMark:true, clouds:false, autoLink:true, theme:'green',
+  showRead:true, showName:false, showMark:false, clouds:false, autoLink:true, theme:'green',
+  calDay:new Date().getDate(), calBadge:'N',
   msgs:[]
 };
 let uid = 1;
@@ -415,14 +420,15 @@ function bubbleTail(x, y, side, color){
   ctx.save();
   ctx.fillStyle = color;
   ctx.beginPath();
-  if (side === 'l'){                 // ฟองฝั่งซ้าย → หางชี้ออกซ้าย
-    ctx.moveTo(x + 1, y);
-    ctx.quadraticCurveTo(x - 4, y - 1, x - 8.5, y + 3.5);
-    ctx.quadraticCurveTo(x - 3.5, y + 4.5, x + 1, y + 12);
-  } else {                           // ฟองฝั่งขวา → หางชี้ออกขวา
-    ctx.moveTo(x - 1, y);
-    ctx.quadraticCurveTo(x + 4, y - 1, x + 8.5, y + 3.5);
-    ctx.quadraticCurveTo(x + 3.5, y + 4.5, x - 1, y + 12);
+  /* ปลายแหลมต้องชี้ "ขึ้น-ออกด้านนอก" จากมุมบนของฟอง (ลูกค้าทักว่ารุ่นแรกกลับด้าน) */
+  if (side === 'l'){                 // ฟองฝั่งซ้าย → ปลายชี้ขึ้น-ซ้าย
+    ctx.moveTo(x + 8, y + 1);
+    ctx.quadraticCurveTo(x + 1, y - 1, x - 8, y - 3);
+    ctx.quadraticCurveTo(x - 2, y + 3, x + 1, y + 11);
+  } else {                           // ฟองฝั่งขวา → ปลายชี้ขึ้น-ขวา
+    ctx.moveTo(x - 8, y + 1);
+    ctx.quadraticCurveTo(x - 1, y - 1, x + 8, y - 3);
+    ctx.quadraticCurveTo(x + 2, y + 3, x - 1, y + 11);
   }
   ctx.closePath();
   ctx.fill();
@@ -468,7 +474,7 @@ function layout(){
     if (m.side === 'l' && S.showName && first) nameH = 17;
 
     if (m.kind === 'call'){
-      const CW = 212, CH = m.sub ? 86 : 58;   // การ์ดบันทึกการโทร (มีแถบล่างหรือไม่มี)
+      const CW = 232, CH = m.sub ? 88 : 60;   // การ์ดบันทึกการโทร (มีแถบล่างหรือไม่มี)
       items.push({m, y:h + nameH, type:'call', first, nameH, w:CW, h:CH});
       h += nameH + CH;
     } else if (m.kind === 'sticker'){
@@ -535,8 +541,8 @@ function render(){
   ctx.fillRect(0, 0, W, H);
   if (S.clouds) drawClouds(H);
 
-  /* ---- ข้อความ (จัดชิดล่างเมื่อเนื้อหาน้อย) ---- */
-  const top = ST_H + HD_H + Math.max(0, chatH - contentH);
+  /* ---- ข้อความเริ่มจากบนไล่ลงล่าง (แชทจริงตอนข้อความน้อยก็เป็นแบบนี้ — ลูกค้าขอ) ---- */
+  const top = ST_H + HD_H;
   ctx.save();
   ctx.translate(0, top);
   items.forEach(it => drawItem(it));
@@ -634,21 +640,22 @@ function drawItem(it){
   }
 
   /* ตัวฟอง */
+  // LINE จริงมีหางทุกฟอง (ไม่ใช่แค่ฟองแรกของกลุ่ม) → มุมบนฝั่งหางเป็นมุมแหลมเสมอ
   const radius = right
-    ? {tl:R_BIG, tr:(it.first ? R_SMALL : R_BIG), br:R_BIG, bl:R_BIG}
-    : {tl:(it.first ? R_SMALL : R_BIG), tr:R_BIG, br:R_BIG, bl:R_BIG};
+    ? {tl:R_BIG, tr:R_SMALL, br:R_BIG, bl:R_BIG}
+    : {tl:R_SMALL, tr:R_BIG, br:R_BIG, bl:R_BIG};
 
   if (it.type === 'call'){
     const isR = right, th = theme();
     ctx.fillStyle = isR ? th.me : th.you;
-    if (it.first) bubbleTail(isR ? bx + it.w : bx, it.y + 3, isR ? 'r' : 'l', ctx.fillStyle);
+    bubbleTail(isR ? bx + it.w : bx, it.y + 3, isR ? 'r' : 'l', ctx.fillStyle);
     rr(bx, it.y, it.w, it.h, radius); ctx.fill();
 
-    // วงกลมไอคอนหูโทรศัพท์
-    const ccx = bx + 30, ccy = it.y + 29;
-    ctx.fillStyle = isR ? 'rgba(255,255,255,.34)' : '#eef1f4';
+    // วงกลมไอคอน: พื้นเขียวเข้มกว่าฟอง + หูโทรศัพท์สีขาว (ให้ชัดแบบที่ลูกค้าขอ)
+    const ccx = bx + 30, ccy = it.y + 30;
+    ctx.fillStyle = isR ? 'rgba(0,0,0,.16)' : '#eef1f4';
     ctx.beginPath(); ctx.arc(ccx, ccy, 19, 0, Math.PI*2); ctx.fill();
-    ctx.strokeStyle = isR ? '#064d24' : '#3f4854'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+    ctx.strokeStyle = isR ? '#ffffff' : '#3f4854'; ctx.lineWidth = 2.4; ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(ccx - 7, ccy - 7); ctx.lineTo(ccx - 3, ccy - 7); ctx.lineTo(ccx - 1, ccy - 2);
     ctx.lineTo(ccx - 4, ccy); ctx.quadraticCurveTo(ccx - 1, ccy + 4, ccx + 3, ccy + 6);
@@ -658,29 +665,29 @@ function drawItem(it){
 
     // ข้อความ 2 บรรทัด
     const tx = bx + 56;
-    ctx.fillStyle = isR ? '#062f14' : '#111318';
-    ctx.font = f(14.5, '700');
-    const lines = wrap(m.text || 'สิ้นสุดการโทรแบบเสียง', it.w - 66, f(14.5, '700'));
-    lines.slice(0, 2).forEach((ln, i) => ctx.fillText(ln, tx, it.y + 22 + i*17));
-    ctx.font = f(13);
-    ctx.fillStyle = isR ? 'rgba(6,47,20,.72)' : '#6b7688';
-    ctx.fillText(m.dur || '00:55', tx, it.y + (lines.length > 1 ? 56 : 41));
+    ctx.fillStyle = isR ? th.meText : th.youText;
+    ctx.font = f(15, '700');
+    const lines = wrap(m.text || 'สิ้นสุดการโทรแบบเสียง', it.w - 66, f(15, '700'));
+    lines.slice(0, 2).forEach((ln, i) => ctx.fillText(ln, tx, it.y + 23 + i*17));
+    ctx.font = f(13.5);
+    ctx.fillStyle = isR ? 'rgba(17,19,24,.62)' : '#6b7688';
+    ctx.fillText(m.dur || '00:55', tx, it.y + (lines.length > 1 ? 57 : 42));
 
     // แถบล่าง (ถ้าเปิด)
     if (m.sub){
-      ctx.strokeStyle = isR ? 'rgba(255,255,255,.35)' : '#e5e8ec'; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(bx + 10, it.y + 58.5); ctx.lineTo(bx + it.w - 10, it.y + 58.5); ctx.stroke();
-      ctx.fillStyle = isR ? '#062f14' : '#3f4854'; ctx.font = f(13);
-      ctx.fillText(m.sub, bx + 30, it.y + 76);
+      ctx.strokeStyle = isR ? 'rgba(0,0,0,.14)' : '#e5e8ec'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(bx + 10, it.y + 60.5); ctx.lineTo(bx + it.w - 10, it.y + 60.5); ctx.stroke();
+      ctx.fillStyle = isR ? th.meText : '#3f4854'; ctx.font = f(13);
+      ctx.fillText(m.sub, bx + 30, it.y + 78);
       // ไอคอนโน้ตดนตรีเล็ก ๆ
-      ctx.fillStyle = isR ? 'rgba(6,47,20,.8)' : '#6b7688';
-      ctx.beginPath(); ctx.arc(bx + 15, it.y + 75, 3, 0, Math.PI*2); ctx.fill();
-      ctx.fillRect(bx + 17, it.y + 66, 1.6, 9);
+      ctx.fillStyle = isR ? 'rgba(17,19,24,.75)' : '#6b7688';
+      ctx.beginPath(); ctx.arc(bx + 15, it.y + 77, 3, 0, Math.PI*2); ctx.fill();
+      ctx.fillRect(bx + 17, it.y + 68, 1.6, 9);
       // ลูกศร >
-      ctx.strokeStyle = isR ? 'rgba(6,47,20,.7)' : '#9aa5b1'; ctx.lineWidth = 1.6;
+      ctx.strokeStyle = isR ? 'rgba(17,19,24,.6)' : '#9aa5b1'; ctx.lineWidth = 1.6;
       ctx.beginPath();
-      ctx.moveTo(bx + it.w - 18, it.y + 68); ctx.lineTo(bx + it.w - 13, it.y + 72.5);
-      ctx.lineTo(bx + it.w - 18, it.y + 77); ctx.stroke();
+      ctx.moveTo(bx + it.w - 18, it.y + 70); ctx.lineTo(bx + it.w - 13, it.y + 74.5);
+      ctx.lineTo(bx + it.w - 18, it.y + 79); ctx.stroke();
     }
   } else if (it.type === 'sticker'){
     const img = (m.st === 'custom') ? m.img : SK_IMG[m.st];
@@ -700,8 +707,8 @@ function drawItem(it){
   } else {
     const th = theme();
     ctx.fillStyle = right ? th.me : th.you;
-    // หางออกก่อน แล้วค่อยวางฟองทับ รอยต่อจะเนียนเป็นชิ้นเดียว
-    if (it.first) bubbleTail(right ? bx + it.w : bx, it.y + 3, right ? 'r' : 'l', ctx.fillStyle);
+    // หางออกก่อน แล้วค่อยวางฟองทับ รอยต่อจะเนียนเป็นชิ้นเดียว — มีทุกฟองแบบแอปจริง
+    bubbleTail(right ? bx + it.w : bx, it.y + 3, right ? 'r' : 'l', ctx.fillStyle);
     rr(bx, it.y, it.w, it.h, radius); ctx.fill();
     const txtCol = right ? th.meText : th.youText;
     ctx.font = f(F_MSG);
@@ -806,12 +813,15 @@ function drawHeader(){
   ctx.moveTo(x + 5.5, cy - 12); ctx.lineTo(x + 5.5, cy - 6);
   ctx.moveTo(x + 14.5, cy - 12); ctx.lineTo(x + 14.5, cy - 6);
   ctx.stroke();
+  // เลขวันจริงบนปฏิทิน (ค่าเริ่มต้น = วันนี้ · แก้ได้ในแผงซ้าย ตามที่ลูกค้าขอ)
   ctx.fillStyle = '#111318'; ctx.font = f(9, '700'); ctx.textAlign = 'center';
-  ctx.fillText('31', x + 10, cy + 6); ctx.textAlign = 'left';
-  ctx.fillStyle = '#0ac15c';
-  ctx.beginPath(); ctx.arc(x + 20, cy - 9, 6.5, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#ffffff'; ctx.font = f(8.5, '700'); ctx.textAlign = 'center';
-  ctx.fillText('N', x + 20, cy - 6); ctx.textAlign = 'left';
+  ctx.fillText(String(S.calDay || new Date().getDate()), x + 10, cy + 6); ctx.textAlign = 'left';
+  if (S.calBadge){
+    ctx.fillStyle = theme().me;
+    ctx.beginPath(); ctx.arc(x + 20, cy - 9, 6.5, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#ffffff'; ctx.font = f(8.5, '700'); ctx.textAlign = 'center';
+    ctx.fillText(S.calBadge, x + 20, cy - 6); ctx.textAlign = 'left';
+  }
 
   // 4) เมนู 3 ขีด
   ctx.strokeStyle = '#111318';
@@ -843,19 +853,19 @@ function drawInputBar(H){
   ctx.moveTo(77, cy + 5); ctx.lineTo(82, cy - 2); ctx.lineTo(86, cy + 2);
   ctx.lineTo(88.5, cy - 0.5); ctx.lineTo(90.5, cy + 5);
   ctx.closePath(); ctx.fillStyle = '#3f4854'; ctx.fill();
-  // ── ช่องพิมพ์ ──
+  // ── ช่องพิมพ์ — หน้ายิ้มอยู่ "ข้างใน" แถบเทา แบบแอปจริง (ลูกค้าทัก) ──
   ctx.fillStyle = '#f1f2f4';
-  rr(103, cy - 14, W - 103 - 62, 28, 14); ctx.fill();
+  rr(103, cy - 14, W - 103 - 44, 28, 14); ctx.fill();
   ctx.fillStyle = '#a7aeb9'; ctx.font = f(14.5);
   ctx.fillText('Aa', 116, cy + 5);
-  // ── ขวา: หน้ายิ้ม · ไมค์ ──
-  ctx.strokeStyle = '#3f4854';
-  const ex = W - 52;
+  ctx.strokeStyle = '#8a94a3';
+  const ex = W - 62;
   ctx.beginPath(); ctx.arc(ex, cy, 9.5, 0, Math.PI*2); ctx.stroke();
   ctx.beginPath(); ctx.arc(ex, cy + 1, 4.8, .15*Math.PI, .85*Math.PI); ctx.stroke();
   ctx.beginPath(); ctx.arc(ex - 3.6, cy - 3, 1, 0, Math.PI*2); ctx.stroke();
   ctx.beginPath(); ctx.arc(ex + 3.6, cy - 3, 1, 0, Math.PI*2); ctx.stroke();
-  // ไมค์
+  // ไมค์ (อยู่นอกแถบเทา)
+  ctx.strokeStyle = '#3f4854';
   const mx = W - 22;
   rr(mx - 4, cy - 9, 8, 12.5, 4); ctx.stroke();
   ctx.beginPath(); ctx.arc(mx, cy + 1, 6.5, 0, Math.PI); ctx.stroke();
@@ -906,6 +916,12 @@ function addMsg(kind){
     S.msgs.push({id:uid++, kind:'text', side:kind, text:'', time:hh+':'+mm, read:true});
   }
   paintList(); render();
+  if (kind === 'img'){
+    // กด "ส่งรูปภาพ" แล้วเปิดหน้าต่างเลือกรูปทันที ไม่ต้องไปกดปุ่มในการ์ดซ้ำ (ลูกค้าขอ)
+    const cards = listEl.querySelectorAll('.msg');
+    const fi = cards.length ? cards[cards.length - 1].querySelector('input[type=file]') : null;
+    if (fi) fi.click();
+  }
 }
 
 function paintList(){
@@ -946,6 +962,19 @@ function paintList(){
       inp.type = 'text'; inp.value = m.text; inp.placeholder = 'เช่น วันนี้ / 9 ส.ค. 2026';
       inp.oninput = () => { m.text = inp.value; render(); };
       el.appendChild(inp);
+      // เลือกจากปฏิทินจริง → ระบบแปลงเป็นข้อความไทยให้เอง (ตามที่ลูกค้าขอ)
+      const dp = document.createElement('input');
+      dp.type = 'date'; dp.style.marginTop = '6px';
+      dp.onchange = () => {
+        if (!dp.value) return;
+        const d = new Date(dp.value + 'T00:00:00');
+        const days = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัส','ศุกร์','เสาร์'];
+        const mons = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+        m.text = (d.toDateString() === new Date().toDateString()) ? 'วันนี้'
+               : `${days[d.getDay()]} ${d.getDate()} ${mons[d.getMonth()]}`;
+        inp.value = m.text; render();
+      };
+      el.appendChild(dp);
 
     } else if (m.kind === 'img'){
       const b = document.createElement('button');
@@ -1047,6 +1076,8 @@ bind('member','input', e => { S.member = e.target.value.trim(); render(); });
 bind('optRead','change', e => { S.showRead = e.target.checked; render(); });
 bind('optName','change', e => { S.showName = e.target.checked; render(); });
 bind('optClouds','change', e => { S.clouds = e.target.checked; render(); });
+bind('calDay','input', e => { S.calDay = e.target.value; render(); });
+bind('calBadge','input', e => { S.calBadge = e.target.value.trim().slice(0,1); render(); });
 bind('optLink','change', e => { S.autoLink = e.target.checked; render(); });
 bind('optMark','change', e => { S.showMark = e.target.checked; render(); });
 
@@ -1156,6 +1187,7 @@ bind('demo','click', loadDemo);
 
 /* เริ่มต้น — โหลดสติกเกอร์ให้เสร็จก่อนวาดครั้งแรก ไม่งั้นช่องสติกเกอร์จะว่างในภาพที่บันทึก */
 loadDemo();
+document.getElementById('calDay').value = S.calDay;
 loadStickers(()=>render());
 
 /* ติดตั้งเป็นแอปได้ (ข้ามตอนเปิดจากไฟล์ในเครื่อง เพราะ service worker ใช้ได้เฉพาะบนเว็บ) */
