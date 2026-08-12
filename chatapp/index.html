@@ -431,14 +431,16 @@ function bubbleTail(x, y, side, color){
   /* หางแบบแอปจริง (วัดจากภาพหน้าจอจริงรอบ 2 ของลูกค้า):
      ตัวฟองเป็นแคปซูลมนเต็มใบ ส่วนหางเป็น "เขี้ยวเล็ก ๆ" แปะที่มุมบนด้านนอก
      ปลายชี้ขึ้น-ออกเล็กน้อยเท่านั้น ไม่ใช่เปลวใหญ่ */
-  if (side === 'l'){                 // ฟองซ้าย → เขี้ยวเล็กชี้ขึ้น-ซ้าย
-    ctx.moveTo(x + 15, y + 1.5);
-    ctx.quadraticCurveTo(x + 5, y - 1.5, x - 3.5, y - 4.5);
-    ctx.quadraticCurveTo(x + 1.5, y + 0.5, x + 2.5, y + 7);
-  } else {                           // ฟองขวา → เขี้ยวเล็กชี้ขึ้น-ขวา
-    ctx.moveTo(x - 15, y + 1.5);
-    ctx.quadraticCurveTo(x - 5, y - 1.5, x + 3.5, y - 4.5);
-    ctx.quadraticCurveTo(x - 1.5, y + 0.5, x - 2.5, y + 7);
+  /* "โค้งขึ้น" ตามที่ลูกค้าย้ำ: ขอบบนของหางเว้าแบบลานสกี —
+     ไหลแบนตามขอบฟองก่อน แล้วสะบัดปลายขึ้นข้างบน ปลายชี้ขึ้นเป็นหลัก เฉียงออกนิดเดียว */
+  if (side === 'l'){                 // ฟองซ้าย → ปลายสะบัดขึ้น-ซ้าย
+    ctx.moveTo(x + 14, y + 1);
+    ctx.quadraticCurveTo(x + 3, y + 1.5, x - 4, y - 6);
+    ctx.quadraticCurveTo(x + 1, y - 0.5, x + 2, y + 6);
+  } else {                           // ฟองขวา → ปลายสะบัดขึ้น-ขวา
+    ctx.moveTo(x - 14, y + 1);
+    ctx.quadraticCurveTo(x - 3, y + 1.5, x + 4, y - 6);
+    ctx.quadraticCurveTo(x - 1, y - 0.5, x - 2, y + 6);
   }
   ctx.closePath();
   ctx.fill();
