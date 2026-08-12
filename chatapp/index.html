@@ -676,7 +676,7 @@ function drawItem(it){
   if (it.type === 'call'){
     const isR = right, th = theme();
     ctx.fillStyle = isR ? th.me : th.you;
-    if (it.first) bubbleTail(isR ? bx + it.w : bx, it.y + 1, isR ? 'r' : 'l', ctx.fillStyle);
+    if (it.first) bubbleTail(isR ? bx + it.w : bx, it.y + 3, isR ? 'r' : 'l', ctx.fillStyle);
     rr(bx, it.y, it.w, it.h, radius); ctx.fill();
 
     // วงกลมไอคอน: พื้นเขียวเข้มกว่าฟอง + หูโทรศัพท์สีขาว (ให้ชัดแบบที่ลูกค้าขอ)
@@ -736,7 +736,7 @@ function drawItem(it){
     const th = theme();
     ctx.fillStyle = right ? th.me : th.you;
     // หางมี "เฉพาะฟองแรกของแต่ละชุด" — ฟองถัดไปเป็นแคปซูลเปล่า (วัดจากภาพแอปจริงของลูกค้า)
-    if (it.first) bubbleTail(right ? bx + it.w : bx, it.y + 1, right ? 'r' : 'l', ctx.fillStyle);
+    if (it.first) bubbleTail(right ? bx + it.w : bx, it.y + 3, right ? 'r' : 'l', ctx.fillStyle);
     rr(bx, it.y, it.w, it.h, radius); ctx.fill();
     const txtCol = right ? th.meText : th.youText;
     ctx.font = f(F_MSG);
