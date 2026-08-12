@@ -420,15 +420,21 @@ function bubbleTail(x, y, side, color){
   ctx.save();
   ctx.fillStyle = color;
   ctx.beginPath();
-  /* ปลายแหลมต้องชี้ "ขึ้น-ออกด้านนอก" จากมุมบนของฟอง (ลูกค้าทักว่ารุ่นแรกกลับด้าน) */
-  if (side === 'l'){                 // ฟองฝั่งซ้าย → ปลายชี้ขึ้น-ซ้าย
-    ctx.moveTo(x + 8, y + 1);
-    ctx.quadraticCurveTo(x + 1, y - 1, x - 8, y - 3);
-    ctx.quadraticCurveTo(x - 2, y + 3, x + 1, y + 11);
-  } else {                           // ฟองฝั่งขวา → ปลายชี้ขึ้น-ขวา
-    ctx.moveTo(x - 8, y + 1);
-    ctx.quadraticCurveTo(x - 1, y - 1, x + 8, y - 3);
-    ctx.quadraticCurveTo(x + 2, y + 3, x - 1, y + 11);
+  /* หางแบบแอปจริง (ลูกค้าซูมภาพมาเทียบ): ไม่ใช่สามเหลี่ยมแหลมบาง
+     แต่เป็น "เปลวโค้ง" ฐานกว้างบนขอบบน ไหลออกนอกแล้วม้วนขึ้นเป็นปลาย
+     ท้องหางเว้ากลับเข้าหาตัวฟอง ทำให้ดูเป็นเนื้อเดียวกับฟอง */
+  if (side === 'l'){                 // ฟองฝั่งซ้าย → ม้วนขึ้น-ซ้าย
+    ctx.moveTo(x + 12, y + 1);
+    ctx.quadraticCurveTo(x + 2, y - 0.5, x - 3, y - 2);
+    ctx.quadraticCurveTo(x - 8.5, y - 4, x - 10, y - 8);
+    ctx.quadraticCurveTo(x - 6, y - 3, x - 2, y + 1.5);
+    ctx.quadraticCurveTo(x + 1, y + 5, x + 1.5, y + 9);
+  } else {                           // ฟองฝั่งขวา → ม้วนขึ้น-ขวา
+    ctx.moveTo(x - 12, y + 1);
+    ctx.quadraticCurveTo(x - 2, y - 0.5, x + 3, y - 2);
+    ctx.quadraticCurveTo(x + 8.5, y - 4, x + 10, y - 8);
+    ctx.quadraticCurveTo(x + 6, y - 3, x + 2, y + 1.5);
+    ctx.quadraticCurveTo(x - 1, y + 5, x - 1.5, y + 9);
   }
   ctx.closePath();
   ctx.fill();
