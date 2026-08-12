@@ -443,10 +443,10 @@ function bubbleTail(x, y, side, color){
      s = ตัวกระจกซ้าย/ขวา (offset แนวนอนคูณ s เพื่อพลิกด้าน) */
   const s = side === 'l' ? -1 : 1;
   const st = S.tailStyle || 'wing';
-  if (st === 'wing'){         // แบบ 1 ปีกมน — ท้องนูน ปลายชี้ออก-ขึ้นนิด (ตรงภาพอ้างอิงที่สุด)
+  if (st === 'wing'){         // แบบ 1 ปีกมน — ตัวอ้วนท้องนูน + ปลายสะบัดขึ้น (ลูกค้าเลือกทรงนี้)
     ctx.moveTo(x - 12*s, y + 0.5);
-    ctx.quadraticCurveTo(x + 2*s,   y - 1,   x + 8.5*s, y - 2.5);
-    ctx.quadraticCurveTo(x + 5.5*s, y + 4.5, x - 2*s,   y + 9);
+    ctx.quadraticCurveTo(x + 2.5*s, y - 0.5, x + 7*s, y - 6.5);
+    ctx.quadraticCurveTo(x + 5*s,   y + 3.5, x - 2*s, y + 9);
   } else if (st === 'flick'){ // แบบ 2 สะบัดขึ้น (ลานสกี)
     ctx.moveTo(x - 14*s, y + 1);
     ctx.quadraticCurveTo(x - 3*s, y + 1.5, x + 4*s, y - 6);
