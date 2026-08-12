@@ -161,6 +161,14 @@
       <label class="f" style="margin-top:10px"><span>จูนสีฟองฝั่งเขียวเอง (เทียบกับแชทจริงบนเครื่องคุณได้เลย)</span>
         <input type="color" id="meColor" value="#79e575" style="width:100%;height:36px;padding:2px;background:#0f131b;border:1px solid var(--line);border-radius:8px;cursor:pointer">
       </label>
+      <label class="f"><span>รูปทรงหางฟอง — ลองสลับเทียบกับแชทจริงจนตรงตา</span>
+        <select id="tailStyle">
+          <option value="wing">แบบ 1 · ปีกมน (ใกล้แอปจริงที่สุด)</option>
+          <option value="flick">แบบ 2 · สะบัดขึ้น</option>
+          <option value="sharp">แบบ 3 · เขี้ยวแหลม</option>
+          <option value="round">แบบ 4 · หยดมน</option>
+        </select>
+      </label>
     </div>
 
     <div class="sec">
@@ -373,7 +381,7 @@ const S = {
   room:'คุณสมชาย ใจดี', clock:'09:41', member:'',
   wall:WALLS[0], avatar:null,
   showRead:true, showName:false, showMark:false, clouds:false, autoLink:true, theme:'green',
-  calDay:new Date().getDate(), calBadge:'N',
+  tailStyle:'wing', calDay:new Date().getDate(), calBadge:'N',
   msgs:[]
 };
 let uid = 1;
@@ -431,16 +439,26 @@ function bubbleTail(x, y, side, color){
   /* หางแบบแอปจริง (วัดจากภาพหน้าจอจริงรอบ 2 ของลูกค้า):
      ตัวฟองเป็นแคปซูลมนเต็มใบ ส่วนหางเป็น "เขี้ยวเล็ก ๆ" แปะที่มุมบนด้านนอก
      ปลายชี้ขึ้น-ออกเล็กน้อยเท่านั้น ไม่ใช่เปลวใหญ่ */
-  /* "โค้งขึ้น" ตามที่ลูกค้าย้ำ: ขอบบนของหางเว้าแบบลานสกี —
-     ไหลแบนตามขอบฟองก่อน แล้วสะบัดปลายขึ้นข้างบน ปลายชี้ขึ้นเป็นหลัก เฉียงออกนิดเดียว */
-  if (side === 'l'){                 // ฟองซ้าย → ปลายสะบัดขึ้น-ซ้าย
-    ctx.moveTo(x + 14, y + 1);
-    ctx.quadraticCurveTo(x + 3, y + 1.5, x - 4, y - 6);
-    ctx.quadraticCurveTo(x + 1, y - 0.5, x + 2, y + 6);
-  } else {                           // ฟองขวา → ปลายสะบัดขึ้น-ขวา
-    ctx.moveTo(x - 14, y + 1);
-    ctx.quadraticCurveTo(x - 3, y + 1.5, x + 4, y - 6);
-    ctx.quadraticCurveTo(x - 1, y - 0.5, x - 2, y + 6);
+  /* มี 4 ทรงให้เลือกในแผงซ้าย — "ความเหมือน" เป็นเรื่องของสายตา ให้ลูกค้าเลือกเทียบเองดีกว่าแก้ไปมา
+     s = ตัวกระจกซ้าย/ขวา (offset แนวนอนคูณ s เพื่อพลิกด้าน) */
+  const s = side === 'l' ? -1 : 1;
+  const st = S.tailStyle || 'wing';
+  if (st === 'wing'){         // แบบ 1 ปีกมน — ท้องนูน ปลายชี้ออก-ขึ้นนิด (ตรงภาพอ้างอิงที่สุด)
+    ctx.moveTo(x - 12*s, y + 0.5);
+    ctx.quadraticCurveTo(x + 2*s,   y - 1,   x + 8.5*s, y - 2.5);
+    ctx.quadraticCurveTo(x + 5.5*s, y + 4.5, x - 2*s,   y + 9);
+  } else if (st === 'flick'){ // แบบ 2 สะบัดขึ้น (ลานสกี)
+    ctx.moveTo(x - 14*s, y + 1);
+    ctx.quadraticCurveTo(x - 3*s, y + 1.5, x + 4*s, y - 6);
+    ctx.quadraticCurveTo(x - 1*s, y - 0.5, x - 2*s, y + 6);
+  } else if (st === 'sharp'){ // แบบ 3 เขี้ยวแหลม
+    ctx.moveTo(x - 12*s, y + 1);
+    ctx.quadraticCurveTo(x - 2*s, y - 0.5, x + 7*s, y - 5);
+    ctx.quadraticCurveTo(x + 1*s, y + 1.5, x - 2*s, y + 7);
+  } else {                    // แบบ 4 หยดมน — ยื่นออกข้างระดับขอบบน ปลายมน
+    ctx.moveTo(x - 12*s, y + 0.5);
+    ctx.quadraticCurveTo(x + 3*s, y - 1.5, x + 7*s, y + 1);
+    ctx.quadraticCurveTo(x + 7*s, y + 6,   x - 2*s, y + 9);
   }
   ctx.closePath();
   ctx.fill();
@@ -658,7 +676,7 @@ function drawItem(it){
   if (it.type === 'call'){
     const isR = right, th = theme();
     ctx.fillStyle = isR ? th.me : th.you;
-    bubbleTail(isR ? bx + it.w : bx, it.y + 1, isR ? 'r' : 'l', ctx.fillStyle);
+    if (it.first) bubbleTail(isR ? bx + it.w : bx, it.y + 1, isR ? 'r' : 'l', ctx.fillStyle);
     rr(bx, it.y, it.w, it.h, radius); ctx.fill();
 
     // วงกลมไอคอน: พื้นเขียวเข้มกว่าฟอง + หูโทรศัพท์สีขาว (ให้ชัดแบบที่ลูกค้าขอ)
@@ -717,8 +735,8 @@ function drawItem(it){
   } else {
     const th = theme();
     ctx.fillStyle = right ? th.me : th.you;
-    // หางออกก่อน แล้วค่อยวางฟองทับ รอยต่อจะเนียนเป็นชิ้นเดียว — มีทุกฟองแบบแอปจริง
-    bubbleTail(right ? bx + it.w : bx, it.y + 1, right ? 'r' : 'l', ctx.fillStyle);
+    // หางมี "เฉพาะฟองแรกของแต่ละชุด" — ฟองถัดไปเป็นแคปซูลเปล่า (วัดจากภาพแอปจริงของลูกค้า)
+    if (it.first) bubbleTail(right ? bx + it.w : bx, it.y + 1, right ? 'r' : 'l', ctx.fillStyle);
     rr(bx, it.y, it.w, it.h, radius); ctx.fill();
     const txtCol = right ? th.meText : th.youText;
     ctx.font = f(F_MSG);
@@ -1132,6 +1150,7 @@ THEMES.forEach(t => {
   themesEl.appendChild(b);
 });
 bind('meColor','input', e => { S.customMe = e.target.value; render(); });
+bind('tailStyle','change', e => { S.tailStyle = e.target.value; render(); });
 
 function download(){
   cv.toBlob(async blob => {
