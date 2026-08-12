@@ -159,7 +159,7 @@
       <label class="f" style="margin-top:12px"><span>ชุดสีฟองข้อความ</span></label>
       <div class="swatches" id="themes"></div>
       <label class="f" style="margin-top:10px"><span>จูนสีฟองฝั่งเขียวเอง (เทียบกับแชทจริงบนเครื่องคุณได้เลย)</span>
-        <input type="color" id="meColor" value="#6edc62" style="width:100%;height:36px;padding:2px;background:#0f131b;border:1px solid var(--line);border-radius:8px;cursor:pointer">
+        <input type="color" id="meColor" value="#79e575" style="width:100%;height:36px;padding:2px;background:#0f131b;border:1px solid var(--line);border-radius:8px;cursor:pointer">
       </label>
     </div>
 
@@ -266,7 +266,7 @@ const WALLS = ['#8cabd8','#7f9dc4','#b8d0e6','#dfe6ec','#2b3441','#a8c8a0','#e8d
 const THEMES = [
   /* เขียวฟองแชทของแอปจริง "อ่อนกว่า" สีโลโก้มาก — ค่านี้วัดจากภาพหน้าจอจริงที่ลูกค้าส่งมา
      และมีช่องจูนสีเองด้านล่าง เผื่อหน้าจอแต่ละเครื่องเพี้ยนไม่เท่ากัน */
-  { id:'green', name:'เขียว',  me:'#6edc62', meText:'#111318', you:'#ffffff', youText:'#111318' },
+  { id:'green', name:'เขียว',  me:'#79e575', meText:'#111318', you:'#ffffff', youText:'#111318' },
   { id:'blue',  name:'ฟ้า',    me:'#3b8fe8', meText:'#062033', you:'#ffffff', youText:'#111318' },
   { id:'dark',  name:'เข้ม',   me:'#4b5563', meText:'#f2f5f9', you:'#ffffff', youText:'#111318' },
   { id:'mint',  name:'มิ้นต์', me:'#2fbf9f', meText:'#04302a', you:'#ffffff', youText:'#111318' }
@@ -428,21 +428,17 @@ function bubbleTail(x, y, side, color){
   ctx.save();
   ctx.fillStyle = color;
   ctx.beginPath();
-  /* หางแบบแอปจริง (ลูกค้าซูมภาพมาเทียบ): ไม่ใช่สามเหลี่ยมแหลมบาง
-     แต่เป็น "เปลวโค้ง" ฐานกว้างบนขอบบน ไหลออกนอกแล้วม้วนขึ้นเป็นปลาย
-     ท้องหางเว้ากลับเข้าหาตัวฟอง ทำให้ดูเป็นเนื้อเดียวกับฟอง */
-  if (side === 'l'){                 // ฟองฝั่งซ้าย → ม้วนขึ้น-ซ้าย
-    ctx.moveTo(x + 12, y + 1);
-    ctx.quadraticCurveTo(x + 2, y - 0.5, x - 3, y - 2);
-    ctx.quadraticCurveTo(x - 8.5, y - 4, x - 10, y - 8);
-    ctx.quadraticCurveTo(x - 6, y - 3, x - 2, y + 1.5);
-    ctx.quadraticCurveTo(x + 1, y + 5, x + 1.5, y + 9);
-  } else {                           // ฟองฝั่งขวา → ม้วนขึ้น-ขวา
-    ctx.moveTo(x - 12, y + 1);
-    ctx.quadraticCurveTo(x - 2, y - 0.5, x + 3, y - 2);
-    ctx.quadraticCurveTo(x + 8.5, y - 4, x + 10, y - 8);
-    ctx.quadraticCurveTo(x + 6, y - 3, x + 2, y + 1.5);
-    ctx.quadraticCurveTo(x - 1, y + 5, x - 1.5, y + 9);
+  /* หางแบบแอปจริง (วัดจากภาพหน้าจอจริงรอบ 2 ของลูกค้า):
+     ตัวฟองเป็นแคปซูลมนเต็มใบ ส่วนหางเป็น "เขี้ยวเล็ก ๆ" แปะที่มุมบนด้านนอก
+     ปลายชี้ขึ้น-ออกเล็กน้อยเท่านั้น ไม่ใช่เปลวใหญ่ */
+  if (side === 'l'){                 // ฟองซ้าย → เขี้ยวเล็กชี้ขึ้น-ซ้าย
+    ctx.moveTo(x + 15, y + 1.5);
+    ctx.quadraticCurveTo(x + 5, y - 1.5, x - 3.5, y - 4.5);
+    ctx.quadraticCurveTo(x + 1.5, y + 0.5, x + 2.5, y + 7);
+  } else {                           // ฟองขวา → เขี้ยวเล็กชี้ขึ้น-ขวา
+    ctx.moveTo(x - 15, y + 1.5);
+    ctx.quadraticCurveTo(x - 5, y - 1.5, x + 3.5, y - 4.5);
+    ctx.quadraticCurveTo(x - 1.5, y + 0.5, x - 2.5, y + 7);
   }
   ctx.closePath();
   ctx.fill();
@@ -654,15 +650,13 @@ function drawItem(it){
   }
 
   /* ตัวฟอง */
-  // LINE จริงมีหางทุกฟอง (ไม่ใช่แค่ฟองแรกของกลุ่ม) → มุมบนฝั่งหางเป็นมุมแหลมเสมอ
-  const radius = right
-    ? {tl:R_BIG, tr:R_SMALL, br:R_BIG, bl:R_BIG}
-    : {tl:R_SMALL, tr:R_BIG, br:R_BIG, bl:R_BIG};
+  // แอปจริง: ตัวฟองมนเต็มทุกมุม (แคปซูล) — หางเป็นชิ้นเล็กแปะทับมุม ไม่ได้ตัดมุมฟอง
+  const radius = {tl:R_BIG, tr:R_BIG, br:R_BIG, bl:R_BIG};
 
   if (it.type === 'call'){
     const isR = right, th = theme();
     ctx.fillStyle = isR ? th.me : th.you;
-    bubbleTail(isR ? bx + it.w : bx, it.y + 3, isR ? 'r' : 'l', ctx.fillStyle);
+    bubbleTail(isR ? bx + it.w : bx, it.y + 1, isR ? 'r' : 'l', ctx.fillStyle);
     rr(bx, it.y, it.w, it.h, radius); ctx.fill();
 
     // วงกลมไอคอน: พื้นเขียวเข้มกว่าฟอง + หูโทรศัพท์สีขาว (ให้ชัดแบบที่ลูกค้าขอ)
@@ -722,7 +716,7 @@ function drawItem(it){
     const th = theme();
     ctx.fillStyle = right ? th.me : th.you;
     // หางออกก่อน แล้วค่อยวางฟองทับ รอยต่อจะเนียนเป็นชิ้นเดียว — มีทุกฟองแบบแอปจริง
-    bubbleTail(right ? bx + it.w : bx, it.y + 3, right ? 'r' : 'l', ctx.fillStyle);
+    bubbleTail(right ? bx + it.w : bx, it.y + 1, right ? 'r' : 'l', ctx.fillStyle);
     rr(bx, it.y, it.w, it.h, radius); ctx.fill();
     const txtCol = right ? th.meText : th.youText;
     ctx.font = f(F_MSG);
