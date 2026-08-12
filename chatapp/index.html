@@ -169,6 +169,9 @@
           <option value="round">แบบ 4 · หยดมน</option>
         </select>
       </label>
+      <label class="f"><span>ตำแหน่งหาง: สูงขึ้น ← → ต่ำลง (<b id="tailYv">5</b>px)</span>
+        <input type="range" id="tailY" min="0" max="12" step="1" value="5" style="width:100%;accent-color:var(--accent)">
+      </label>
     </div>
 
     <div class="sec">
@@ -381,7 +384,7 @@ const S = {
   room:'คุณสมชาย ใจดี', clock:'09:41', member:'',
   wall:WALLS[0], avatar:null,
   showRead:true, showName:false, showMark:false, clouds:false, autoLink:true, theme:'green',
-  tailStyle:'wing', calDay:new Date().getDate(), calBadge:'N',
+  tailStyle:'wing', tailY:5, calDay:new Date().getDate(), calBadge:'N',
   msgs:[]
 };
 let uid = 1;
@@ -676,7 +679,7 @@ function drawItem(it){
   if (it.type === 'call'){
     const isR = right, th = theme();
     ctx.fillStyle = isR ? th.me : th.you;
-    if (it.first) bubbleTail(isR ? bx + it.w : bx, it.y + 3, isR ? 'r' : 'l', ctx.fillStyle);
+    if (it.first) bubbleTail(isR ? bx + it.w : bx, it.y + (+S.tailY || 0), isR ? 'r' : 'l', ctx.fillStyle);
     rr(bx, it.y, it.w, it.h, radius); ctx.fill();
 
     // วงกลมไอคอน: พื้นเขียวเข้มกว่าฟอง + หูโทรศัพท์สีขาว (ให้ชัดแบบที่ลูกค้าขอ)
@@ -736,7 +739,7 @@ function drawItem(it){
     const th = theme();
     ctx.fillStyle = right ? th.me : th.you;
     // หางมี "เฉพาะฟองแรกของแต่ละชุด" — ฟองถัดไปเป็นแคปซูลเปล่า (วัดจากภาพแอปจริงของลูกค้า)
-    if (it.first) bubbleTail(right ? bx + it.w : bx, it.y + 3, right ? 'r' : 'l', ctx.fillStyle);
+    if (it.first) bubbleTail(right ? bx + it.w : bx, it.y + (+S.tailY || 0), right ? 'r' : 'l', ctx.fillStyle);
     rr(bx, it.y, it.w, it.h, radius); ctx.fill();
     const txtCol = right ? th.meText : th.youText;
     ctx.font = f(F_MSG);
@@ -1151,6 +1154,7 @@ THEMES.forEach(t => {
 });
 bind('meColor','input', e => { S.customMe = e.target.value; render(); });
 bind('tailStyle','change', e => { S.tailStyle = e.target.value; render(); });
+bind('tailY','input', e => { S.tailY = +e.target.value; document.getElementById('tailYv').textContent = e.target.value; render(); });
 
 function download(){
   cv.toBlob(async blob => {
