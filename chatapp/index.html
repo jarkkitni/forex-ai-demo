@@ -158,6 +158,9 @@
       <div class="swatches" id="walls"></div>
       <label class="f" style="margin-top:12px"><span>ชุดสีฟองข้อความ</span></label>
       <div class="swatches" id="themes"></div>
+      <label class="f" style="margin-top:10px"><span>จูนสีฟองฝั่งเขียวเอง (เทียบกับแชทจริงบนเครื่องคุณได้เลย)</span>
+        <input type="color" id="meColor" value="#6edc62" style="width:100%;height:36px;padding:2px;background:#0f131b;border:1px solid var(--line);border-radius:8px;cursor:pointer">
+      </label>
     </div>
 
     <div class="sec">
@@ -261,12 +264,17 @@ const WALLS = ['#8cabd8','#7f9dc4','#b8d0e6','#dfe6ec','#2b3441','#a8c8a0','#e8d
 /* ชุดสีฟองข้อความ — ตั้งใจ "ไม่ใช้ค่าสีประจำแบรนด์ของผู้ให้บริการแชทรายใดแบบตรงตัวเลข"
    หน้าตายังคุ้นมือเหมือนเดิม แต่ไม่มีจุดให้อ้างว่าเราสวมเครื่องหมายของใคร */
 const THEMES = [
-  { id:'green', name:'เขียว',  me:'#06c755', meText:'#111318', you:'#ffffff', youText:'#111318' },
+  /* เขียวฟองแชทของแอปจริง "อ่อนกว่า" สีโลโก้มาก — ค่านี้วัดจากภาพหน้าจอจริงที่ลูกค้าส่งมา
+     และมีช่องจูนสีเองด้านล่าง เผื่อหน้าจอแต่ละเครื่องเพี้ยนไม่เท่ากัน */
+  { id:'green', name:'เขียว',  me:'#6edc62', meText:'#111318', you:'#ffffff', youText:'#111318' },
   { id:'blue',  name:'ฟ้า',    me:'#3b8fe8', meText:'#062033', you:'#ffffff', youText:'#111318' },
   { id:'dark',  name:'เข้ม',   me:'#4b5563', meText:'#f2f5f9', you:'#ffffff', youText:'#111318' },
   { id:'mint',  name:'มิ้นต์', me:'#2fbf9f', meText:'#04302a', you:'#ffffff', youText:'#111318' }
 ];
-const theme = () => THEMES.find(t => t.id === S.theme) || THEMES[0];
+const theme = () => {
+  const base = THEMES.find(t => t.id === S.theme) || THEMES[0];
+  return S.customMe ? { ...base, me: S.customMe } : base;   // สีที่จูนเองชนะเสมอ
+};
 
 /* =========================================================
    สติกเกอร์ — วาดขึ้นใหม่ทั้งหมดด้วย SVG ในไฟล์นี้
@@ -1120,12 +1128,14 @@ THEMES.forEach(t => {
   b.className = 'sw' + (t.id === S.theme ? ' on' : '');
   b.style.background = t.me; b.title = 'ชุดสี' + t.name;
   b.onclick = () => {
-    S.theme = t.id;
+    S.theme = t.id; S.customMe = null;                       // เลือกชุดสี = ล้างสีที่จูนเอง
+    document.getElementById('meColor').value = t.me;
     [...themesEl.children].forEach(x => x.classList.remove('on'));
     b.classList.add('on'); render();
   };
   themesEl.appendChild(b);
 });
+bind('meColor','input', e => { S.customMe = e.target.value; render(); });
 
 function download(){
   cv.toBlob(async blob => {
