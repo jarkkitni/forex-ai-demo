@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>ก่อน–หลัง มีเว็บของร้าน</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{width:1080px;height:1350px;overflow:hidden;position:relative;background:#0d1016;
+       font-family:"Leelawadee UI","Sarabun","Segoe UI",sans-serif;color:#fff}
+
+  .band{position:relative;padding:26px 46px}
+
+  /* ---------- ก่อน ---------- */
+  .before{height:556px;background:linear-gradient(160deg,#2a1414 0%,#1a1113 60%,#161318 100%)}
+  .after {height:604px;background:linear-gradient(160deg,#0c2318 0%,#0b1a17 55%,#0a1418 100%)}
+
+  .badge{position:absolute;left:40px;top:-4px;z-index:3;
+         width:104px;height:104px;border-radius:50%;display:grid;place-items:center;
+         font-size:32px;font-weight:800;transform:rotate(-9deg);
+         box-shadow:0 12px 30px rgba(0,0,0,.45)}
+  .badge.b{background:#e5484d;color:#fff;border:4px solid #ff8a8d}
+  .badge.a{background:#22c55e;color:#042a14;border:4px solid #86efac}
+
+  h2{font-size:52px;font-weight:800;letter-spacing:-1px;margin-left:126px;line-height:1.1}
+  h2 small{display:block;font-size:24px;font-weight:600;color:#9aa4b2;margin-top:5px;letter-spacing:0}
+
+  .cols{display:flex;gap:34px;margin-top:18px}
+
+  /* กรอบมือถือ — ฝั่ง "หลัง" ข้างในคือหน้าเว็บจริงที่รันอยู่ ไม่ใช่ภาพวาด */
+  .phone{width:264px;height:436px;flex:none;border-radius:24px;overflow:hidden;
+         border:7px solid #2b3240;background:#fff;position:relative;
+         box-shadow:0 18px 40px rgba(0,0,0,.5)}
+  .phone img{width:100%;display:block}
+  .tag{position:absolute;left:0;right:0;bottom:0;background:rgba(8,12,18,.88);
+       color:#d7e2f0;font-size:18px;text-align:center;padding:9px 6px;font-weight:700}
+  /* จอใหญ่ฝั่ง "หลัง" — ต้องอ่านออกแม้ Facebook ย่อรูปเหลือครึ่งเดียว */
+  .shot{width:524px;flex:none;position:relative;border-radius:16px;overflow:hidden;
+        border:6px solid #2b3240;box-shadow:0 18px 40px rgba(0,0,0,.5);background:#fff}
+  .shot img{width:100%;display:block}
+  .shot .tag{font-size:19px}
+
+  /* จอแชท (ฝั่งก่อน) วาดเองด้วย CSS */
+  .chat{background:#93aecd;height:100%;display:flex;flex-direction:column}
+  .chat .hd{background:#fff;color:#12161d;padding:11px 12px;font-size:16px;font-weight:700;
+            display:flex;justify-content:space-between;align-items:center}
+  .chat .hd i{font-style:normal;color:#8892a0;font-size:14px;font-weight:600}
+  .chat .bd{flex:1;padding:12px 11px;display:flex;flex-direction:column;gap:9px;overflow:hidden}
+  .bub{max-width:78%;font-size:15.5px;line-height:1.4;padding:9px 12px;border-radius:15px;color:#14181f}
+  .bub.l{background:#fff;border-top-left-radius:5px;align-self:flex-start}
+  .bub.r{background:#8ee97f;border-top-right-radius:5px;align-self:flex-end}
+  .slip{align-self:flex-start;background:#fff;border-radius:12px;padding:8px;width:104px}
+  .slip .p{height:74px;background:repeating-linear-gradient(#eef1f5 0 4px,#fff 4px 9px);
+           border:1px solid #dfe4ea;border-radius:6px}
+  .slip .c{font-size:12px;color:#8892a0;text-align:center;margin-top:4px}
+  .unread{background:#e5484d;color:#fff;font-size:14px;font-weight:800;text-align:center;
+          padding:7px;letter-spacing:.2px}
+
+  .pts{flex:1;padding-top:8px}
+  .pt{display:flex;gap:14px;align-items:flex-start;margin-bottom:18px}
+  .pt .ic{width:44px;height:44px;flex:none;border-radius:12px;display:grid;place-items:center;font-size:22px}
+  .before .pt .ic{background:#e5484d22;border:1px solid #e5484d55}
+  .after  .pt .ic{background:#22c55e22;border:1px solid #22c55e55}
+  .pt .tx{font-size:25px;line-height:1.4;font-weight:700}
+  .pt .tx span{display:block;font-size:19.5px;font-weight:500;color:#9aa4b2;margin-top:3px;line-height:1.45}
+
+  /* ---------- คั่นกลาง ---------- */
+  .mid{height:96px;background:#11161d;display:flex;align-items:center;justify-content:center;gap:22px;
+       border-top:1px solid #ffffff12;border-bottom:1px solid #ffffff12}
+  .mid .ar{font-size:40px;color:#22c55e}
+  .mid .tx{font-size:31px;font-weight:800}
+  .mid .tx b{color:#3ee07f}
+  .mid .tx small{display:block;font-size:18px;color:#8b96a5;font-weight:600;margin-top:2px}
+
+  /* ---------- ท้าย ---------- */
+  .foot{position:absolute;left:0;right:0;bottom:0;height:94px;background:#3ee07f;color:#04321a;
+        display:flex;align-items:center;justify-content:center;flex-direction:column}
+  .foot .f1{font-size:31px;font-weight:800}
+  .foot .f2{font-size:21px;font-weight:700;opacity:.82;margin-top:4px}
+</style>
+</head>
+<body>
+
+  <!-- ================= ก่อน ================= -->
+  <div class="band before">
+    <div class="badge b">ก่อน</div>
+    <h2>ก่อนมีเว็บของร้าน<small>ทุกออเดอร์ต้องผ่านมือเราหมด</small></h2>
+    <div class="cols">
+      <div class="phone">
+        <div class="chat">
+          <div class="hd"><span>ลูกค้า (คนใหม่)</span><i>23:47</i></div>
+          <div class="bd">
+            <div class="bub l">อันนี้ราคาเท่าไหร่คะ</div>
+            <div class="bub l">มีสีอื่นอีกไหมคะ ส่งกี่วันคะ</div>
+            <div class="bub r">890 ค่ะ ส่ง 2 วันค่ะ 🙏</div>
+            <div class="bub l">โอนแล้วนะคะ รบกวนเช็คให้ด้วย</div>
+            <div class="slip"><div class="p"></div><div class="c">สลิป.jpg</div></div>
+            <div class="bub r">รอตรวจสักครู่นะคะ</div>
+          </div>
+          <div class="unread">ยังไม่ได้ตอบอีก 12 แชท</div>
+        </div>
+        <div class="tag">ตอบเองทุกคน ทุกคำถาม</div>
+      </div>
+
+      <div class="pts">
+        <div class="pt"><div class="ic">💬</div><div class="tx">ตอบราคาซ้ำเดิมทุกวัน
+          <span>ลูกค้า 10 คน ก็พิมพ์เรื่องเดิม 10 รอบ</span></div></div>
+        <div class="pt"><div class="ic">🧾</div><div class="tx">นั่งไล่ตรวจสลิปทีละใบ
+          <span>ตรวจช้า ลูกค้าทวง · ตรวจพลาด เจอสลิปปลอม</span></div></div>
+        <div class="pt"><div class="ic">🌙</div><div class="tx">ตอบช้าไปนิดเดียว ลูกค้าหายไปเลย
+          <span>เขาทักตอนเรานอน พอตื่นมาเขาซื้อร้านอื่นแล้ว</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= คั่นกลาง ================= -->
+  <div class="mid">
+    <div class="ar">▼</div>
+    <div class="tx">เปลี่ยนเป็นแบบนี้ <b>เริ่ม 3,500.-</b>
+      <small>จ่ายครั้งเดียว ได้เว็บที่รับเงินเองได้จริง ไม่ใช่แค่หน้าเว็บสวยๆ</small></div>
+    <div class="ar">▼</div>
+  </div>
+
+  <!-- ================= หลัง ================= -->
+  <div class="band after">
+    <div class="badge a">หลัง</div>
+    <h2>หลังมีเว็บของร้าน<small>ลูกค้าทำเองได้ทั้งหมด ตั้งแต่เลือกจนจ่ายเงิน</small></h2>
+    <div class="cols">
+      <div class="shot">
+        <img src="crop-paid.png" alt="หน้าจอจริงตอนลูกค้าจ่ายเงินเสร็จ">
+        <div class="tag">หน้าจอจริงหลังลูกค้าจ่ายเงิน — ระบบขึ้นให้เอง ไม่ต้องส่งสลิป</div>
+      </div>
+      <div class="pts">
+        <div class="pt"><div class="ic">🛒</div><div class="tx">ลูกค้ากดซื้อเองได้ 24 ชม.
+          <span>ไม่ต้องรอเราตอบ ตอนเรานอนร้านก็ยังขายอยู่</span></div></div>
+        <div class="pt"><div class="ic">✅</div><div class="tx">เงินเข้าปุ๊บ ระบบขึ้นให้เอง
+          <span>ไม่ต้องส่งสลิป ไม่ต้องนั่งตรวจอีกต่อไป</span></div></div>
+        <div class="pt"><div class="ic">🔗</div><div class="tx">มีลิงก์ร้านเป็นของตัวเอง
+          <span>แปะไบโอ วางตอนไลฟ์ ส่งในแชทได้เลย</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div class="f1">รูปนี้คือระบบจริงที่เปิดใช้อยู่ · กดลองเป็นลูกค้าได้เลย</div>
+    <div class="f2">thailinebot.com/shop · รับทำเว็บตามสั่ง ทักมาคุยก่อนได้ ดูให้ฟรี</div>
+  </div>
+</body>
+</html>
