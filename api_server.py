@@ -504,6 +504,22 @@ def chatapp(sub):
     return resp
 
 
+@app.route("/chatmaker/", defaults={"sub": "index.html"})
+@app.route("/chatmaker/<path:sub>")
+def chatmaker(sub):
+    """ตัวเดโมของ Chat Mockup Maker — ให้ว่าที่ลูกค้าลองเล่นก่อนซื้อ
+    ต่างจาก /chatapp/ (แอปเต็มของลูกค้าที่จ่ายเงินแล้ว) ตรงที่: บันทึกภาพไม่ได้ + ภาพมีลายน้ำ
+    ⚠️ ไฟล์ในโฟลเดอร์ chatdemo/ ถูก "ปั๊มออกมา" จากต้นทางด้วย chat-mockup-maker/make_demo.py
+       ห้ามแก้ด้วยมือ — แก้ต้นทางแล้วรันสคริปต์ใหม่เสมอ ไม่งั้นแก้ครั้งหน้าจะทับหาย"""
+    from flask import send_from_directory
+    d = os.path.join(os.path.dirname(__file__), "chatdemo")
+    resp = send_from_directory(d, sub)
+    if sub.endswith(".html"):
+        # หน้าเดโมต้องได้ตัวใหม่เสมอ (ไม่มี service worker ช่วยอัปเดตให้เหมือนตัวแอปเต็ม)
+        resp.headers["Cache-Control"] = "no-cache, must-revalidate"
+    return resp
+
+
 @app.route("/pitch/chef")
 def pitch_chef():
     """Demo พรีเซนต์ลูกค้า AI Executive Assistant (Chef/Restaurant) — เปิดได้ทั้ง PC/แท็บเล็ต"""
@@ -2096,7 +2112,7 @@ def seo_landing(slug):
 @app.route("/sitemap.xml")
 def sitemap():
     # "/botkit" ไม่อยู่ในนี้แล้ว — มัน 301 มา "/" ซึ่งมีอยู่แล้ว (กัน duplicate content)
-    urls = ["/"] + [f"/{k}" for k in SEO_PAGES] + \
+    urls = ["/", "/chatmaker/"] + [f"/{k}" for k in SEO_PAGES] + \
            [f"/demo/{k}" for k in _load_demo_configs()]
     today = datetime.now().strftime("%Y-%m-%d")
     items = "".join(

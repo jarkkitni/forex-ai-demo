@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="index,follow">
+<meta name="description" content="ลองสร้างภาพแชทตัวอย่างเองได้ฟรีในเบราว์เซอร์ พิมพ์เองได้ทั้งสองฝั่ง ใส่รูป สติกเกอร์ เวลา อ่านแล้ว — เวอร์ชันทดลองบันทึกภาพไม่ได้">
+<title>ทดลองใช้ฟรี — โปรแกรมสร้างภาพแชทตัวอย่าง (Chat Mockup Maker)</title>
+
+<!-- ===== ติดตั้งเป็นแอปได้ทั้ง Android และ iPhone ===== -->
+<meta name="theme-color" content="#0ac15c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Chat Mockup">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon-64.png" sizes="64x64" type="image/png">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#12151c; --panel:#1a1f29; --line:#2a3140; --txt:#e7ecf3; --dim:#8d98ab;
+    --accent:#0ac15c; --accent2:#2f6df6; --danger:#e05260;
+  }
+  body{
+    font-family:"Leelawadee UI","Sarabun","Segoe UI",-apple-system,"Helvetica Neue",sans-serif;
+    background:var(--bg); color:var(--txt); height:100vh; overflow:hidden;
+  }
+  .app{display:flex; height:100vh}
+
+  /* ---------- แผงควบคุม ---------- */
+  .panel{
+    width:400px; flex:none; background:var(--panel); border-right:1px solid var(--line);
+    overflow-y:auto; padding:16px 16px 60px;
+  }
+  .brand{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+  .brand .dot{width:26px;height:26px;border-radius:8px;background:var(--accent);
+    display:grid;place-items:center;font-size:15px}
+  .brand h1{font-size:16px;font-weight:700;letter-spacing:.2px}
+  .brand small{display:block;color:var(--dim);font-size:11px;font-weight:400}
+
+  .sec{margin-top:18px;border-top:1px solid var(--line);padding-top:14px}
+  .sec>h2{font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
+
+  label.f{display:block;margin-bottom:10px;font-size:12px;color:var(--dim)}
+  label.f>span{display:block;margin-bottom:4px}
+  input[type=text],input[type=time],input[type=number],input[type=date],select,textarea{
+    width:100%;background:#0f131b;border:1px solid var(--line);color:var(--txt);
+    border-radius:8px;padding:8px 10px;font:inherit;font-size:13px;outline:none;
+  }
+  input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+  textarea{resize:vertical;min-height:52px;line-height:1.45}
+  .row{display:flex;gap:8px}
+  .row>*{flex:1;min-width:0}
+
+  .chk{display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:8px;cursor:pointer;color:var(--txt)}
+  .chk input{accent-color:var(--accent);width:16px;height:16px}
+
+  button{font:inherit;cursor:pointer;border:none;border-radius:8px;transition:.15s}
+  .btn{background:#232b39;color:var(--txt);padding:9px 12px;font-size:13px;border:1px solid var(--line)}
+  .btn:hover{background:#2c3546}
+  .btn.pri{background:var(--accent);color:#04331a;font-weight:700;border-color:transparent}
+  .btn.pri:hover{filter:brightness(1.08)}
+  .btn.blue{background:var(--accent2);color:#fff;border-color:transparent}
+  .btn.wide{width:100%}
+  .addbar{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+
+  /* รายการข้อความ */
+  .msg{background:#151a23;border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:9px}
+  .msg.r{border-left:3px solid var(--accent)}
+  .msg.l{border-left:3px solid #6b7688}
+  .msg.d{border-left:3px solid #c9922f}
+  .mhead{display:flex;align-items:center;gap:6px;margin-bottom:7px}
+  .mhead .tag{font-size:10px;padding:2px 7px;border-radius:99px;background:#232b39;color:var(--dim)}
+  .mhead .sp{flex:1}
+  .ico{width:26px;height:26px;display:grid;place-items:center;background:#232b39;
+    border:1px solid var(--line);border-radius:7px;color:var(--dim);font-size:12px;line-height:1}
+  .ico:hover{background:#2c3546;color:var(--txt)}
+  .ico.del:hover{background:var(--danger);color:#fff;border-color:transparent}
+  .thumb{width:100%;height:74px;object-fit:cover;border-radius:7px;margin-top:6px;border:1px solid var(--line)}
+  .skgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:2px}
+  .skbtn{background:#0f131b;border:1px solid var(--line);border-radius:9px;padding:3px;cursor:pointer;line-height:0}
+  .skbtn:hover{background:#1b2230}
+  .skbtn.on{border-color:var(--accent);background:#12231a}
+  .skbtn img{width:100%;display:block}
+
+  .avwrap{display:flex;align-items:center;gap:10px}
+  .avprev{width:46px;height:46px;border-radius:50%;background:#0f131b;border:1px solid var(--line);
+    object-fit:cover;flex:none}
+  .swatches{display:flex;gap:6px;flex-wrap:wrap}
+  .sw{width:28px;height:28px;border-radius:7px;border:2px solid transparent;cursor:pointer}
+  .sw.on{border-color:#fff}
+
+  .note{font-size:11px;line-height:1.6;color:var(--dim);background:#0f131b;border:1px solid var(--line);
+    border-radius:8px;padding:9px 10px;margin-top:12px}
+
+  /* ---------- เวที/พรีวิว ---------- */
+  .stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+    overflow:auto;padding:22px;background:
+      radial-gradient(900px 500px at 50% -10%,#1d2634 0%,var(--bg) 70%)}
+  .stagebar{display:flex;gap:8px;align-items:center;margin-bottom:14px}
+  #cv{border-radius:18px;box-shadow:0 24px 60px rgba(0,0,0,.55);background:#8cabd8}
+  .hint{color:var(--dim);font-size:11px;margin-top:12px;text-align:center;line-height:1.7}
+  input[type=file]{display:none}
+
+  /* ---------- มือถือ ---------- */
+  .fab{position:fixed;right:14px;bottom:16px;z-index:60;display:none;border:none;
+       background:var(--accent);color:#04331a;font-weight:700;font-size:14px;
+       padding:13px 20px;border-radius:99px;box-shadow:0 8px 24px rgba(0,0,0,.45)}
+  @media(max-width:900px){
+    .app{flex-direction:column;height:auto;overflow:auto}
+    body{overflow:auto;padding-bottom:env(safe-area-inset-bottom)}
+    .panel{width:100%;border-right:none;border-bottom:1px solid var(--line);
+           padding:14px 14px 20px;padding-top:calc(14px + env(safe-area-inset-top))}
+    .stage{padding:16px 10px 90px;min-height:auto}
+    .addbar{grid-template-columns:1fr 1fr}
+    .fab{display:block}
+    .btn,.ico,button{min-height:38px}      /* นิ้วกดโดนแน่ */
+    textarea,input[type=text]{font-size:16px}  /* กัน iOS ซูมเองตอนโฟกัสช่องพิมพ์ */
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ แผงควบคุม ============ -->
+  <aside class="panel">
+    <div class="brand">
+      <div class="dot">💬</div>
+      <div>
+        <h1>Chat Mockup Maker</h1>
+        <small>สร้างภาพแชทตัวอย่าง · ทำงานออฟไลน์ 100%</small>
+      </div>
+    </div>
+
+    <div class="demoflag">
+      🔒 <b>โหมดทดลอง</b> — ลองปรับได้ทุกปุ่ม แต่ <b>บันทึกภาพไม่ได้</b> และภาพมีลายน้ำ
+      <button class="demoflag-btn" id="demoWant">อยากได้ตัวเต็ม →</button>
+    </div>
+
+    <div class="sec">
+      <h2>หน้าจอ</h2>
+      <label class="f"><span>ชื่อคู่สนทนา / ชื่อห้อง</span>
+        <input type="text" id="room" value="คุณสมชาย ใจดี"></label>
+      <div class="row">
+        <label class="f"><span>เวลาบนสถานะ</span><input type="text" id="clock" value="09:41"></label>
+        <label class="f"><span>สมาชิก (เว้นว่าง=แชทเดี่ยว)</span><input type="text" id="member" placeholder="เช่น 4"></label>
+      </div>
+      <div class="row">
+        <label class="f"><span>เลขวันบนไอคอนปฏิทิน</span><input type="number" id="calDay" min="1" max="31"></label>
+        <label class="f"><span>ตัวอักษรบนจุดแจ้งเตือน</span><input type="text" id="calBadge" value="N" maxlength="1" placeholder="เว้นว่าง=ไม่มี"></label>
+      </div>
+      <label class="f"><span>รูปโปรไฟล์คู่สนทนา</span></label>
+      <div class="avwrap">
+        <img class="avprev" id="avPrev" alt="">
+        <div style="flex:1">
+          <button class="btn wide" id="avBtn">📷 เลือกรูปโปรไฟล์</button>
+          <button class="btn wide" id="avClr" style="margin-top:6px">ลบรูป</button>
+        </div>
+      </div>
+      <input type="file" id="avFile" accept="image/*">
+
+      <label class="f" style="margin-top:12px"><span>สีพื้นหลังแชท</span></label>
+      <div class="swatches" id="walls"></div>
+      <label class="f" style="margin-top:12px"><span>ชุดสีฟองข้อความ</span></label>
+      <div class="swatches" id="themes"></div>
+      <label class="f" style="margin-top:10px"><span>จูนสีฟองฝั่งเขียวเอง (เทียบกับแชทจริงบนเครื่องคุณได้เลย)</span>
+        <input type="color" id="meColor" value="#79e575" style="width:100%;height:36px;padding:2px;background:#0f131b;border:1px solid var(--line);border-radius:8px;cursor:pointer">
+      </label>
+      <label class="f"><span>รูปทรงหางฟอง — ลองสลับเทียบกับแชทจริงจนตรงตา</span>
+        <select id="tailStyle">
+          <option value="wing">แบบ 1 · ปีกมน (ใกล้แอปจริงที่สุด)</option>
+          <option value="flick">แบบ 2 · สะบัดขึ้น</option>
+          <option value="sharp">แบบ 3 · เขี้ยวแหลม</option>
+          <option value="round">แบบ 4 · หยดมน</option>
+        </select>
+      </label>
+      <label class="f"><span>ตำแหน่งหาง: สูงขึ้น ← → ต่ำลง (<b id="tailYv">5</b>px)</span>
+        <input type="range" id="tailY" min="0" max="12" step="1" value="5" style="width:100%;accent-color:var(--accent)">
+      </label>
+    </div>
+
+    <div class="sec">
+      <h2>บทสนทนา</h2>
+      <div class="addbar">
+        <button class="btn" data-add="l">＋ ข้อความ (ฝั่งซ้าย)</button>
+        <button class="btn" data-add="r">＋ ข้อความ (ฝั่งขวา)</button>
+        <button class="btn" data-add="date">＋ ป้ายวันที่</button>
+        <button class="btn" data-add="img">＋ ส่งรูปภาพ</button>
+        <button class="btn" data-add="sticker">＋ สติกเกอร์</button>
+        <button class="btn" data-add="mysticker">＋ สติกเกอร์ของฉัน</button>
+        <button class="btn" data-add="call">＋ บันทึกการโทร</button>
+        <button class="btn" data-add="system">＋ ข้อความระบบ</button>
+      </div>
+      <div id="list"></div>
+    </div>
+
+    <div class="sec">
+      <h2>ตัวเลือก</h2>
+      <label class="chk"><input type="checkbox" id="optRead" checked> แสดง "อ่านแล้ว" ที่ข้อความฝั่งขวา</label>
+      <label class="chk"><input type="checkbox" id="optName"> แสดงชื่อเหนือฟองข้อความฝั่งซ้าย</label>
+      <label class="chk"><input type="checkbox" id="optClouds"> พื้นหลังมีลายเมฆ</label>
+      <label class="chk"><input type="checkbox" id="optLink" checked> ทำเบอร์โทร/ลิงก์ให้เป็นสีน้ำเงินอัตโนมัติ</label>
+      <label class="chk"><input type="checkbox" id="optMark"> ใส่ป้าย "ภาพจำลอง" ที่มุมภาพ</label>
+      <div class="row" style="margin-top:10px">
+        <button class="btn pri" id="dl">🔒 บันทึกเป็น PNG</button>
+        <button class="btn blue" id="demo">โหลดตัวอย่าง</button>
+      </div>
+      <button class="btn wide" id="clr" style="margin-top:8px">ล้างบทสนทนาทั้งหมด</button>
+      <div class="note">
+        <b style="color:#e7ecf3">โปรแกรมนี้ใช้ “สร้างภาพแชท” ไม่ใช่แอปส่งข้อความ</b><br>
+        พิมพ์เองได้ทั้งสองฝั่งในเครื่องเดียว แล้วบันทึกออกมาเป็นรูป — ข้อความไม่ได้ถูกส่งหาใคร
+        และไม่วิ่งข้ามเครื่อง เพราะไม่ต่ออินเทอร์เน็ตเลย · ดับเน็ตแล้วเปิดใช้ได้ปกติ
+        รูปทุกใบอยู่ในเครื่องคุณล้วน ไม่มีการอัปโหลดไปไหน
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ พรีวิว ============ -->
+  <main class="stage">
+    <div class="stagebar">
+      <button class="btn" id="zoomOut">−</button>
+      <span id="zoomTxt" style="font-size:12px;color:var(--dim);min-width:52px;text-align:center">100%</span>
+      <button class="btn" id="zoomIn">＋</button>
+      <button class="btn pri" id="dl2">🔒 บันทึก PNG</button>
+    </div>
+    <canvas id="cv"></canvas>
+    <div class="hint">ภาพส่งออกความละเอียด ×3 (1170 px กว้าง) — คมพอสำหรับลงโฆษณา/พรีเซนต์</div>
+  </main>
+</div>
+<button class="fab" id="fab">👁 ดูภาพ</button>
+
+<script>
+/* =========================================================
+   Chat Mockup Maker — วาดทุกอย่างด้วย Canvas 2D
+   ไม่มีไลบรารีภายนอก · ไม่มีการเรียกเน็ต · ตัดคำไทยด้วย Intl.Segmenter
+   ========================================================= */
+
+const cv  = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+
+/* ความละเอียดที่ส่งออก — ปกติ ×3 ให้คมชัด
+   ⚠️ Safari บน iPhone มีเพดานขนาด canvas: ด้านยาวสุดไม่เกิน ~4096 px และพื้นที่รวมไม่เกิน ~16.7 ล้านพิกเซล
+   ถ้าเกิน canvas จะว่างเปล่า/ดำ และบันทึกรูปไม่ได้เลย (แชทยาว ๆ ชนเพดานนี้ได้ง่ายมาก)
+   จึงต้องลดความละเอียดลงอัตโนมัติเมื่อภาพยาว แทนที่จะปล่อยให้พัง */
+const MAX_SIDE = 4096, MAX_AREA = 16.7e6;
+let DPR = 3, TOO_LONG = false;
+function fitDPR(w, h){
+  TOO_LONG = false;
+  for(const d of [3, 2.5, 2, 1.5, 1]){
+    if(h*d <= MAX_SIDE && w*d <= MAX_SIDE && (w*d)*(h*d) <= MAX_AREA) return d;
+  }
+  // ยาวเกินกว่าจะพอดีเพดานแม้ที่ ×1 → ย่อลงอีกเพื่อให้ยัง "บันทึกได้" แต่ต้องเตือนผู้ใช้
+  TOO_LONG = true;
+  return Math.max(0.3, MAX_SIDE / h);
+}
+
+/* ---------- ค่าคงที่ของหน้าจอ (หน่วย logical px) ---------- */
+const W        = 390;              // กว้างเท่าจอมือถือมาตรฐาน
+const H_MIN    = 844;
+const ST_H     = 44;               // แถบสถานะ
+const HD_H     = 54;               // หัวห้องแชท
+const IN_H     = 58;               // แถบพิมพ์ข้อความ
+const PAD      = 12;
+const AV       = 36;               // ขนาดรูปโปรไฟล์ในแชท
+const AV_GAP   = 8;
+const BUB_MAXW = 232;
+const BUB_PX   = 12, BUB_PY = 9;
+const F_MSG    = 15, LH = 21;
+const F_NAME   = 12, F_TIME = 11;
+const GAP_SAME = 5, GAP_DIFF = 13;
+const R_BIG    = 18, R_SMALL = 5;
+
+/* ฟอนต์ต้องครอบคลุมทุกเครื่อง: Windows(Leelawadee) · Android(Noto Sans Thai) · iOS(Thonburi/SF)
+   ถ้าไม่ใส่ของมือถือ ตัวอักษรไทยจะตกไปใช้ฟอนต์สำรองที่สระลอย */
+const FONT = '"Leelawadee UI","Noto Sans Thai","Sarabun","Thonburi",-apple-system,"Segoe UI","Helvetica Neue",sans-serif';
+const f = (sz, w) => (w ? w + ' ' : '') + sz + 'px ' + FONT;
+
+const WALLS = ['#8cabd8','#7f9dc4','#b8d0e6','#dfe6ec','#2b3441','#a8c8a0','#e8d5c4','#c9b8d8'];
+
+/* ชุดสีฟองข้อความ — ตั้งใจ "ไม่ใช้ค่าสีประจำแบรนด์ของผู้ให้บริการแชทรายใดแบบตรงตัวเลข"
+   หน้าตายังคุ้นมือเหมือนเดิม แต่ไม่มีจุดให้อ้างว่าเราสวมเครื่องหมายของใคร */
+const THEMES = [
+  /* เขียวฟองแชทของแอปจริง "อ่อนกว่า" สีโลโก้มาก — ค่านี้วัดจากภาพหน้าจอจริงที่ลูกค้าส่งมา
+     และมีช่องจูนสีเองด้านล่าง เผื่อหน้าจอแต่ละเครื่องเพี้ยนไม่เท่ากัน */
+  { id:'green', name:'เขียว',  me:'#79e575', meText:'#111318', you:'#ffffff', youText:'#111318' },
+  { id:'blue',  name:'ฟ้า',    me:'#3b8fe8', meText:'#062033', you:'#ffffff', youText:'#111318' },
+  { id:'dark',  name:'เข้ม',   me:'#4b5563', meText:'#f2f5f9', you:'#ffffff', youText:'#111318' },
+  { id:'mint',  name:'มิ้นต์', me:'#2fbf9f', meText:'#04302a', you:'#ffffff', youText:'#111318' }
+];
+const theme = () => {
+  const base = THEMES.find(t => t.id === S.theme) || THEMES[0];
+  return S.customMe ? { ...base, me: S.customMe } : base;   // สีที่จูนเองชนะเสมอ
+};
+
+/* =========================================================
+   สติกเกอร์ — วาดขึ้นใหม่ทั้งหมดด้วย SVG ในไฟล์นี้
+   ⚠️ ห้ามใช้ตัวละครของแพลตฟอร์มใด ๆ (หมีบราวน์/โคนี่ ฯลฯ เป็นลิขสิทธิ์ของ LINE)
+   ชุดนี้เป็นตัวการ์ตูนที่วาดเอง ใช้ในงานขายได้โดยไม่ติดลิขสิทธิ์ใคร
+   ========================================================= */
+const SK_FACE = '#3f2d1c';
+function skWrap(inner, text, bg){
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 160">
+    <rect width="150" height="160" fill="none"/>
+    ${inner}
+    ${text ? `<text x="75" y="150" text-anchor="middle" font-family="Leelawadee UI,Sarabun,sans-serif"
+       font-size="19" font-weight="700" fill="${bg||'#5a4632'}">${text}</text>` : ''}
+  </svg>`;
+}
+/* ส่วนประกอบร่วม */
+const skEyesOpen  = (y=62)=>`<circle cx="60" cy="${y}" r="4.6" fill="${SK_FACE}"/><circle cx="90" cy="${y}" r="4.6" fill="${SK_FACE}"/>
+  <circle cx="61.6" cy="${y-1.6}" r="1.5" fill="#fff"/><circle cx="91.6" cy="${y-1.6}" r="1.5" fill="#fff"/>`;
+const skEyesShut  = (y=62)=>`<path d="M54 ${y} q6 6 12 0" stroke="${SK_FACE}" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M84 ${y} q6 6 12 0" stroke="${SK_FACE}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+const skBlush = (y=74)=>`<ellipse cx="47" cy="${y}" rx="8" ry="5" fill="#f6a8a0" opacity=".65"/>
+  <ellipse cx="103" cy="${y}" rx="8" ry="5" fill="#f6a8a0" opacity=".65"/>`;
+const skSmile = (y=76)=>`<path d="M64 ${y} q11 10 22 0" stroke="${SK_FACE}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+const skBearEars = (c1,c2,y=38)=>`<circle cx="45" cy="${y}" r="15" fill="${c1}"/><circle cx="105" cy="${y}" r="15" fill="${c1}"/>
+  <circle cx="45" cy="${y}" r="8" fill="${c2}"/><circle cx="105" cy="${y}" r="8" fill="${c2}"/>`;
+const skCatEars = (c1,c2)=>`<path d="M42 46 L38 20 L62 34 Z" fill="${c1}"/><path d="M108 46 L112 20 L88 34 Z" fill="${c1}"/>
+  <path d="M45 42 L43 27 L57 35 Z" fill="${c2}"/><path d="M105 42 L107 27 L93 35 Z" fill="${c2}"/>`;
+const skBunnyEars = (c1,c2)=>`<ellipse cx="56" cy="24" rx="9" ry="24" fill="${c1}"/><ellipse cx="94" cy="24" rx="9" ry="24" fill="${c1}"/>
+  <ellipse cx="56" cy="26" rx="4.5" ry="16" fill="${c2}"/><ellipse cx="94" cy="26" rx="4.5" ry="16" fill="${c2}"/>`;
+const skHead = c => `<ellipse cx="75" cy="68" rx="36" ry="33" fill="${c}"/>`;
+const skMuzzle = ()=>`<ellipse cx="75" cy="80" rx="15" ry="11" fill="#fff" opacity=".55"/>
+  <ellipse cx="75" cy="73" rx="5" ry="3.6" fill="${SK_FACE}"/>`;
+
+const BEAR='#d7a878', BEAR_D='#c08e5f', CAT='#f0c674', CAT_D='#dba94f', BUN='#f2e3e6', BUN_D='#e8bfc8';
+
+const STICKERS = [
+  { id:'thanks', name:'ขอบคุณ', svg: skWrap(
+      `${skBearEars(BEAR_D,'#e8c4a0',46)}<ellipse cx="75" cy="74" rx="36" ry="31" fill="${BEAR}"/>
+       ${skEyesShut(70)}${skBlush(82)}${skMuzzle()}
+       <path d="M30 104 q10 -14 22 -8" stroke="${BEAR_D}" stroke-width="9" fill="none" stroke-linecap="round"/>
+       <path d="M120 104 q-10 -14 -22 -8" stroke="${BEAR_D}" stroke-width="9" fill="none" stroke-linecap="round"/>`,
+      'ขอบคุณครับ') },
+  { id:'hello', name:'สวัสดี', svg: skWrap(
+      `${skBearEars(BEAR_D,'#e8c4a0')}${skHead(BEAR)}${skEyesOpen()}${skBlush()}${skSmile()}
+       <path d="M112 62 q16 -10 14 -24" stroke="${BEAR_D}" stroke-width="9" fill="none" stroke-linecap="round"/>
+       <circle cx="126" cy="34" r="7" fill="${BEAR}"/>`,
+      'สวัสดีครับ') },
+  { id:'ok', name:'โอเค', svg: skWrap(
+      `${skBearEars(BEAR_D,'#e8c4a0')}${skHead(BEAR)}${skEyesOpen()}${skBlush()}${skSmile()}
+       <circle cx="120" cy="66" r="13" fill="${BEAR}"/>
+       <rect x="116" y="44" width="9" height="20" rx="4.5" fill="${BEAR}"/>`,
+      'โอเคครับ') },
+  { id:'love', name:'ถูกใจ', svg: skWrap(
+      `${skCatEars(CAT_D,'#f7d9a0')}${skHead(CAT)}${skEyesShut()}${skBlush()}${skSmile()}
+       <path d="M75 108 c-9 -11 -22 -4 -18 7 c3 8 18 15 18 15 c0 0 15 -7 18 -15 c4 -11 -9 -18 -18 -7 z" fill="#f0576b"/>`,
+      'ถูกใจ') },
+  { id:'yes', name:'รับทราบ', svg: skWrap(
+      `${skCatEars(CAT_D,'#f7d9a0')}${skHead(CAT)}${skEyesOpen()}${skBlush()}
+       <path d="M66 78 q9 7 18 0" stroke="${SK_FACE}" stroke-width="3" fill="none" stroke-linecap="round"/>
+       <path d="M104 100 l10 10 l20 -22" stroke="#25b04f" stroke-width="9" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+      'รับทราบ') },
+  { id:'sorry', name:'ขอโทษ', svg: skWrap(
+      `${skBunnyEars(BUN_D,'#f6dde2')}${skHead(BUN)}${skEyesShut()}
+       <ellipse cx="47" cy="74" rx="8" ry="5" fill="#f6a8a0" opacity=".8"/>
+       <ellipse cx="103" cy="74" rx="8" ry="5" fill="#f6a8a0" opacity=".8"/>
+       <path d="M66 82 q9 -7 18 0" stroke="${SK_FACE}" stroke-width="3" fill="none" stroke-linecap="round"/>
+       <path d="M56 76 q-3 12 0 18" stroke="#79c7ef" stroke-width="4" fill="none" stroke-linecap="round"/>`,
+      'ขอโทษครับ') },
+  { id:'wow', name:'ตกใจ', svg: skWrap(
+      `${skBunnyEars(BUN_D,'#f6dde2')}${skHead(BUN)}
+       <circle cx="60" cy="62" r="6.5" fill="${SK_FACE}"/><circle cx="90" cy="62" r="6.5" fill="${SK_FACE}"/>
+       <circle cx="62" cy="59.5" r="2" fill="#fff"/><circle cx="92" cy="59.5" r="2" fill="#fff"/>
+       <ellipse cx="75" cy="82" rx="7" ry="9" fill="${SK_FACE}"/>
+       <text x="120" y="40" font-family="sans-serif" font-size="30" font-weight="700" fill="#f0a500">!</text>`,
+      'จริงเหรอ') },
+  { id:'bye', name:'ราตรีสวัสดิ์', svg: skWrap(
+      `${skBearEars(BEAR_D,'#e8c4a0')}${skHead(BEAR)}${skEyesShut()}${skBlush()}
+       <ellipse cx="75" cy="80" rx="6" ry="8" fill="${SK_FACE}" opacity=".8"/>
+       <text x="112" y="44" font-family="sans-serif" font-size="20" font-weight="700" fill="#7a8ba8">z</text>
+       <text x="124" y="30" font-family="sans-serif" font-size="14" font-weight="700" fill="#7a8ba8">z</text>`,
+      'ฝันดีครับ') }
+];
+const SK_IMG = {};                       // เก็บรูปที่โหลดแล้ว
+function loadStickers(cb){
+  let left = STICKERS.length;
+  STICKERS.forEach(s=>{
+    const im = new Image();
+    im.onload = ()=>{ SK_IMG[s.id]=im; if(--left===0 && cb) cb(); };
+    im.onerror= ()=>{ if(--left===0 && cb) cb(); };
+    im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s.svg);
+  });
+}
+
+/* ---------- สถานะทั้งหมดของภาพ ---------- */
+const S = {
+  room:'คุณสมชาย ใจดี', clock:'09:41', member:'',
+  wall:WALLS[0], avatar:null,
+  showRead:true, showName:false, showMark:false, clouds:false, autoLink:true, theme:'green',
+  tailStyle:'wing', tailY:5, calDay:new Date().getDate(), calBadge:'N',
+  msgs:[]
+};
+let uid = 1;
+let zoom = 1;
+
+/* =========================================================
+   ตัดบรรทัด — ใช้ตัวตัดคำไทยของเบราว์เซอร์ถ้ามี
+   ========================================================= */
+let segmenter = null;
+try { segmenter = new Intl.Segmenter('th', {granularity:'word'}); } catch(e) {}
+
+function wrap(text, maxW, font){
+  ctx.font = font;
+  const out = [];
+  for (const para of String(text).split('\n')){
+    if (para === ''){ out.push(''); continue; }
+    let segs;
+    if (segmenter) segs = [...segmenter.segment(para)].map(s => s.segment);
+    else           segs = para.split(/(\s+)/).filter(s => s !== '');
+    let cur = '';
+    for (const seg of segs){
+      if (!cur && /^\s+$/.test(seg)) continue;             // ไม่ขึ้นบรรทัดด้วยช่องว่าง
+      if (ctx.measureText(cur + seg).width <= maxW){ cur += seg; continue; }
+      if (cur){ out.push(cur); cur = ''; }
+      if (/^\s+$/.test(seg)) continue;
+      if (ctx.measureText(seg).width > maxW){              // คำเดียวยาวเกินบรรทัด → ตัดทีละอักขระ
+        for (const ch of seg){
+          if (ctx.measureText(cur + ch).width <= maxW) cur += ch;
+          else { out.push(cur); cur = ch; }
+        }
+      } else cur = seg;
+    }
+    if (cur) out.push(cur);
+  }
+  return out.length ? out : [''];
+}
+
+/* ---------- helper วาดรูปทรง ---------- */
+function rr(x, y, w, h, r){
+  const rad = (typeof r === 'number') ? {tl:r,tr:r,br:r,bl:r} : r;
+  ctx.beginPath();
+  ctx.moveTo(x + rad.tl, y);
+  ctx.lineTo(x + w - rad.tr, y);          ctx.quadraticCurveTo(x + w, y, x + w, y + rad.tr);
+  ctx.lineTo(x + w, y + h - rad.br);      ctx.quadraticCurveTo(x + w, y + h, x + w - rad.br, y + h);
+  ctx.lineTo(x + rad.bl, y + h);          ctx.quadraticCurveTo(x, y + h, x, y + h - rad.bl);
+  ctx.lineTo(x, y + rad.tl);              ctx.quadraticCurveTo(x, y, x + rad.tl, y);
+  ctx.closePath();
+}
+/* หางฟองข้อความ — ยื่นออกจากมุมบนของฟอง ด้านที่ติดคนพูด
+   เป็นรูปทรงเรขาคณิตทั่วไป ไม่ใช่โลโก้หรือตัวละครของใคร */
+function bubbleTail(x, y, side, color){
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  /* หางแบบแอปจริง (วัดจากภาพหน้าจอจริงรอบ 2 ของลูกค้า):
+     ตัวฟองเป็นแคปซูลมนเต็มใบ ส่วนหางเป็น "เขี้ยวเล็ก ๆ" แปะที่มุมบนด้านนอก
+     ปลายชี้ขึ้น-ออกเล็กน้อยเท่านั้น ไม่ใช่เปลวใหญ่ */
+  /* มี 4 ทรงให้เลือกในแผงซ้าย — "ความเหมือน" เป็นเรื่องของสายตา ให้ลูกค้าเลือกเทียบเองดีกว่าแก้ไปมา
+     s = ตัวกระจกซ้าย/ขวา (offset แนวนอนคูณ s เพื่อพลิกด้าน) */
+  const s = side === 'l' ? -1 : 1;
+  const st = S.tailStyle || 'wing';
+  if (st === 'wing'){         // แบบ 1 ปีกมน — ตัวอ้วนท้องนูน + ปลายสะบัดขึ้น (ลูกค้าเลือกทรงนี้)
+    ctx.moveTo(x - 12*s, y + 0.5);
+    ctx.quadraticCurveTo(x + 2.5*s, y - 0.5, x + 7*s, y - 6.5);
+    ctx.quadraticCurveTo(x + 5*s,   y + 3.5, x - 2*s, y + 9);
+  } else if (st === 'flick'){ // แบบ 2 สะบัดขึ้น (ลานสกี)
+    ctx.moveTo(x - 14*s, y + 1);
+    ctx.quadraticCurveTo(x - 3*s, y + 1.5, x + 4*s, y - 6);
+    ctx.quadraticCurveTo(x - 1*s, y - 0.5, x - 2*s, y + 6);
+  } else if (st === 'sharp'){ // แบบ 3 เขี้ยวแหลม
+    ctx.moveTo(x - 12*s, y + 1);
+    ctx.quadraticCurveTo(x - 2*s, y - 0.5, x + 7*s, y - 5);
+    ctx.quadraticCurveTo(x + 1*s, y + 1.5, x - 2*s, y + 7);
+  } else {                    // แบบ 4 หยดมน — ยื่นออกข้างระดับขอบบน ปลายมน
+    ctx.moveTo(x - 12*s, y + 0.5);
+    ctx.quadraticCurveTo(x + 3*s, y - 1.5, x + 7*s, y + 1);
+    ctx.quadraticCurveTo(x + 7*s, y + 6,   x - 2*s, y + 9);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function circleImg(img, x, y, d){
+  ctx.save(); ctx.beginPath(); ctx.arc(x + d/2, y + d/2, d/2, 0, Math.PI*2); ctx.clip();
+  const s = Math.max(d / img.width, d / img.height);
+  const w = img.width * s, h = img.height * s;
+  ctx.drawImage(img, x + (d - w)/2, y + (d - h)/2, w, h);
+  ctx.restore();
+}
+function defaultAvatar(x, y, d){
+  ctx.save();
+  ctx.fillStyle = '#c8d2de'; ctx.beginPath(); ctx.arc(x+d/2, y+d/2, d/2, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#8d9bab';
+  ctx.beginPath(); ctx.arc(x+d/2, y+d*0.38, d*0.17, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x+d/2, y+d*0.92, d*0.30, Math.PI, 0); ctx.fill();
+  ctx.restore();
+}
+
+/* =========================================================
+   คำนวณ layout ของทุกข้อความ (ยังไม่วาด) → รู้ความสูงรวม
+   ========================================================= */
+function layout(){
+  const items = [];
+  let h = S.showMark ? 34 : 10;                 // เว้นบนสุด (กันชนป้าย "ภาพจำลอง")
+  let prevSide = null;
+
+  S.msgs.forEach((m, i) => {
+    if (m.kind === 'date'){
+      ctx.font = f(12);
+      const wpx = ctx.measureText(m.text || '').width + 24;
+      items.push({m, y:h + 8, type:'date', w:wpx, h:24});
+      h += 8 + 24 + 10; prevSide = null; return;
+    }
+
+    const first = (prevSide !== m.side);        // ข้อความแรกของกลุ่ม → โชว์รูป/ชื่อ
+    h += (prevSide === null) ? 0 : (first ? GAP_DIFF : GAP_SAME);
+
+    let nameH = 0;
+    if (m.side === 'l' && S.showName && first) nameH = 17;
+
+    if (m.kind === 'call'){
+      const CW = 232, CH = m.sub ? 88 : 60;   // การ์ดบันทึกการโทร (มีแถบล่างหรือไม่มี)
+      items.push({m, y:h + nameH, type:'call', first, nameH, w:CW, h:CH});
+      h += nameH + CH;
+    } else if (m.kind === 'sticker'){
+      const SZ = 116;                       // สติกเกอร์ไม่มีฟองข้อความ วางลอยเหมือนแอปแชทจริง
+      items.push({m, y:h + nameH, type:'sticker', first, nameH, w:SZ, h:SZ});
+      h += nameH + SZ;
+    } else if (m.kind === 'img'){
+      const box = fitImg(m.img);
+      items.push({m, y:h + nameH, type:'img', first, nameH, w:box.w, h:box.h});
+      h += nameH + box.h;
+    } else {
+      const lines = wrap(m.text || '', BUB_MAXW - BUB_PX*2, f(F_MSG));
+      let tw = 0;
+      ctx.font = f(F_MSG);
+      lines.forEach(l => tw = Math.max(tw, ctx.measureText(l).width));
+      const bw = Math.max(tw + BUB_PX*2, 42);
+      const bh = lines.length * LH + BUB_PY*2;
+      items.push({m, y:h + nameH, type:'text', first, nameH, lines, w:bw, h:bh});
+      h += nameH + bh;
+    }
+    prevSide = m.side;
+  });
+
+  return {items, contentH: h + 14};
+}
+function fitImg(img){
+  if (!img) return {w:180, h:130};
+  const MW = 200, MH = 260;
+  const s = Math.min(MW / img.width, MH / img.height, 1);
+  return {w: Math.max(60, img.width * s), h: Math.max(60, img.height * s)};
+}
+
+/* =========================================================
+   วาดจริง
+   ========================================================= */
+
+/* ---------- โหมดเดโม: ลายน้ำทแยงทั้งภาพ ----------
+   วาดท้ายสุดของ render() ทุกครั้ง = ไม่มี "ภาพเวอร์ชันไม่มีลายน้ำ" อยู่ในหน้านี้เลย
+   ต่อให้ผู้ใช้กดสกรีนช็อตหรือคลิกขวาบันทึกภาพ ก็ได้ภาพที่ติดลายน้ำไปด้วยเสมอ */
+function demoWatermark(w, h){
+  ctx.save();
+  ctx.font = f(17, '800');
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const t = 'DEMO · ตัวอย่าง';
+  const D = Math.hypot(w, h) / 2;             // ครึ่งเส้นทแยง — คลุมภาพได้ทุกมุมหลังหมุน
+  ctx.translate(w / 2, h / 2);
+  ctx.rotate(-Math.PI / 7);
+  /* ความเข้มนี้จูนจากการวัดจริง ไม่ได้กะเอา:
+     พิกเซลที่โดนลายน้ำ ~8% ของภาพ · ความต่างความสว่างเฉลี่ยบนรอยลายน้ำ ~32/255
+     = เห็นชัดว่าเป็นตัวอย่างแม้ย่อรูป แต่ยังอ่านบทสนทนาออกครบ */
+  for(let y = -D; y <= D; y += 78){
+    for(let x = -D; x <= D; x += 150){
+      ctx.fillStyle = 'rgba(255,255,255,.42)';   // เงาขาว — ให้อ่านออกบนพื้นเข้ม
+      ctx.fillText(t, x + 1.5, y + 1.5);
+      ctx.fillStyle = 'rgba(17,21,28,.26)';      // ตัวอักษรเข้ม — ให้อ่านออกบนพื้นสว่าง
+      ctx.fillText(t, x, y);
+    }
+  }
+  ctx.restore();
+
+  /* คำอธิบายใต้ภาพ — render() เขียนทับทุกครั้ง จึงต้องเขียนคืนตรงนี้ */
+  const hintEl = document.querySelector('.hint');
+  if(hintEl){
+    hintEl.innerHTML = '<b style="color:#ffb020">🔒 โหมดทดลอง</b> — ' +
+      'ภาพในหน้านี้มีลายน้ำและบันทึกไม่ได้ · ตัวเต็มบันทึกเป็นไฟล์ PNG คมชัด ×3 ไม่มีลายน้ำ';
+  }
+}
+
+function render(){
+  const {items, contentH} = layout();
+  const chatMin = H_MIN - ST_H - HD_H - IN_H;
+  const chatH   = Math.max(chatMin, contentH);
+  const H       = ST_H + HD_H + chatH + IN_H;
+
+  DPR = fitDPR(W, H);                       // ลดความละเอียดเองถ้าภาพยาวจนชนเพดานของ iPhone
+  cv.width  = W * DPR;  cv.height = H * DPR;
+  cv.style.width  = (W * zoom) + 'px';
+  cv.style.height = (H * zoom) + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const hintEl = document.querySelector('.hint');
+  if (hintEl){
+    if (TOO_LONG){
+      hintEl.innerHTML = `<b style="color:#ffb020">⚠️ แชทยาวเกินไป (${cv.width} × ${cv.height} px)</b><br>
+        ภาพจะไม่คมชัดและอาจบันทึกไม่ได้บน iPhone — แนะนำให้แบ่งเป็น 2 ภาพ โดยลบข้อความส่วนท้ายออกแล้วบันทึกทีละช่วง`;
+    } else {
+      hintEl.textContent = `ภาพที่บันทึกได้ ${cv.width} × ${cv.height} px (×${DPR})` +
+        (DPR < 3 ? ' — ลดความละเอียดอัตโนมัติเพราะแชทยาว เพื่อให้บันทึกได้ทุกเครื่อง'
+                 : ' — คมพอสำหรับลงโฆษณา/พรีเซนต์');
+    }
+  }
+  ctx.textBaseline = 'alphabetic';
+
+  const dark = isDark(S.wall);
+
+  /* พื้นหลังแชท */
+  ctx.fillStyle = S.wall;
+  ctx.fillRect(0, 0, W, H);
+  if (S.clouds) drawClouds(H);
+
+  /* ---- ข้อความเริ่มจากบนไล่ลงล่าง (แชทจริงตอนข้อความน้อยก็เป็นแบบนี้ — ลูกค้าขอ) ---- */
+  const top = ST_H + HD_H;
+  ctx.save();
+  ctx.translate(0, top);
+  items.forEach(it => drawItem(it));
+  ctx.restore();
+
+  drawStatusBar();
+  drawHeader();
+  drawInputBar(H);
+  if (S.showMark) drawMark(H);
+  demoWatermark(W, H);
+}
+
+/* เมฆพื้นหลัง — วาดเองด้วยไล่เฉดวงกลม ไม่ได้ใช้ไฟล์ภาพของใคร
+   ตำแหน่งคงที่ (ไม่สุ่ม) ไม่งั้นเมฆจะขยับทุกครั้งที่พิมพ์ */
+function drawClouds(H){
+  ctx.save();
+  const puff = (x, y, r) => {
+    const g = ctx.createRadialGradient(x, y, r*0.15, x, y, r);
+    g.addColorStop(0, 'rgba(255,255,255,.46)');
+    g.addColorStop(.55, 'rgba(255,255,255,.22)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+  };
+  const rows = Math.ceil(H / 300);
+  for (let i = 0; i < rows; i++){
+    const y0 = 70 + i*300;
+    puff(62, y0, 52);  puff(112, y0 + 10, 36); puff(152, y0 - 6, 30);
+    puff(300, y0 + 96, 44); puff(345, y0 + 104, 30);
+    puff(40, y0 + 186, 34);
+    puff(215, y0 + 232, 40); puff(258, y0 + 240, 26);
+  }
+  ctx.restore();
+}
+
+function isDark(hex){
+  const c = hex.replace('#','');
+  const r = parseInt(c.substr(0,2),16), g = parseInt(c.substr(2,2),16), b = parseInt(c.substr(4,2),16);
+  return (r*299 + g*587 + b*114) / 1000 < 140;
+}
+
+/* วาดข้อความหนึ่งบรรทัด โดยทำ "เบอร์โทร / ลิงก์" ให้เป็นสีน้ำเงินขีดเส้นใต้
+   เหมือนที่แอปแชทจริงทำอัตโนมัติ (ปิดได้ที่ช่องตัวเลือก) */
+const LINKISH = /(0\d[\d\-\s]{7,11}\d|https?:\/\/\S+|www\.\S+)/g;
+function drawLineWithLinks(line, x, y, color){
+  if (!S.autoLink || !LINKISH.test(line)){
+    LINKISH.lastIndex = 0;
+    ctx.fillStyle = color; ctx.fillText(line, x, y); return;
+  }
+  LINKISH.lastIndex = 0;
+  let cx = x;
+  line.split(LINKISH).forEach(part => {
+    if (!part) return;
+    LINKISH.lastIndex = 0;
+    const isLink = LINKISH.test(part) && part.length > 6;
+    LINKISH.lastIndex = 0;
+    ctx.fillStyle = isLink ? '#1a6fd4' : color;
+    ctx.fillText(part, cx, y);
+    const w = ctx.measureText(part).width;
+    if (isLink){ ctx.fillRect(cx, y + 2.5, w, 1.1); }   // ขีดเส้นใต้
+    cx += w;
+  });
+}
+
+function drawItem(it){
+  const m = it.m;
+
+  /* ป้ายวันที่ */
+  if (it.type === 'date'){
+    const x = (W - it.w) / 2;
+    ctx.fillStyle = 'rgba(0,0,0,.22)';
+    rr(x, it.y, it.w, it.h, 12); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = f(12); ctx.textAlign = 'center';
+    ctx.fillText(m.text || '', W/2, it.y + 16);
+    ctx.textAlign = 'left';
+    return;
+  }
+
+  const right = (m.side === 'r');
+  const metaCol = isDark(S.wall) ? 'rgba(255,255,255,.75)' : 'rgba(255,255,255,.95)';
+
+  /* รูปโปรไฟล์ + ชื่อ (เฉพาะฝั่งซ้าย ข้อความแรกของกลุ่ม) */
+  let bx;
+  if (right){
+    bx = W - PAD - it.w;
+  } else {
+    bx = PAD + AV + AV_GAP;
+    if (it.first){
+      const ay = it.y + it.nameH;
+      if (S.avatar) circleImg(S.avatar, PAD, ay, AV); else defaultAvatar(PAD, ay, AV);
+    }
+    if (it.nameH){
+      ctx.fillStyle = metaCol; ctx.font = f(F_NAME);
+      ctx.fillText(S.room, bx + 2, it.y - 4);
+    }
+  }
+
+  /* ตัวฟอง */
+  // แอปจริง: ตัวฟองมนเต็มทุกมุม (แคปซูล) — หางเป็นชิ้นเล็กแปะทับมุม ไม่ได้ตัดมุมฟอง
+  const radius = {tl:R_BIG, tr:R_BIG, br:R_BIG, bl:R_BIG};
+
+  if (it.type === 'call'){
+    const isR = right, th = theme();
+    ctx.fillStyle = isR ? th.me : th.you;
+    if (it.first) bubbleTail(isR ? bx + it.w : bx, it.y + (+S.tailY || 0), isR ? 'r' : 'l', ctx.fillStyle);
+    rr(bx, it.y, it.w, it.h, radius); ctx.fill();
+
+    // วงกลมไอคอน: พื้นเขียวเข้มกว่าฟอง + หูโทรศัพท์สีขาว (ให้ชัดแบบที่ลูกค้าขอ)
+    const ccx = bx + 30, ccy = it.y + 30;
+    ctx.fillStyle = isR ? 'rgba(0,0,0,.16)' : '#eef1f4';
+    ctx.beginPath(); ctx.arc(ccx, ccy, 19, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = isR ? '#ffffff' : '#3f4854'; ctx.lineWidth = 2.4; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(ccx - 7, ccy - 7); ctx.lineTo(ccx - 3, ccy - 7); ctx.lineTo(ccx - 1, ccy - 2);
+    ctx.lineTo(ccx - 4, ccy); ctx.quadraticCurveTo(ccx - 1, ccy + 4, ccx + 3, ccy + 6);
+    ctx.lineTo(ccx + 5, ccy + 3); ctx.lineTo(ccx + 9, ccy + 5); ctx.lineTo(ccx + 9, ccy + 9);
+    ctx.quadraticCurveTo(ccx - 2, ccy + 9, ccx - 7, ccy - 7);
+    ctx.stroke();
+
+    // ข้อความ 2 บรรทัด
+    const tx = bx + 56;
+    ctx.fillStyle = isR ? th.meText : th.youText;
+    ctx.font = f(15, '700');
+    const lines = wrap(m.text || 'สิ้นสุดการโทรแบบเสียง', it.w - 66, f(15, '700'));
+    lines.slice(0, 2).forEach((ln, i) => ctx.fillText(ln, tx, it.y + 23 + i*17));
+    ctx.font = f(13.5);
+    ctx.fillStyle = isR ? 'rgba(17,19,24,.62)' : '#6b7688';
+    ctx.fillText(m.dur || '00:55', tx, it.y + (lines.length > 1 ? 57 : 42));
+
+    // แถบล่าง (ถ้าเปิด)
+    if (m.sub){
+      ctx.strokeStyle = isR ? 'rgba(0,0,0,.14)' : '#e5e8ec'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(bx + 10, it.y + 60.5); ctx.lineTo(bx + it.w - 10, it.y + 60.5); ctx.stroke();
+      ctx.fillStyle = isR ? th.meText : '#3f4854'; ctx.font = f(13);
+      ctx.fillText(m.sub, bx + 30, it.y + 78);
+      // ไอคอนโน้ตดนตรีเล็ก ๆ
+      ctx.fillStyle = isR ? 'rgba(17,19,24,.75)' : '#6b7688';
+      ctx.beginPath(); ctx.arc(bx + 15, it.y + 77, 3, 0, Math.PI*2); ctx.fill();
+      ctx.fillRect(bx + 17, it.y + 68, 1.6, 9);
+      // ลูกศร >
+      ctx.strokeStyle = isR ? 'rgba(17,19,24,.6)' : '#9aa5b1'; ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(bx + it.w - 18, it.y + 70); ctx.lineTo(bx + it.w - 13, it.y + 74.5);
+      ctx.lineTo(bx + it.w - 18, it.y + 79); ctx.stroke();
+    }
+  } else if (it.type === 'sticker'){
+    const img = (m.st === 'custom') ? m.img : SK_IMG[m.st];
+    if (img) ctx.drawImage(img, bx, it.y, it.w, it.h);
+    else {
+      ctx.fillStyle = 'rgba(255,255,255,.45)'; rr(bx, it.y, it.w, it.h, 14); ctx.fill();
+      ctx.fillStyle = '#7a8697'; ctx.font = f(13); ctx.textAlign = 'center';
+      ctx.fillText('เลือกสติกเกอร์', bx + it.w/2, it.y + it.h/2 + 5); ctx.textAlign = 'left';
+    }
+  } else if (it.type === 'img'){
+    ctx.save(); rr(bx, it.y, it.w, it.h, 14); ctx.clip();
+    if (m.img) ctx.drawImage(m.img, bx, it.y, it.w, it.h);
+    else { ctx.fillStyle = '#dfe4ea'; ctx.fillRect(bx, it.y, it.w, it.h);
+           ctx.fillStyle = '#9aa5b1'; ctx.font = f(13); ctx.textAlign = 'center';
+           ctx.fillText('เลือกรูปภาพ', bx + it.w/2, it.y + it.h/2 + 5); ctx.textAlign = 'left'; }
+    ctx.restore();
+  } else {
+    const th = theme();
+    ctx.fillStyle = right ? th.me : th.you;
+    // หางมี "เฉพาะฟองแรกของแต่ละชุด" — ฟองถัดไปเป็นแคปซูลเปล่า (วัดจากภาพแอปจริงของลูกค้า)
+    if (it.first) bubbleTail(right ? bx + it.w : bx, it.y + (+S.tailY || 0), right ? 'r' : 'l', ctx.fillStyle);
+    rr(bx, it.y, it.w, it.h, radius); ctx.fill();
+    const txtCol = right ? th.meText : th.youText;
+    ctx.font = f(F_MSG);
+    it.lines.forEach((ln, i) =>
+      drawLineWithLinks(ln, bx + BUB_PX, it.y + BUB_PY + LH*(i+1) - 6, txtCol));
+  }
+
+  /* เวลา + อ่านแล้ว (อยู่นอกฟอง ชิดขอบล่าง) */
+  ctx.font = f(F_TIME);
+  ctx.fillStyle = metaCol;
+  const baseY = it.y + it.h - 2;
+  if (right){
+    const tw = ctx.measureText(m.time || '').width;
+    if (m.time) ctx.fillText(m.time, bx - 6 - tw, baseY);
+    if (S.showRead && m.read !== false){
+      const rw = ctx.measureText('อ่านแล้ว').width;
+      ctx.fillText('อ่านแล้ว', bx - 6 - rw, baseY - (m.time ? 14 : 0));
+    }
+  } else if (m.time){
+    ctx.fillText(m.time, bx + it.w + 6, baseY);
+  }
+}
+
+/* แถบสถานะ: เวลา / สัญญาณ / wifi / แบตเตอรี่ */
+function drawStatusBar(){
+  ctx.save();
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, ST_H);
+  ctx.fillStyle = '#111318';
+  ctx.font = f(15, '600'); ctx.textAlign = 'center';
+  ctx.fillText(S.clock, 58, 28);
+  ctx.textAlign = 'left';
+
+  let x = W - 30;
+  // แบตเตอรี่
+  ctx.strokeStyle = 'rgba(17,19,24,.4)'; ctx.lineWidth = 1;
+  rr(x, 16, 22, 11, 3); ctx.stroke();
+  ctx.fillStyle = '#111318';
+  rr(x + 1.5, 17.5, 15, 8, 2); ctx.fill();
+  ctx.fillRect(x + 23, 19, 1.6, 5);
+  // wifi
+  x -= 26; ctx.strokeStyle = '#111318'; ctx.lineWidth = 1.7;
+  for (let i = 0; i < 3; i++){
+    ctx.beginPath();
+    ctx.arc(x + 8, 27, 3 + i*3.4, Math.PI*1.25, Math.PI*1.75);
+    ctx.stroke();
+  }
+  ctx.beginPath(); ctx.arc(x + 8, 26.5, 1.2, 0, Math.PI*2); ctx.fillStyle = '#111318'; ctx.fill();
+  // สัญญาณ
+  x -= 24;
+  for (let i = 0; i < 4; i++){
+    const bh = 4 + i*2.6;
+    ctx.fillRect(x + i*5, 26 - bh, 3.4, bh);
+  }
+  ctx.restore();
+}
+
+/* หัวห้องแชท */
+function drawHeader(){
+  ctx.save();
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, ST_H, W, HD_H);
+  ctx.strokeStyle = 'rgba(0,0,0,.08)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, ST_H + HD_H - .5); ctx.lineTo(W, ST_H + HD_H - .5); ctx.stroke();
+
+  const cy = ST_H + HD_H/2;
+  // ลูกศรย้อนกลับ
+  ctx.strokeStyle = '#111318'; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.moveTo(22, cy - 6); ctx.lineTo(15, cy); ctx.lineTo(22, cy + 6); ctx.stroke();
+
+  // ชื่อ + จำนวนสมาชิก
+  ctx.fillStyle = '#111318'; ctx.font = f(16, '600');
+  const name = S.room || '';
+  ctx.fillText(name, 36, cy + (S.member ? 0 : 6));
+  if (S.member){
+    ctx.fillStyle = '#8d98ab'; ctx.font = f(11);
+    ctx.fillText(S.member + ' คน', 36, cy + 15);
+  }
+
+  // ไอคอนขวา: ค้นหา · โทร · ปฏิทิน(มีแจ้งเตือน) · เมนู
+  // ทุกตัววาดขึ้นเองจากเส้นพื้นฐาน เป็นสัญลักษณ์สากล ไม่ได้คัดลอกไฟล์ไอคอนของใคร
+  ctx.strokeStyle = '#111318'; ctx.lineWidth = 1.8; ctx.lineCap = 'round';
+
+  // 1) แว่นขยาย
+  let x = W - 152;
+  ctx.beginPath(); ctx.arc(x + 7, cy - 2, 7, 0, Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + 12, cy + 3); ctx.lineTo(x + 16.5, cy + 8); ctx.stroke();
+
+  // 2) หูโทรศัพท์
+  x = W - 116;
+  ctx.beginPath();
+  ctx.moveTo(x, cy - 7); ctx.lineTo(x + 5, cy - 7); ctx.lineTo(x + 7, cy - 2);
+  ctx.lineTo(x + 4, cy);  ctx.quadraticCurveTo(x + 7, cy + 5, x + 12, cy + 8);
+  ctx.lineTo(x + 14, cy + 5); ctx.lineTo(x + 19, cy + 7); ctx.lineTo(x + 19, cy + 12);
+  ctx.quadraticCurveTo(x + 6, cy + 12, x, cy - 7);
+  ctx.stroke();
+
+  // 3) ปฏิทินเลข 31 + จุดแจ้งเตือน
+  x = W - 74;
+  rr(x, cy - 8, 20, 18, 3.5); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x, cy - 2.5); ctx.lineTo(x + 20, cy - 2.5); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x + 5.5, cy - 12); ctx.lineTo(x + 5.5, cy - 6);
+  ctx.moveTo(x + 14.5, cy - 12); ctx.lineTo(x + 14.5, cy - 6);
+  ctx.stroke();
+  // เลขวันจริงบนปฏิทิน (ค่าเริ่มต้น = วันนี้ · แก้ได้ในแผงซ้าย ตามที่ลูกค้าขอ)
+  ctx.fillStyle = '#111318'; ctx.font = f(9, '700'); ctx.textAlign = 'center';
+  ctx.fillText(String(S.calDay || new Date().getDate()), x + 10, cy + 6); ctx.textAlign = 'left';
+  if (S.calBadge){
+    ctx.fillStyle = theme().me;
+    ctx.beginPath(); ctx.arc(x + 20, cy - 9, 6.5, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#ffffff'; ctx.font = f(8.5, '700'); ctx.textAlign = 'center';
+    ctx.fillText(S.calBadge, x + 20, cy - 6); ctx.textAlign = 'left';
+  }
+
+  // 4) เมนู 3 ขีด
+  ctx.strokeStyle = '#111318';
+  x = W - 36;
+  for (let i = 0; i < 3; i++){
+    ctx.beginPath(); ctx.moveTo(x, cy - 6 + i*6); ctx.lineTo(x + 18, cy - 6 + i*6); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/* แถบพิมพ์ข้อความล่างสุด */
+function drawInputBar(H){
+  const y = H - IN_H;
+  ctx.save();
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, y, W, IN_H);
+  ctx.strokeStyle = 'rgba(0,0,0,.07)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, y + .5); ctx.lineTo(W, y + .5); ctx.stroke();
+
+  const cy = y + IN_H/2 - 4;
+  ctx.strokeStyle = '#3f4854'; ctx.lineWidth = 1.9; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  // ── ซ้าย: + · กล้อง · รูปภาพ ──
+  ctx.beginPath(); ctx.moveTo(15, cy); ctx.lineTo(31, cy); ctx.moveTo(23, cy - 8); ctx.lineTo(23, cy + 8); ctx.stroke();
+  // กล้อง
+  rr(43, cy - 8, 19, 16, 4); ctx.stroke();
+  ctx.beginPath(); ctx.arc(52.5, cy, 4, 0, Math.PI*2); ctx.stroke();
+  // รูปภาพ (กรอบ + ภูเขา)
+  rr(74, cy - 8, 19, 16, 4); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(77, cy + 5); ctx.lineTo(82, cy - 2); ctx.lineTo(86, cy + 2);
+  ctx.lineTo(88.5, cy - 0.5); ctx.lineTo(90.5, cy + 5);
+  ctx.closePath(); ctx.fillStyle = '#3f4854'; ctx.fill();
+  // ── ช่องพิมพ์ — หน้ายิ้มอยู่ "ข้างใน" แถบเทา แบบแอปจริง (ลูกค้าทัก) ──
+  ctx.fillStyle = '#f1f2f4';
+  rr(103, cy - 14, W - 103 - 44, 28, 14); ctx.fill();
+  ctx.fillStyle = '#a7aeb9'; ctx.font = f(14.5);
+  ctx.fillText('Aa', 116, cy + 5);
+  ctx.strokeStyle = '#8a94a3';
+  const ex = W - 62;
+  ctx.beginPath(); ctx.arc(ex, cy, 9.5, 0, Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(ex, cy + 1, 4.8, .15*Math.PI, .85*Math.PI); ctx.stroke();
+  ctx.beginPath(); ctx.arc(ex - 3.6, cy - 3, 1, 0, Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(ex + 3.6, cy - 3, 1, 0, Math.PI*2); ctx.stroke();
+  // ไมค์ (อยู่นอกแถบเทา)
+  ctx.strokeStyle = '#3f4854';
+  const mx = W - 22;
+  rr(mx - 4, cy - 9, 8, 12.5, 4); ctx.stroke();
+  ctx.beginPath(); ctx.arc(mx, cy + 1, 6.5, 0, Math.PI); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(mx, cy + 7.5); ctx.lineTo(mx, cy + 10.5); ctx.stroke();
+  // ขีดล่างแบบ home indicator
+  ctx.fillStyle = 'rgba(0,0,0,.55)';
+  rr(W/2 - 60, H - 9, 120, 4, 2); ctx.fill();
+  ctx.restore();
+}
+
+/* ป้ายกำกับว่าเป็นภาพจำลอง */
+function drawMark(H){
+  ctx.save();
+  ctx.font = f(10, '600');
+  const t = 'ภาพจำลอง / MOCKUP';
+  const w = ctx.measureText(t).width + 14;
+  const y = ST_H + HD_H + 8;                    // ใต้หัวห้องแชท — พื้นที่ที่ไม่มีฟองข้อความ
+  ctx.fillStyle = 'rgba(0,0,0,.30)';
+  rr(W - w - 8, y, w, 18, 9); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.92)';
+  ctx.fillText(t, W - w - 1, y + 13);
+  ctx.restore();
+}
+
+/* =========================================================
+   แผงควบคุม (DOM)
+   ========================================================= */
+const listEl = document.getElementById('list');
+
+function addMsg(kind){
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2,'0'), mm = String(now.getMinutes()).padStart(2,'0');
+  if (kind === 'date'){
+    S.msgs.push({id:uid++, kind:'date', text:'วันนี้'});
+  } else if (kind === 'img'){
+    S.msgs.push({id:uid++, kind:'img', side:'r', img:null, time:hh+':'+mm, read:true});
+  } else if (kind === 'call'){
+    S.msgs.push({id:uid++, kind:'call', side:'r', text:'สิ้นสุดการโทรแบบเสียง', dur:'00:55',
+                 sub:'เสียงเรียกเข้า & เสียงรอสาย', time:hh+':'+mm, read:true});
+  } else if (kind === 'system'){
+    // ป้ายกลางจอแบบเดียวกับป้ายวันที่ ใช้เขียนข้อความระบบได้ทุกแบบ
+    S.msgs.push({id:uid++, kind:'date', text:'คุณสมชาย เข้าร่วมแชทแล้ว'});
+  } else if (kind === 'sticker'){
+    S.msgs.push({id:uid++, kind:'sticker', side:'r', st:STICKERS[0].id, time:hh+':'+mm, read:true});
+  } else if (kind === 'mysticker'){
+    S.msgs.push({id:uid++, kind:'sticker', side:'r', st:'custom', img:null, time:hh+':'+mm, read:true});
+  } else {
+    S.msgs.push({id:uid++, kind:'text', side:kind, text:'', time:hh+':'+mm, read:true});
+  }
+  paintList(); render();
+  if (kind === 'img'){
+    // กด "ส่งรูปภาพ" แล้วเปิดหน้าต่างเลือกรูปทันที ไม่ต้องไปกดปุ่มในการ์ดซ้ำ (ลูกค้าขอ)
+    const cards = listEl.querySelectorAll('.msg');
+    const fi = cards.length ? cards[cards.length - 1].querySelector('input[type=file]') : null;
+    if (fi) fi.click();
+  }
+}
+
+function paintList(){
+  listEl.innerHTML = '';
+  S.msgs.forEach((m, i) => {
+    const el = document.createElement('div');
+    el.className = 'msg ' + (m.kind === 'date' ? 'd' : m.side);
+
+    const head = document.createElement('div');
+    head.className = 'mhead';
+    const tag = document.createElement('span');
+    tag.className = 'tag';
+    tag.textContent = m.kind === 'date' ? '📅 ป้ายวันที่'
+                    : (m.side === 'r' ? '➡ ฝั่งขวา (เรา)' : '⬅ ฝั่งซ้าย (คู่สนทนา)');
+    head.appendChild(tag);
+    head.appendChild(Object.assign(document.createElement('span'), {className:'sp'}));
+
+    if (m.kind !== 'date'){
+      const sw = document.createElement('button');
+      sw.className = 'ico'; sw.title = 'สลับฝั่ง'; sw.textContent = '⇄';
+      sw.onclick = () => { m.side = (m.side === 'r' ? 'l' : 'r'); paintList(); render(); };
+      head.appendChild(sw);
+    }
+    const up = document.createElement('button');
+    up.className = 'ico'; up.title = 'เลื่อนขึ้น'; up.textContent = '↑';
+    up.onclick = () => { if (i > 0){ [S.msgs[i-1], S.msgs[i]] = [S.msgs[i], S.msgs[i-1]]; paintList(); render(); } };
+    const dn = document.createElement('button');
+    dn.className = 'ico'; dn.title = 'เลื่อนลง'; dn.textContent = '↓';
+    dn.onclick = () => { if (i < S.msgs.length-1){ [S.msgs[i+1], S.msgs[i]] = [S.msgs[i], S.msgs[i+1]]; paintList(); render(); } };
+    const del = document.createElement('button');
+    del.className = 'ico del'; del.title = 'ลบ'; del.textContent = '✕';
+    del.onclick = () => { S.msgs.splice(i,1); paintList(); render(); };
+    head.append(up, dn, del);
+    el.appendChild(head);
+
+    if (m.kind === 'date'){
+      const inp = document.createElement('input');
+      inp.type = 'text'; inp.value = m.text; inp.placeholder = 'เช่น วันนี้ / 9 ส.ค. 2026';
+      inp.oninput = () => { m.text = inp.value; render(); };
+      el.appendChild(inp);
+      // เลือกจากปฏิทินจริง → ระบบแปลงเป็นข้อความไทยให้เอง (ตามที่ลูกค้าขอ)
+      const dp = document.createElement('input');
+      dp.type = 'date'; dp.style.marginTop = '6px';
+      dp.onchange = () => {
+        if (!dp.value) return;
+        const d = new Date(dp.value + 'T00:00:00');
+        const days = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัส','ศุกร์','เสาร์'];
+        const mons = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+        m.text = (d.toDateString() === new Date().toDateString()) ? 'วันนี้'
+               : `${days[d.getDay()]} ${d.getDate()} ${mons[d.getMonth()]}`;
+        inp.value = m.text; render();
+      };
+      el.appendChild(dp);
+
+    } else if (m.kind === 'img'){
+      const b = document.createElement('button');
+      b.className = 'btn wide'; b.textContent = m.img ? '🖼 เปลี่ยนรูป' : '🖼 เลือกรูปที่จะส่ง';
+      const fi = document.createElement('input'); fi.type = 'file'; fi.accept = 'image/*';
+      b.onclick = () => fi.click();
+      fi.onchange = () => loadImage(fi.files[0], img => { m.img = img; paintList(); render(); });
+      el.append(b, fi);
+      if (m.img){
+        const t = document.createElement('img'); t.className = 'thumb'; t.src = m.img.src; el.appendChild(t);
+      }
+      el.appendChild(timeRow(m));
+
+    } else if (m.kind === 'call'){
+      const mk = (label, key, ph) => {
+        const lb = document.createElement('label'); lb.className = 'f'; lb.style.marginBottom = '7px';
+        const sp = document.createElement('span'); sp.textContent = label;
+        const ip = document.createElement('input'); ip.type = 'text'; ip.value = m[key] || ''; ip.placeholder = ph || '';
+        ip.oninput = () => { m[key] = ip.value; render(); };
+        lb.append(sp, ip); return lb;
+      };
+      el.appendChild(mk('ข้อความ', 'text', 'สิ้นสุดการโทรแบบเสียง'));
+      const row = document.createElement('div'); row.className = 'row';
+      row.append(mk('ระยะเวลา', 'dur', '00:55'), mk('แถบล่าง (เว้นว่าง=ไม่มี)', 'sub', 'เสียงเรียกเข้า & เสียงรอสาย'));
+      el.appendChild(row);
+      el.appendChild(timeRow(m));
+
+    } else if (m.kind === 'sticker'){
+      if (m.st === 'custom'){
+        const b = document.createElement('button');
+        b.className = 'btn wide'; b.textContent = m.img ? '🎨 เปลี่ยนสติกเกอร์' : '🎨 เลือกไฟล์สติกเกอร์ของคุณ';
+        const fi = document.createElement('input'); fi.type = 'file'; fi.accept = 'image/*';
+        b.onclick = () => fi.click();
+        fi.onchange = () => loadImage(fi.files[0], img => { m.img = img; paintList(); render(); });
+        el.append(b, fi);
+        if (m.img){ const t=document.createElement('img'); t.className='thumb'; t.src=m.img.src; el.appendChild(t); }
+      } else {
+        const g = document.createElement('div'); g.className = 'skgrid';
+        STICKERS.forEach(s=>{
+          const btn = document.createElement('button');
+          btn.className = 'skbtn' + (m.st === s.id ? ' on' : '');
+          btn.title = s.name;
+          const im = document.createElement('img');
+          im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s.svg);
+          btn.appendChild(im);
+          btn.onclick = () => { m.st = s.id; paintList(); render(); };
+          g.appendChild(btn);
+        });
+        el.appendChild(g);
+      }
+      el.appendChild(timeRow(m));
+
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = m.text; ta.placeholder = 'พิมพ์ข้อความ… (Enter = ขึ้นบรรทัดใหม่)';
+      ta.oninput = () => { m.text = ta.value; render(); };
+      el.appendChild(ta);
+      el.appendChild(timeRow(m));
+    }
+    listEl.appendChild(el);
+  });
+
+  if (!S.msgs.length){
+    listEl.innerHTML = '<div class="note">ยังไม่มีข้อความ — กดปุ่มด้านบนเพื่อเพิ่ม หรือกด “โหลดตัวอย่าง”</div>';
+  }
+}
+
+function timeRow(m){
+  const row = document.createElement('div');
+  row.className = 'row'; row.style.marginTop = '7px'; row.style.alignItems = 'center';
+  const t = document.createElement('input');
+  t.type = 'text'; t.value = m.time || ''; t.placeholder = 'เวลา เช่น 14:05';
+  t.oninput = () => { m.time = t.value; render(); };
+  row.appendChild(t);
+  if (m.side === 'r'){
+    const lb = document.createElement('label');
+    lb.className = 'chk'; lb.style.margin = '0';
+    const c = document.createElement('input');
+    c.type = 'checkbox'; c.checked = m.read !== false;
+    c.onchange = () => { m.read = c.checked; render(); };
+    lb.append(c, document.createTextNode('อ่านแล้ว'));
+    row.appendChild(lb);
+  }
+  return row;
+}
+
+function loadImage(file, cb){
+  if (!file) return;
+  const fr = new FileReader();
+  fr.onload = () => { const im = new Image(); im.onload = () => cb(im); im.src = fr.result; };
+  fr.readAsDataURL(file);
+}
+
+/* ---------- ผูก event ---------- */
+const bind = (id, ev, fn) => document.getElementById(id).addEventListener(ev, fn);
+bind('room','input', e => { S.room = e.target.value; render(); });
+bind('clock','input', e => { S.clock = e.target.value; render(); });
+bind('member','input', e => { S.member = e.target.value.trim(); render(); });
+bind('optRead','change', e => { S.showRead = e.target.checked; render(); });
+bind('optName','change', e => { S.showName = e.target.checked; render(); });
+bind('optClouds','change', e => { S.clouds = e.target.checked; render(); });
+bind('calDay','input', e => { S.calDay = e.target.value; render(); });
+bind('calBadge','input', e => { S.calBadge = e.target.value.trim().slice(0,1); render(); });
+bind('optLink','change', e => { S.autoLink = e.target.checked; render(); });
+bind('optMark','change', e => { S.showMark = e.target.checked; render(); });
+
+document.querySelectorAll('[data-add]').forEach(b =>
+  b.addEventListener('click', () => addMsg(b.dataset.add)));
+
+bind('avBtn','click', () => document.getElementById('avFile').click());
+document.getElementById('avFile').addEventListener('change', e =>
+  loadImage(e.target.files[0], img => {
+    S.avatar = img; document.getElementById('avPrev').src = img.src; render();
+  }));
+bind('avClr','click', () => { S.avatar = null; document.getElementById('avPrev').removeAttribute('src'); render(); });
+
+const wallsEl = document.getElementById('walls');
+WALLS.forEach(c => {
+  const b = document.createElement('button');
+  b.className = 'sw' + (c === S.wall ? ' on' : '');
+  b.style.background = c;
+  b.onclick = () => {
+    S.wall = c;
+    [...wallsEl.children].forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); render();
+  };
+  wallsEl.appendChild(b);
+});
+
+/* บันทึกรูป — ต้องรองรับ 3 สภาพแวดล้อมที่ทำงานคนละแบบ
+   1) คอมพิวเตอร์ / Android Chrome → ดาวน์โหลดตรงด้วย <a download>
+   2) iPhone (โดยเฉพาะตอนเปิดเป็นแอปจากหน้าจอโฮม) → <a download> ไม่ทำงาน ต้องใช้แผงแชร์ของ iOS
+   3) เผื่อทั้งสองทางไม่ได้ → เปิดรูปในแท็บใหม่ ให้ผู้ใช้กดค้างเพื่อบันทึกลงคลังรูป */
+const themesEl = document.getElementById('themes');
+THEMES.forEach(t => {
+  const b = document.createElement('button');
+  b.className = 'sw' + (t.id === S.theme ? ' on' : '');
+  b.style.background = t.me; b.title = 'ชุดสี' + t.name;
+  b.onclick = () => {
+    S.theme = t.id; S.customMe = null;                       // เลือกชุดสี = ล้างสีที่จูนเอง
+    document.getElementById('meColor').value = t.me;
+    [...themesEl.children].forEach(x => x.classList.remove('on'));
+    b.classList.add('on'); render();
+  };
+  themesEl.appendChild(b);
+});
+bind('meColor','input', e => { S.customMe = e.target.value; render(); });
+bind('tailStyle','change', e => { S.tailStyle = e.target.value; render(); });
+bind('tailY','input', e => { S.tailY = +e.target.value; document.getElementById('tailYv').textContent = e.target.value; render(); });
+
+/* โหมดเดโม: ฟังก์ชันบันทึกภาพถูกถอดออก เหลือแค่เรียกหน้าแพ็กเกจ */
+function download(){ showPaywall(); }
+const isIOS = () => /iP(hone|ad|od)/.test(navigator.userAgent) ||
+                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+bind('dl','click', download);
+bind('dl2','click', download);
+/* ปุ่มลอยบนมือถือ: สลับไปดูภาพ ↔ กลับมาแก้ไข */
+(function(){
+  const fab = document.getElementById('fab');
+  let atImage = false;
+  fab.addEventListener('click', ()=>{
+    if(atImage){ window.scrollTo({top:0, behavior:'smooth'}); fab.textContent='👁 ดูภาพ'; }
+    else { document.getElementById('cv').scrollIntoView({behavior:'smooth', block:'start'}); fab.textContent='✎ กลับไปแก้'; }
+    atImage = !atImage;
+  });
+})();
+bind('clr','click', () => { S.msgs = []; paintList(); render(); });
+
+const zt = document.getElementById('zoomTxt');
+function setZoom(z){ zoom = Math.min(1.6, Math.max(.45, z)); zt.textContent = Math.round(zoom*100)+'%'; render(); }
+bind('zoomIn','click', () => setZoom(zoom + .1));
+bind('zoomOut','click', () => setZoom(zoom - .1));
+
+/* ---------- บทสนทนาตัวอย่าง ---------- */
+function loadDemo(){
+  S.msgs = [
+    {id:uid++, kind:'date', text:'วันนี้'},
+    {id:uid++, kind:'text', side:'l', text:'สวัสดีค่ะ สนใจสั่งเค้กวันเกิด 2 ปอนด์ ส่งวันเสาร์นี้ได้ไหมคะ', time:'09:12'},
+    {id:uid++, kind:'text', side:'r', text:'สวัสดีครับ ได้เลยครับ 2 ปอนด์ 850 บาท ส่งเสาร์ช่วงบ่ายนะครับ', time:'09:14', read:true},
+    {id:uid++, kind:'text', side:'l', text:'ขอเป็นครีมสดรสวานิลลา เขียนหน้าเค้กว่า "สุขสันต์วันเกิดแม่" ค่ะ', time:'09:15'},
+    {id:uid++, kind:'text', side:'r', text:'รับทราบครับ 👍\nสรุปออเดอร์:\n• เค้กครีมสด 2 ปอนด์\n• เขียนหน้าเค้ก: สุขสันต์วันเกิดแม่\n• ส่ง เสาร์ 12 ส.ค. 13:00-15:00\nรวม 850 บาทครับ', time:'09:17', read:true},
+    {id:uid++, kind:'text', side:'l', text:'โอนแล้วนะคะ รบกวนตรวจสอบด้วยค่ะ', time:'09:21'},
+    {id:uid++, kind:'text', side:'r', text:'ได้รับยอดเรียบร้อยครับ ขอบคุณมากครับ 🙏', time:'09:22', read:true}
+  ];
+  S.room = 'คุณสมชาย ใจดี';
+  document.getElementById('room').value = S.room;
+  paintList(); render();
+}
+bind('demo','click', loadDemo);
+
+/* เริ่มต้น — โหลดสติกเกอร์ให้เสร็จก่อนวาดครั้งแรก ไม่งั้นช่องสติกเกอร์จะว่างในภาพที่บันทึก */
+loadDemo();
+document.getElementById('calDay').value = S.calDay;
+loadStickers(()=>render());
+
+/* โหมดเดโม: ไม่ลงทะเบียน service worker — ไม่ให้ติดตั้งเป็นแอป และไม่ให้ค้างเวอร์ชันเก่า */
+/* บนมือถือ ย่อภาพให้พอดีจอ — ต้องคำนวณซ้ำตอนหมุนจอ/เปลี่ยนขนาด
+   (ถ้าคำนวณครั้งเดียวตอนสคริปต์รัน จะได้ค่าผิดเพราะจอยังตั้งขนาดไม่เสร็จ) */
+let userZoomed = false;
+function autoFit(){
+  if(userZoomed) return;
+  if(window.innerWidth < 820){
+    setZoom(Math.max(.4, Math.min(1, (window.innerWidth - 24) / W)));
+  }
+}
+autoFit();
+window.addEventListener('load', autoFit);
+window.addEventListener('resize', autoFit);
+window.addEventListener('orientationchange', ()=> setTimeout(autoFit, 350));
+document.getElementById('zoomIn').addEventListener('click', ()=> userZoomed = true);
+document.getElementById('zoomOut').addEventListener('click', ()=> userZoomed = true);
+</script>
+
+<style>
+  /* ---------- โหมดเดโม ---------- */
+  .demoflag{
+    margin-top:12px;background:rgba(255,176,32,.10);border:1px solid rgba(255,176,32,.42);
+    color:#ffd79a;border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.6;
+  }
+  .demoflag b{color:#ffb020}
+  .demoflag-btn{
+    display:block;width:100%;margin-top:9px;background:#0ac15c;color:#04331a;
+    font-weight:800;font-size:13px;padding:9px 12px;border-radius:8px;
+  }
+  .demoflag-btn:hover{filter:brightness(1.08)}
+  #cv{-webkit-touch-callout:none;user-select:none}
+
+  .paywrap{
+    position:fixed;inset:0;background:rgba(6,9,14,.78);z-index:999;
+    display:none;place-items:center;padding:18px;overflow-y:auto;
+  }
+  .paywrap.on{display:grid}
+  .paycard{
+    width:min(460px,100%);background:var(--panel);border:1px solid var(--line);
+    border-radius:16px;padding:22px 22px 18px;box-shadow:0 24px 70px rgba(0,0,0,.6);
+  }
+  .paycard h3{font-size:19px;margin-bottom:6px}
+  .paycard .lead{color:var(--dim);font-size:13px;line-height:1.65;margin-bottom:14px}
+  .paylist{list-style:none;margin:0 0 16px;padding:0}
+  .paylist li{font-size:13.5px;line-height:1.5;padding:7px 0 7px 26px;position:relative;border-top:1px solid var(--line)}
+  .paylist li:first-child{border-top:none}
+  .paylist li::before{content:"✓";position:absolute;left:4px;color:var(--accent);font-weight:800}
+  .paybtn{
+    display:block;text-align:center;text-decoration:none;font-weight:800;font-size:14px;
+    padding:12px;border-radius:10px;margin-bottom:9px;
+  }
+  .paybtn.fb{background:#1877f2;color:#fff}
+  .paybtn.line{background:#06c755;color:#04331a}
+  .paybtn.fw{background:#2f6df6;color:#fff}
+  .payclose{
+    width:100%;background:transparent;border:1px solid var(--line);color:var(--dim);
+    padding:10px;border-radius:10px;font-size:13px;margin-top:4px;
+  }
+  .paynote{color:var(--dim);font-size:11.5px;line-height:1.6;margin-top:12px;text-align:center}
+</style>
+
+<div class="paywrap" id="paywrap">
+  <div class="paycard">
+    <h3>🔒 บันทึกภาพได้เฉพาะตัวเต็ม</h3>
+    <div class="lead">
+      หน้านี้เป็นตัวทดลอง เลยใส่ลายน้ำและปิดปุ่มบันทึกไว้ —
+      ลองปรับ ลองพิมพ์ ลองสี ได้ทุกอย่างตามสบายครับ
+    </div>
+    <ul class="paylist">
+      <li>บันทึกเป็นไฟล์ PNG คมชัด ×3 (กว้าง 1170 px) <b>ไม่มีลายน้ำ</b></li>
+      <li>ติดตั้งเป็นแอปได้ทั้ง iPhone และ Android</li>
+      <li>ใช้งานตอนไม่มีเน็ตได้ ข้อความไม่ออกจากเครื่อง</li>
+      <li>ใส่โลโก้/สติกเกอร์ของร้านคุณเองได้</li>
+      <li>ปรับหน้าตาเพิ่มตามที่คุณใช้จริงได้</li>
+    </ul>
+    <a class="paybtn fb" href="https://www.facebook.com/jakkar.jakkar.39545" target="_blank" rel="noopener">📘 ทักทาง Facebook</a>
+    <a class="paybtn fw" href="https://fastwork.co/byob/TtC8gpKfYN" target="_blank" rel="noopener">🧾 ดูแพ็กเกจ/สั่งซื้อบน FastWork</a>
+    <button class="payclose" id="payClose">← กลับไปลองเล่นต่อ</button>
+    <div class="paynote">ราคาขึ้นกับว่าคุณอยากได้แค่ไหน — ทักมาบอกงานก่อนได้เลย ประเมินให้ฟรี</div>
+  </div>
+</div>
+
+<script>
+/* ---------- โหมดเดโม: หน้าต่างแพ็กเกจ ---------- */
+function showPaywall(){ document.getElementById('paywrap').classList.add('on'); }
+function hidePaywall(){ document.getElementById('paywrap').classList.remove('on'); }
+
+document.getElementById('payClose').addEventListener('click', hidePaywall);
+document.getElementById('demoWant').addEventListener('click', showPaywall);
+document.getElementById('paywrap').addEventListener('click', e => {
+  if(e.target.id === 'paywrap') hidePaywall();            // คลิกพื้นหลัง = ปิด
+});
+document.addEventListener('keydown', e => { if(e.key === 'Escape') hidePaywall(); });
+
+/* คลิกขวา/กดค้างบนภาพ → ชวนไปดูแพ็กเกจแทนเมนู "บันทึกรูปภาพ"
+   (กันได้แค่คนที่ไม่ตั้งใจ — ตัวกันจริงคือลายน้ำที่ฝังอยู่ในภาพแล้ว) */
+document.getElementById('cv').addEventListener('contextmenu', e => {
+  e.preventDefault(); showPaywall();
+});
+</script>
+</body>
+</html>
