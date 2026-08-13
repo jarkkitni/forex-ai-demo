@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="th"><head><meta charset="utf-8"><title>{{TITLE_A}}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{width:1080px;height:1350px;overflow:hidden;position:relative;background:#0e1219;
+       font-family:"Leelawadee UI","Sarabun","Segoe UI",sans-serif;color:#fff}
+  .glow{position:absolute;border-radius:50%;filter:blur(120px)}
+  .g1{width:640px;height:640px;background:#1b6ef3;opacity:.26;top:-220px;right:-140px}
+  .g2{width:560px;height:560px;background:#22c55e;opacity:.18;bottom:-200px;left:-160px}
+  .wrap{position:relative;padding:56px 58px}
+
+  .hook{display:inline-block;background:#ffffff12;border:1px solid #ffffff26;border-radius:99px;
+        padding:10px 22px;font-size:24px;font-weight:700;color:#cfe0f5}
+  h1{font-size:66px;line-height:1.14;font-weight:800;margin-top:20px;letter-spacing:-1.4px}
+  h1 em{font-style:normal;color:#ff6b6b}
+  .sub{margin-top:14px;font-size:27px;color:#9fb0c4;line-height:1.5}
+
+  .stage{display:flex;gap:40px;margin-top:34px;align-items:flex-start}
+
+  .phone{width:392px;flex:none;border-radius:30px;overflow:hidden;border:9px solid #2b3240;
+         background:#93aecd;box-shadow:0 26px 60px rgba(0,0,0,.55)}
+  .hd{background:#fff;color:#12161d;padding:15px 16px;font-size:21px;font-weight:700;
+      display:flex;justify-content:space-between;align-items:center}
+  .hd i{font-style:normal;color:#8892a0;font-size:18px}
+  .bd{padding:16px 14px;display:flex;flex-direction:column;gap:12px;min-height:470px}
+  .bub{max-width:80%;font-size:21px;line-height:1.45;padding:12px 15px;border-radius:19px;color:#14181f}
+  .bub.l{background:#fff;border-top-left-radius:6px;align-self:flex-start}
+  .bub.r{background:#8ee97f;border-top-right-radius:6px;align-self:flex-end}
+  .slip{align-self:flex-start;background:#fff;border-radius:14px;padding:10px;width:138px}
+  .slip .p{height:96px;border:1px solid #dfe4ea;border-radius:7px;
+           background:repeating-linear-gradient(#eef1f5 0 5px,#fff 5px 11px)}
+  .slip .c{font-size:15px;color:#8892a0;text-align:center;margin-top:5px}
+  .unread{background:#e5484d;color:#fff;font-size:19px;font-weight:800;text-align:center;padding:11px}
+
+  .side{flex:1;padding-top:6px}
+  .card{background:#ffffff0a;border:1px solid #ffffff1c;border-radius:16px;padding:20px 22px;margin-bottom:16px}
+  .card .h{font-size:26px;font-weight:800;line-height:1.35}
+  .card .t{font-size:21px;color:#9fb0c4;margin-top:7px;line-height:1.5}
+  .card.good{background:#22c55e14;border-color:#22c55e4d}
+  .card.good .h{color:#4ade80}
+  .arrow{text-align:center;font-size:34px;color:#22c55e;margin:6px 0 14px}
+
+  .foot{position:absolute;left:0;right:0;bottom:0;background:#3ee07f;color:#04321a;
+        padding:24px 58px 28px;text-align:center}
+  .foot .f1{font-size:31px;font-weight:800}
+  .foot .f2{font-size:21px;font-weight:700;opacity:.85;margin-top:5px}
+</style></head>
+<body>
+  <div class="glow g1"></div><div class="glow g2"></div>
+  <div class="wrap">
+    <div class="hook">{{HOOK}}</div>
+    <h1>{{TITLE_A}}<br><em>{{TITLE_EM}}</em></h1>
+    <div class="sub">{{SUB}}</div>
+
+    <div class="stage">
+      <div class="phone">
+        <div class="hd"><span>{{CHAT_NAME}}</span><i>{{CHAT_TIME}}</i></div>
+        <div class="bd">{{BUBBLES}}</div>
+        <div class="unread">{{UNREAD}}</div>
+      </div>
+
+      <div class="side">
+        <div class="card"><div class="h">{{PAIN_TITLE}}</div><div class="t">{{PAIN_SUB}}</div></div>
+        <div class="arrow">▼</div>
+        <div class="card good"><div class="h">{{FIX_TITLE}}</div><div class="t">{{FIX}}</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div class="f1">{{FOOT1}}</div>
+    <div class="f2">{{FOOT2}}</div>
+  </div>
+</body></html>

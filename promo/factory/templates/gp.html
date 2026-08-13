@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="th"><head><meta charset="utf-8"><title>{{TITLE}}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{width:1080px;height:1350px;overflow:hidden;position:relative;background:#0e1219;
+       font-family:"Leelawadee UI","Sarabun","Segoe UI",sans-serif;color:#fff}
+  .wrap{padding:54px 56px 0;text-align:center}
+  .kick{display:inline-block;background:#ffffff12;border:1px solid #ffffff26;border-radius:99px;
+        padding:9px 22px;font-size:23px;font-weight:700;color:#cfe0f5}
+  h1{font-size:62px;line-height:1.14;font-weight:800;margin-top:18px;letter-spacing:-1.4px}
+  h1 em{font-style:normal;color:#3ee07f}
+  .assume{margin-top:12px;font-size:22px;color:#8b97a8}
+
+  .cols{display:flex;gap:26px;margin-top:34px;text-align:left}
+  .box{flex:1;border-radius:22px;padding:28px 26px;position:relative;overflow:hidden}
+  .box.bad {background:linear-gradient(165deg,#3a1618,#241316);border:2px solid #e5484d55}
+  .box.good{background:linear-gradient(165deg,#0e3322,#0c2119);border:2px solid #22c55e66}
+  .box .lb{font-size:25px;font-weight:800}
+  .box.bad  .lb{color:#ff8a8d}
+  .box.good .lb{color:#4ade80}
+  .box .num{font-size:88px;font-weight:800;letter-spacing:-3px;line-height:1.05;margin-top:10px}
+  .box .per{font-size:24px;color:#a9b6c6;font-weight:700;margin-top:2px}
+  .box .nt{font-size:21px;color:#9fb0c4;line-height:1.5;margin-top:16px;border-top:1px solid #ffffff1a;padding-top:14px}
+
+  .year{margin-top:26px;background:#ffffff0a;border:1px solid #ffffff1f;border-radius:18px;
+        padding:22px 26px;display:flex;align-items:center;justify-content:space-between}
+  .year .l{font-size:27px;font-weight:700;text-align:left;line-height:1.4}
+  .year .l small{display:block;font-size:20px;color:#9fb0c4;font-weight:600;margin-top:4px}
+  .year .r{font-size:58px;font-weight:800;color:#3ee07f;letter-spacing:-2px;white-space:nowrap}
+
+  .pts{margin-top:24px;text-align:left}
+  .pt{display:flex;gap:14px;align-items:flex-start;margin-bottom:14px;font-size:24px;line-height:1.45}
+  .pt b{color:#fff;font-weight:700}
+  .pt .ic{color:#3ee07f;font-size:26px;line-height:1.2}
+  .pt span{color:#9fb0c4}
+
+  .self{margin-top:20px;background:#3ee07f14;border:2px dashed #3ee07f66;border-radius:16px;
+        padding:20px 24px;text-align:center;font-size:25px;font-weight:800;color:#8af0b4}
+  .self small{display:block;font-size:20px;font-weight:600;color:#9fb0c4;margin-top:6px;line-height:1.45}
+  .foot{position:absolute;left:0;right:0;bottom:0;background:#3ee07f;color:#04321a;
+        padding:24px 56px 28px;text-align:center}
+  .foot .f1{font-size:31px;font-weight:800}
+  .foot .f2{font-size:21px;font-weight:700;opacity:.85;margin-top:5px}
+</style></head>
+<body>
+  <div class="wrap">
+    <div class="kick">{{KICK}}</div>
+    <h1>{{TITLE}}<br><em>{{TITLE_EM}}</em></h1>
+    <div class="assume">{{ASSUME}}</div>
+
+    <div class="cols">
+      <div class="box bad">
+        <div class="lb">{{BAD_LABEL}}</div>
+        <div class="num">{{BAD_NUM}}</div>
+        <div class="per">{{BAD_PER}}</div>
+        <div class="nt">{{BAD_NOTE}}</div>
+      </div>
+      <div class="box good">
+        <div class="lb">{{GOOD_LABEL}}</div>
+        <div class="num">{{GOOD_NUM}}</div>
+        <div class="per">{{GOOD_PER}}</div>
+        <div class="nt">{{GOOD_NOTE}}</div>
+      </div>
+    </div>
+
+    <div class="year">
+      <div class="l">{{YEAR_L}}<small>{{YEAR_SUB}}</small></div>
+      <div class="r">{{YEAR_R}}</div>
+    </div>
+
+    <div class="pts">{{POINTS}}</div>
+    <div class="self">{{SELF}}<small>{{SELF_SUB}}</small></div>
+  </div>
+
+  <div class="foot">
+    <div class="f1">{{FOOT1}}</div>
+    <div class="f2">{{FOOT2}}</div>
+  </div>
+</body></html>

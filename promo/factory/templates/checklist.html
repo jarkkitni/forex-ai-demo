@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="th"><head><meta charset="utf-8"><title>{{TITLE}}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{width:1080px;height:1350px;overflow:hidden;position:relative;background:#efe9dd;
+       font-family:"Leelawadee UI","Sarabun","Segoe UI",sans-serif;color:#1b1f26}
+  body::before{content:"";position:absolute;inset:0;opacity:.5;
+    background-image:radial-gradient(#00000010 1px,transparent 1px);background-size:5px 5px}
+  .warm{position:absolute;border-radius:50%;filter:blur(120px)}
+  .w1{width:560px;height:560px;background:#d9c9a3;opacity:.55;top:-200px;right:-140px}
+  .w2{width:480px;height:480px;background:#bcd6c2;opacity:.45;bottom:-190px;left:-150px}
+
+  .wrap{position:relative;padding:52px 60px 0;text-align:center}
+  h1{font-size:62px;font-weight:800;line-height:1.14;letter-spacing:-1.2px}
+  h1 em{font-style:normal;color:#0a8f4d}
+  .sub{margin-top:14px;font-size:25px;color:#5d6470;line-height:1.5}
+
+  .paper{background:#fdfcf9;border-radius:20px;margin-top:30px;padding:40px 38px;text-align:left;
+         box-shadow:0 24px 56px rgba(40,32,18,.24)}
+  .it{display:flex;gap:20px;align-items:flex-start;padding:25px 0;border-bottom:2px dashed #e3e6ec}
+  .it:last-child{border-bottom:none}
+  .bx{width:50px;height:50px;flex:none;border-radius:11px;display:grid;place-items:center;
+      font-size:26px;font-weight:800;border:3px solid #d6dae2;color:#fff}
+  .bx.no{background:#fff;color:#c9ced7}
+  .bx.yes{background:#0a8f4d;border-color:#0a8f4d}
+  .tx{font-size:29px;font-weight:700;line-height:1.35}
+  .tx span{display:block;font-size:22px;font-weight:500;color:#6b7280;margin-top:5px;line-height:1.45}
+
+  .verdict{margin-top:26px;background:#0a8f4d12;border:2px solid #0a8f4d44;border-radius:16px;
+           padding:28px 26px;font-size:27px;font-weight:800;color:#0a6c3b;line-height:1.45}
+  .verdict small{display:block;font-size:21px;font-weight:600;color:#4b5563;margin-top:6px}
+
+  .foot{position:absolute;left:0;right:0;bottom:0;background:#181c23;color:#fff;
+        padding:24px 60px 28px;text-align:center}
+  .foot .f1{font-size:30px;font-weight:800}
+  .foot .f1 span{color:#3ee07f}
+  .foot .f2{font-size:21px;color:#aab3c0;margin-top:6px}
+</style></head>
+<body>
+  <div class="warm w1"></div><div class="warm w2"></div>
+  <div class="wrap">
+    <h1>{{TITLE}}<br><em>{{TITLE_EM}}</em></h1>
+    <div class="sub">{{SUB}}</div>
+    <div class="paper">{{ITEMS}}</div>
+    <div class="verdict">{{VERDICT}}<small>{{VERDICT_SUB}}</small></div>
+  </div>
+  <div class="foot">
+    <div class="f1">{{FOOT1}} <span>{{FOOT_LINK}}</span></div>
+    <div class="f2">{{FOOT2}}</div>
+  </div>
+</body></html>
