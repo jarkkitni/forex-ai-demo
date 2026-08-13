@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>รูปโปรไฟล์เพจ — AI Claude Academy</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  /* รูปโปรไฟล์เพจ Facebook: อัป 1080x1080 แล้วโดนครอปเป็นวงกลม
+     ในฟีดจริงมันเล็กมาก (~40-60px) ตัวหนังสือเล็กๆ อ่านไม่ออกแน่นอน
+     จึงใช้เครื่องหมายล้วน ไม่ใส่ข้อความ ให้จำได้จากรูปทรงและสี */
+  body{width:1080px;height:1080px;overflow:hidden;position:relative;background:#05070d}
+  .bg{position:absolute;inset:0;
+      background:radial-gradient(circle at 50% 42%, #12253f 0%, #080d18 55%, #04060b 100%)}
+  .glow{position:absolute;border-radius:50%;filter:blur(90px)}
+  .g1{width:520px;height:520px;background:#1b6ef3;opacity:.42;top:120px;left:120px}
+  .g2{width:420px;height:420px;background:#c026d3;opacity:.28;bottom:110px;right:110px}
+  .ring{position:absolute;inset:52px;border-radius:50%;border:3px solid #ffffff14}
+  svg{position:absolute;inset:0;margin:auto}
+</style>
+</head>
+<body>
+  <div class="bg"></div>
+  <div class="glow g1"></div><div class="glow g2"></div>
+  <div class="ring"></div>
+
+  <svg viewBox="0 0 1080 1080" width="1080" height="1080">
+    <defs>
+      <filter id="f" x="-60%" y="-60%" width="220%" height="220%">
+        <feGaussianBlur stdDeviation="22" result="b"/>
+        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+      <radialGradient id="core">
+        <stop offset="0%" stop-color="#ffffff"/><stop offset="52%" stop-color="#cdefff"/>
+        <stop offset="100%" stop-color="#38bdf8"/>
+      </radialGradient>
+    </defs>
+    <g filter="url(#f)">
+      <g stroke="#7ae7ff" stroke-width="7" opacity=".5">
+        <line x1="540" y1="540" x2="540" y2="252"/>
+        <line x1="540" y1="540" x2="744" y2="336"/>
+        <line x1="540" y1="540" x2="828" y2="540"/>
+        <line x1="540" y1="540" x2="744" y2="744"/>
+        <line x1="540" y1="540" x2="540" y2="828"/>
+        <line x1="540" y1="540" x2="336" y2="744"/>
+        <line x1="540" y1="540" x2="252" y2="540"/>
+        <line x1="540" y1="540" x2="336" y2="336"/>
+      </g>
+      <circle cx="540" cy="252" r="54" fill="#22d3ee"/>
+      <circle cx="744" cy="336" r="42" fill="#e879f9"/>
+      <circle cx="828" cy="540" r="52" fill="#38bdf8"/>
+      <circle cx="744" cy="744" r="40" fill="#a78bfa"/>
+      <circle cx="540" cy="828" r="52" fill="#e879f9"/>
+      <circle cx="336" cy="744" r="42" fill="#22d3ee"/>
+      <circle cx="252" cy="540" r="50" fill="#a78bfa"/>
+      <circle cx="336" cy="336" r="40" fill="#38bdf8"/>
+      <circle cx="540" cy="540" r="112" fill="url(#core)"/>
+    </g>
+  </svg>
+</body>
+</html>

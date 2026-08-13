@@ -504,6 +504,18 @@ def chatapp(sub):
     return resp
 
 
+@app.route("/shop")
+def shop_demo_shortlink():
+    """ทางลัดสำหรับใช้ในรูปโปรโมท/โพสต์: thailinebot.com/shop
+    เดโมร้านศิลาดลอยู่คนละ service (Next.js) จึงเป็น redirect ไม่ใช่ proxy
+    ทำไมต้องมี: ลิงก์ siladon-shop-demo.onrender.com ยาวและจำยาก
+    แปะในรูปแล้วคนพิมพ์ตามไม่ไหว — ถ้าย้ายที่อยู่เดโมวันหลัง แก้บรรทัดเดียวจบ
+    รูปที่แจกไปแล้วยังใช้ได้เหมือนเดิม"""
+    from flask import redirect
+    _track_visit()
+    return redirect("https://siladon-shop-demo.onrender.com/", code=302)
+
+
 @app.route("/chatmaker/", defaults={"sub": "index.html"})
 @app.route("/chatmaker/<path:sub>")
 def chatmaker(sub):

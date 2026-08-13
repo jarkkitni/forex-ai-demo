@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>ปกเพจ Facebook — AI Claude Academy</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  /* ปกเพจ Facebook: อัป 1640x856
+     เดสก์ท็อปตัดบน-ล่างข้างละ ~116px · มือถือตัดซ้าย-ขวาข้างละ ~59px
+     ของสำคัญจึงต้องอยู่ในกรอบกลาง 1522 x 624 เท่านั้น
+     และมุมล่างซ้าย ~300px โดนรูปโปรไฟล์ทับบนเดสก์ท็อป ห้ามวางอะไร */
+  body{width:1640px;height:856px;overflow:hidden;position:relative;background:#05070d;
+       font-family:"Leelawadee UI","Sarabun","Segoe UI",sans-serif;color:#fff}
+
+  .glow{position:absolute;border-radius:50%;filter:blur(110px)}
+  .g1{width:760px;height:760px;background:#1b6ef3;opacity:.34;top:-190px;left:80px}
+  .g2{width:620px;height:620px;background:#c026d3;opacity:.24;bottom:-240px;left:330px}
+  .g3{width:560px;height:560px;background:#0891b2;opacity:.20;top:-120px;right:-60px}
+  .grid{position:absolute;inset:0;opacity:.22;
+    background-image:linear-gradient(#ffffff0d 1px,transparent 1px),
+                     linear-gradient(90deg,#ffffff0d 1px,transparent 1px);
+    background-size:60px 60px}
+
+  .safe{position:absolute;left:59px;right:59px;top:116px;bottom:116px;
+        display:flex;align-items:center;gap:56px;padding-left:40px}
+
+  .mark{flex:none;width:360px;height:360px;position:relative}
+
+  .txt{flex:1;padding-bottom:6px}
+  .kicker{display:inline-block;border:1px solid #22d3ee66;background:#22d3ee14;color:#67e8f9;
+          font-size:20px;font-weight:700;letter-spacing:2.5px;padding:7px 17px;border-radius:99px}
+  /* พาดหัวใหญ่สุดคือ "รับทำเว็บ" — คนเลื่อนผ่านต้องอ่านคำนี้ให้ได้ก่อนคำอื่น */
+  h1{font-size:98px;line-height:1.02;font-weight:800;margin-top:16px;letter-spacing:-2.5px;
+     text-shadow:0 6px 34px rgba(0,0,0,.55)}
+  h1 span{color:#3ee07f}
+  .svc{margin-top:16px;font-size:31px;color:#dbe4f0;line-height:1.5;font-weight:600}
+  .svc i{font-style:normal;color:#67e8f9}
+  .line{margin-top:10px;font-size:25px;color:#9fb0c4;line-height:1.5}
+  .line b{color:#fff;font-weight:700}
+  .cta{margin-top:22px;display:flex;align-items:center;gap:14px;font-size:23px;color:#8fa0b5}
+  .cta .pill{background:#3ee07f;color:#04321a;font-weight:800;padding:11px 20px;border-radius:10px;
+             font-size:23px}
+</style>
+</head>
+<body>
+  <div class="glow g1"></div><div class="glow g2"></div><div class="glow g3"></div>
+  <div class="grid"></div>
+
+  <div class="safe">
+    <div class="mark">
+      <!-- เครื่องหมายวาดด้วยเวกเตอร์ล้วน ไม่ได้ใช้ภาพจากที่ไหน -->
+      <svg viewBox="0 0 360 360" width="360" height="360">
+        <defs>
+          <filter id="f" x="-60%" y="-60%" width="220%" height="220%">
+            <feGaussianBlur stdDeviation="9" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <radialGradient id="core">
+            <stop offset="0%" stop-color="#ffffff"/><stop offset="55%" stop-color="#bfe9ff"/>
+            <stop offset="100%" stop-color="#38bdf8"/>
+          </radialGradient>
+        </defs>
+        <g filter="url(#f)">
+          <g stroke="#6ee7ff" stroke-width="2" opacity=".45">
+            <line x1="180" y1="180" x2="180" y2="62"/>
+            <line x1="180" y1="180" x2="263" y2="97"/>
+            <line x1="180" y1="180" x2="298" y2="180"/>
+            <line x1="180" y1="180" x2="263" y2="263"/>
+            <line x1="180" y1="180" x2="180" y2="298"/>
+            <line x1="180" y1="180" x2="97" y2="263"/>
+            <line x1="180" y1="180" x2="62" y2="180"/>
+            <line x1="180" y1="180" x2="97" y2="97"/>
+          </g>
+          <circle cx="180" cy="62"  r="22" fill="#22d3ee"/>
+          <circle cx="263" cy="97"  r="17" fill="#e879f9"/>
+          <circle cx="298" cy="180" r="21" fill="#38bdf8"/>
+          <circle cx="263" cy="263" r="16" fill="#a78bfa"/>
+          <circle cx="180" cy="298" r="21" fill="#e879f9"/>
+          <circle cx="97"  cy="263" r="17" fill="#22d3ee"/>
+          <circle cx="62"  cy="180" r="20" fill="#a78bfa"/>
+          <circle cx="97"  cy="97"  r="16" fill="#38bdf8"/>
+          <circle cx="180" cy="180" r="42" fill="url(#core)"/>
+        </g>
+      </svg>
+    </div>
+
+    <div class="txt">
+      <div class="kicker">AI CLAUDE ACADEMY · เชียงใหม่</div>
+      <h1>รับทำเว็บ <span>ตามสั่ง</span></h1>
+      <div class="svc">ร้านค้าออนไลน์ + ระบบรับเงิน <i>·</i> เว็บร้าน/แคตตาล็อกสินค้า <i>·</i> บอทตอบแชท</div>
+      <div class="line"><b>ลองเดโมของจริงก่อนได้ ไม่ต้องสมัคร ไม่เสียอะไร</b> — thailinebot.com/shop</div>
+      <div class="cta"><span class="pill">ทักแชทมาคุยได้เลย</span>
+        <span>ประเมินราคาให้ฟรี ไม่กดดัน</span></div>
+    </div>
+  </div>
+</body>
+</html>
