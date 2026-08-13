@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>ใบเสนอราคารายบรรทัด — ร้านอาหาร 2 สาขา บน Stardeck (ตัวอย่างงาน)</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{--ink:#12161d;--dim:#5b6472;--line:#e2e6ec;--bg:#f6f7f9;--card:#fff;--acc:#0a8f4d;--warn:#b4372f}
+  body{background:var(--bg);color:var(--ink);line-height:1.6;
+       font-family:"Leelawadee UI","Sarabun","Segoe UI",system-ui,sans-serif;padding:28px 18px 60px}
+  .wrap{max-width:1060px;margin:0 auto}
+  header{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:26px 28px;margin-bottom:18px}
+  .tag{display:inline-block;background:#0a8f4d14;border:1px solid #0a8f4d40;color:var(--acc);
+       font-size:13px;font-weight:700;padding:5px 12px;border-radius:99px}
+  h1{font-size:26px;line-height:1.3;margin:12px 0 8px;letter-spacing:-.3px}
+  .lede{color:var(--dim);font-size:15px}
+  .note{background:#fff8e6;border:1px solid #f0d79a;border-radius:10px;padding:13px 15px;
+        font-size:14px;color:#6b5417;margin-top:16px}
+  h2{font-size:19px;margin:26px 0 10px}
+  h2 span{color:var(--dim);font-weight:500;font-size:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin-bottom:16px}
+  .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{border-collapse:collapse;width:100%;min-width:820px;font-size:14px;background:var(--card)}
+  th,td{border:1px solid var(--line);padding:9px 11px;vertical-align:top;text-align:left}
+  th{background:#eef1f5;font-size:13px;white-space:nowrap}
+  td.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:700}
+  tr.sum td{background:#f2f7f4;font-weight:800;font-size:15.5px}
+  .f{font-weight:800;font-size:12px;padding:2px 8px;border-radius:99px;white-space:nowrap}
+  .fast{background:#e8f6ee;color:#0a6c3b}
+  .deep{background:#fdeceb;color:var(--warn)}
+  .gate{display:inline-block;background:#eef3fb;color:#2f5fa8;font-size:11.5px;font-weight:700;
+        padding:1px 7px;border-radius:99px;margin-left:5px;white-space:nowrap}
+  ul{margin:6px 0 0 20px}li{margin-bottom:7px;font-size:14.5px}
+  li b{color:var(--ink)}
+  .q{background:#f4f7fb;border-left:4px solid #2f5fa8;border-radius:0 10px 10px 0;padding:14px 16px;margin-bottom:10px}
+  .q b{display:block;font-size:15px;margin-bottom:3px}
+  .q span{font-size:14px;color:var(--dim)}
+  footer{color:var(--dim);font-size:13px;text-align:center;margin-top:26px;line-height:1.7}
+  a{color:#1a6fd4}
+  @media print{body{background:#fff;padding:0}.card,header{border:none;padding:0}}
+</style>
+</head>
+<body><div class="wrap">
+
+<header>
+  <div class="tag">ตัวอย่างงาน · ทำขึ้นสำหรับสมัครตำแหน่ง Technical Project Manager</div>
+  <h1>ใบเสนอราคารายบรรทัด — ร้านอาหาร 2 สาขา</h1>
+  <div class="lede">
+    ตีราคาจากหน้า Setup fee calculator ของ Stardeck โดยตรง (ดึงค่าเมื่อ 14 ส.ค. 2026) ·
+    คู่กับเอกสาร <a href="stardeck-spec.html">สเปก 1 หน้า + แผน UAT</a>
+  </div>
+  <div class="note">
+    <b>ราคาทุกบรรทัดคัดจาก calculator ของ Stardeck เอง ไม่ได้ตั้งเอง</b> —
+    ตัวเลขที่ผมดึงจากหน้าเว็บไม่ได้ (เช่น ค่าแพ็กรายเดือนแต่ละ tier) ผมไม่เดา
+    แต่ยกไปไว้ในหัวข้อ "ข้อที่ต้องยืนยันก่อนล็อกราคา" ท้ายเอกสาร
+  </div>
+</header>
+
+<h2>ขอบเขตที่ตีราคา <span>· 1 app / 4 Surfaces · MVP เปิดใช้ที่สาขาเดียวก่อน แล้วขยายเป็น 2</span></h2>
+<div class="card scroll">
+<table>
+<tr><th>#</th><th>รายการ (ตามชื่อใน calculator)</th><th>ความยาก</th><th>ทำไมต้องมี / ต้องระวังอะไร</th><th>ราคา</th></tr>
+
+<tr><td>1</td><td>Point of Sale (POS) <span class="gate">Growth+</span></td>
+<td><span class="f fast">fast</span></td>
+<td>หัวใจของหน้าร้าน · ผูกกับ Edge machine สำหรับพิมพ์ใบเสร็จ</td><td class="num">฿15,000</td></tr>
+
+<tr><td>2</td><td>Order from Table (QR) <span class="gate">Growth+</span></td>
+<td><span class="f fast">fast</span></td>
+<td>ลดคนรับออเดอร์ช่วงพีค · calculator ระบุว่า<b>รวม Payment Processing มาให้แล้ว</b> จึงไม่ตีราคาซ้ำในบรรทัดถัดไป</td><td class="num">฿10,000</td></tr>
+
+<tr><td>3</td><td>Payment Processing (Beam หรือ Stripe) <span class="gate">Growth+</span></td>
+<td><span class="f fast">fast</span></td>
+<td><b>รวมมากับข้อ 2 แล้ว</b> — ระบุไว้เพื่อความโปร่งใส ไม่คิดเงินซ้ำ · Beam ครอบ QR PromptPay ในไทย</td><td class="num">รวมในข้อ 2</td></tr>
+
+<tr><td>4</td><td>Kitchen Display System (KDS)</td>
+<td><span class="f fast">fast</span></td>
+<td>แยกจอครัว/บาร์ · ผูกกับ REQ-KIT-02 ในสเปก</td><td class="num">฿7,500</td></tr>
+
+<tr><td>5</td><td>Product Management System</td>
+<td><span class="f fast">fast</span></td>
+<td>เมนู ตัวเลือก ราคา · ใช้ร่วม 2 สาขา</td><td class="num">฿12,500</td></tr>
+
+<tr><td>6</td><td>Inventory Management</td>
+<td><span class="f deep">deep</span></td>
+<td>ต้องนิยามหน่วยนับและจุดตัดสต็อกก่อน — ตัดตอนสั่ง ตอนครัวรับ หรือตอนเสิร์ฟ ให้ผลต่างกันมาก</td><td class="num">฿10,000</td></tr>
+
+<tr><td>7</td><td>Permission System (RBAC) <span class="gate">Scale+</span></td>
+<td><span class="f deep">deep</span></td>
+<td><b>ตัวนี้กำหนดค่าแพ็กรายเดือนทั้งโปรเจกต์</b> เพราะบังคับ Scale ขึ้นไป · ผูกกับ REQ-SEC-01/02 ซึ่งเป็น Must ทั้งคู่ — ไม่ใช่ของที่ตัดทิ้งได้เพื่อประหยัด</td><td class="num">฿12,500</td></tr>
+
+<tr><td>8</td><td>Revenue Tracking &amp; Reports</td>
+<td><span class="f fast">fast</span></td>
+<td>รายงานสิ้นวันแยกสาขา + รวม · สิทธิ์เข้าถึงต่างกันตาม RBAC</td><td class="num">฿10,000</td></tr>
+
+<tr><td>9</td><td>Document / PDF Generation</td>
+<td><span class="f deep">deep</span></td>
+<td>ใบเสร็จ/ใบกำกับภาษี · <b>ต้องปิด DEC-02 ก่อน</b> ว่าต้องการแค่ PDF หรือ e-Tax ที่ยื่นสรรพากรได้</td><td class="num">฿17,500</td></tr>
+
+<tr><td>10</td><td>Edge Machine (2 เครื่อง × 2 สาขา)</td>
+<td><span class="f fast">fast</span></td>
+<td>฿4,500/เครื่อง · เครื่องพิมพ์ใบเสร็จ/ลิ้นชักเก็บเงิน</td><td class="num">฿9,000</td></tr>
+
+<tr class="sum"><td colspan="4">รวม MVP (เฉพาะที่จำเป็นต่อการเปิดใช้จริง)</td><td class="num">฿104,000</td></tr>
+</table>
+</div>
+
+<h2>ตัวเลือกเพิ่ม — เสนอแยก ไม่ยัดใน MVP <span>· ให้ลูกค้าเลือกเองว่าจำเป็นตอนนี้ไหม</span></h2>
+<div class="card scroll">
+<table>
+<tr><th>รายการ</th><th>ราคา</th><th>ควรทำเมื่อไหร่</th></tr>
+<tr><td>Customer Management &amp; Membership</td><td class="num">฿7,500</td>
+<td>เมื่อเริ่มทำลูกค้าประจำ/สะสมแต้ม — ยังไม่จำเป็นวันเปิดใช้</td></tr>
+<tr><td>Kitchen Management System</td><td class="num">฿25,000</td>
+<td>ถ้าต้องการตัดสต็อก<b>ระดับวัตถุดิบตามสูตร</b> ไม่ใช่แค่ระดับเมนู · ต้องมีสูตรอาหารเป็นลายลักษณ์อักษรก่อน ไม่งั้นข้อมูลเข้าระบบไม่ได้</td></tr>
+<tr><td>Data Migration</td><td class="num">฿50,000</td>
+<td><b>อาจไม่ต้องจ่าย</b> ถ้าเมนูมีไม่กี่ร้อยรายการและอยู่ใน Excel อยู่แล้ว — ผมแนะนำให้ลองนำเข้าเองก่อนตามเกณฑ์ REQ-DATA-01 แล้วค่อยตัดสินใจ</td></tr>
+<tr><td>E-Tax / E-Invoice <span class="gate">Scale+</span></td><td class="num">฿80,000</td>
+<td>เฉพาะเมื่อลูกค้านิติบุคคลเยอะจนต้องยื่นสรรพากรจริง · ตัวเลขนี้ใหญ่พอที่จะเปลี่ยนการตัดสินใจทั้งโปรเจกต์ จึงต้องถามตั้งแต่วันแรก ไม่ใช่ตอน UAT</td></tr>
+</table>
+</div>
+
+<h2>นอกขอบเขต <span>· เขียนไว้ให้ชัดตั้งแต่ต้น เพื่อไม่ต้องเถียงกันตอนส่งมอบ</span></h2>
+<div class="card"><ul>
+  <li>เชื่อมกับ<b>โปรแกรมบัญชีเดิม</b>ของร้าน (calculator คิดแยก ฿45,000 และบังคับ Growth+)</li>
+  <li>ดึงออเดอร์จาก<b>แอปส่งอาหาร/มาร์เก็ตเพลส</b> (แยกอีก ฿45,000)</li>
+  <li>ออกแบบหน้าตาใหม่แบบ pixel perfect (฿15,000) — MVP ใช้ดีไซน์มาตรฐานก่อน</li>
+  <li>ถ่ายภาพเมนู เขียนคำบรรยายสินค้า และคีย์ข้อมูลเมนูให้</li>
+  <li>ฝึกอบรมพนักงานเกิน 2 รอบ · การไปหน้างานนอกจังหวัด (ค่าเดินทาง/ที่พักคิดตามจริง)</li>
+</ul></div>
+
+<h2>ข้อที่ต้องยืนยันก่อนล็อกราคา <span>· ผมไม่เดาแทนลูกค้า และไม่เดาแทนเจ้าของแพลตฟอร์ม</span></h2>
+<div class="card">
+  <div class="q"><b>1. ค่าแพ็กรายเดือน (Starter / Growth / Scale) เท่าไหร่</b>
+  <span>หน้า pricing แสดงราคาเป็น JavaScript ฝั่งเบราว์เซอร์ ผมดึงตัวเลขไม่ได้จึงไม่ใส่ — แต่เรื่องนี้สำคัญมาก
+  เพราะ RBAC บังคับ Scale+ ทำให้ค่ารายเดือนอาจแพงกว่าที่ลูกค้าคิดตั้งแต่เดือนแรก</span></div>
+
+  <div class="q"><b>2. 2 สาขา = 1 app หรือ 2 app</b>
+  <span>กระทบทั้งค่าแพ็ก โครงข้อมูล และงานรายงานรวม (DEC-01 ในสเปก) — ต้องปิดก่อนเริ่ม ไม่ใช่ระหว่างทาง</span></div>
+
+  <div class="q"><b>3. มีค่าธรรมเนียมเร่งงาน (priority build) ไหม และคิดยังไง</b>
+  <span>ผมเห็นการอ้างถึงส่วนเพิ่มสำหรับงานเร่งจากแหล่งข้อมูลรอง แต่ยืนยันบนหน้า calculator ไม่ได้ จึง<b>ไม่ใส่ลงในยอดรวม</b></span></div>
+
+  <div class="q"><b>4. ระยะเวลาเปิดร้านค้ากับ Beam ใช้กี่วัน และต้องใช้เอกสารอะไร</b>
+  <span>เป็นงานของบุคคลที่สาม คุมเวลาเองไม่ได้ ถ้าไม่เริ่มขนานไปกับการพัฒนา จะกลายเป็นคอขวดวันเปิดใช้</span></div>
+
+  <div class="q"><b>5. ลูกค้ามีไฟล์เมนู/ราคาเดิมเป็นรูปแบบไหน</b>
+  <span>Excel ที่โครงสร้างดี กับรูปถ่ายเมนูกระดาษ ต่างกันเป็นหลักหมื่นในบรรทัด Data Migration</span></div>
+</div>
+
+<h2>เงื่อนไขการชำระเงิน</h2>
+<div class="card" style="font-size:14.5px">
+  ตามที่ Stardeck ประกาศไว้บนหน้า pricing: <b>50% เมื่อเซ็นตกลง · 50% เมื่อส่งมอบงานงวดสุดท้าย</b><br>
+  <span style="color:var(--dim)">ค่าธรรมเนียมธุรกรรมของผู้ให้บริการชำระเงินคิดตามจริง ไม่บวกเพิ่ม ·
+  ค่าแพ็กรายเดือนและค่า AI credits เรียกเก็บแยกจากค่า setup</span>
+</div>
+
+<footer>
+  จักรกฤษณ์ (sIRImeta) · ผลงานที่กดตรวจได้จริง:
+  <a href="https://forex-ai-demo.onrender.com/portfolio">portfolio</a> ·
+  <a href="https://forex-ai-demo.onrender.com/shop">เดโมร้านค้า + รับเงิน</a><br>
+  เอกสารนี้เป็นแบบฝึกหัดเพื่อประกอบการสมัครงาน ไม่ใช่ข้อเสนอที่มีผลผูกพันต่อคู่สัญญาใด ·
+  ราคาที่อ้างถึงเป็นราคาที่ผู้ให้บริการเผยแพร่สาธารณะ ณ วันที่ระบุ
+</footer>
+
+</div></body></html>

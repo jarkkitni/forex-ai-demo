@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>สเปก 1 หน้า — ร้านอาหาร 2 สาขา บน Stardeck (ตัวอย่างงาน)</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{--ink:#12161d;--dim:#5b6472;--line:#e2e6ec;--bg:#f6f7f9;--card:#fff;--acc:#0a8f4d;--warn:#b4372f}
+  body{background:var(--bg);color:var(--ink);line-height:1.6;
+       font-family:"Leelawadee UI","Sarabun","Segoe UI",system-ui,sans-serif;
+       padding:28px 18px 60px}
+  .wrap{max-width:1120px;margin:0 auto}
+  header{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:26px 28px;margin-bottom:18px}
+  .tag{display:inline-block;background:#0a8f4d14;border:1px solid #0a8f4d40;color:var(--acc);
+       font-size:13px;font-weight:700;padding:5px 12px;border-radius:99px}
+  h1{font-size:27px;line-height:1.3;margin:12px 0 8px;letter-spacing:-.3px}
+  .lede{color:var(--dim);font-size:15px}
+  .note{background:#fff8e6;border:1px solid #f0d79a;border-radius:10px;padding:13px 15px;
+        font-size:14px;color:#6b5417;margin-top:16px}
+  h2{font-size:19px;margin:26px 0 10px;padding-top:6px}
+  h2 span{color:var(--dim);font-weight:500;font-size:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin-bottom:16px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(238px,1fr));gap:12px}
+  .g{border:1px solid var(--line);border-radius:10px;padding:14px 15px;background:#fbfcfd}
+  .g b{display:block;font-size:14.5px;margin-bottom:4px}
+  .g span{font-size:13.5px;color:var(--dim)}
+  .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{border-collapse:collapse;width:100%;min-width:900px;font-size:13.5px;background:var(--card)}
+  th,td{border:1px solid var(--line);padding:9px 11px;vertical-align:top;text-align:left}
+  th{background:#eef1f5;font-size:13px;white-space:nowrap}
+  td.id{font-family:ui-monospace,Consolas,monospace;font-weight:700;white-space:nowrap;font-size:12.5px}
+  .m{font-weight:800;font-size:12px;padding:2px 8px;border-radius:99px;white-space:nowrap}
+  .must{background:#fdeceb;color:var(--warn)}
+  .should{background:#eef3fb;color:#2f5fa8}
+  .could{background:#f1f3f6;color:var(--dim)}
+  .ac{background:#f7fbf8}
+  code{background:#eef1f5;padding:1px 6px;border-radius:5px;font-size:12.5px}
+  ul{margin:6px 0 0 20px}li{margin-bottom:5px;font-size:14.5px}
+  .sign{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:14px;margin-top:14px}
+  .sign div{border:1px dashed #b9c1cc;border-radius:10px;padding:16px 14px;font-size:13.5px;color:var(--dim)}
+  .sign div b{display:block;color:var(--ink);margin-bottom:26px;font-size:14px}
+  footer{color:var(--dim);font-size:13px;text-align:center;margin-top:26px;line-height:1.7}
+  a{color:#1a6fd4}
+  @media print{body{background:#fff;padding:0}.card,header{border:none;padding:0}}
+</style>
+</head>
+<body><div class="wrap">
+
+<header>
+  <div class="tag">ตัวอย่างงาน · ทำขึ้นสำหรับสมัครตำแหน่ง Technical Project Manager</div>
+  <h1>สเปก 1 หน้า — ร้านอาหาร 2 สาขา<br>วางเป็น 1 App / 4 Surfaces บน Stardeck</h1>
+  <div class="lede">
+    Requirements → User flow → Acceptance Criteria → แผน UAT → ใบเซ็นรับ ·
+    เขียนโดย จักรกฤษณ์ (sIRImeta) · 14 ส.ค. 2026
+  </div>
+  <div class="note">
+    <b>นี่คือแบบฝึกหัด ไม่ใช่ใบเสนอราคาต่อลูกค้าจริง</b> — เคสร้านอาหารเป็นเคสสมมติ
+    แต่โครงสร้าง Surfaces/Modules และรายการฟีเจอร์อ้างอิงจากเอกสารและหน้า calculator ของ Stardeck จริง
+    ข้อไหนที่ผมยังไม่รู้ ผมเขียนไว้ในหัวข้อ "ข้อสมมติที่ต้องยืนยัน" ไม่เดาแทนลูกค้า
+  </div>
+</header>
+
+<h2>ขอบเขต <span>· 1 app = 4 Surfaces ตามแพตเทิร์นในเอกสารของ Stardeck</span></h2>
+<div class="card"><div class="grid">
+  <div class="g"><b>S1 · หน้าสั่งอาหารลูกค้า</b><span>สแกน QR ที่โต๊ะ ดูเมนู สั่ง จ่ายเงิน ติดตามสถานะ</span></div>
+  <div class="g"><b>S2 · POS เคาน์เตอร์</b><span>รับออเดอร์หน้าร้าน เก็บเงิน ออกใบเสร็จ ต่อ Edge machine</span></div>
+  <div class="g"><b>S3 · จอครัว (KDS)</b><span>คิวงานครัว/บาร์ แยกจอ เปลี่ยนสถานะ แจ้งเสิร์ฟ</span></div>
+  <div class="g"><b>S4 · หลังบ้าน</b><span>เมนู/ราคา สต็อก รายงานยอด สิทธิ์ผู้ใช้ ข้ามสาขา</span></div>
+</div></div>
+
+<h2>Requirements + Acceptance Criteria <span>· 14 ข้อ · เกณฑ์เขียนเป็นพฤติกรรมที่ทดสอบได้ ไม่ใช่คำบรรยายฟีเจอร์</span></h2>
+<div class="card scroll">
+<table>
+<tr><th>REQ-ID</th><th>Surface</th><th>User flow</th><th>Acceptance Criteria (ผ่าน/ไม่ผ่าน)</th><th>MoSCoW</th><th>ผู้เซ็นรับ</th></tr>
+
+<tr><td class="id">REQ-SEC-01</td><td>S4</td>
+<td>แคชเชียร์ล็อกอิน แล้วพยายามเปิดรายงานยอดขายรวมทุกสาขา</td>
+<td class="ac"><b>เมื่อ</b>ยิง API รายงานรวมด้วยสิทธิ์แคชเชียร์ (ไม่ผ่าน UI) <b>ต้องได้</b> HTTP 403 จากเซิร์ฟเวอร์<br>
+<b>ไม่นับว่าผ่าน</b>ถ้าแค่ซ่อนปุ่มบนหน้าจอแต่ API ยังตอบข้อมูล</td>
+<td><span class="m must">Must</span></td><td>เจ้าของร้าน</td></tr>
+
+<tr><td class="id">REQ-SEC-02</td><td>S4</td>
+<td>พนักงานสาขา A เปิดดูออเดอร์ของสาขา B</td>
+<td class="ac"><b>ต้อง</b>ได้ 403 หรือผลลัพธ์ว่าง โดยการกรองสาขาเกิดฝั่งเซิร์ฟเวอร์จากตัวตนผู้ใช้<br>
+<b>ห้าม</b>ให้ client ส่ง <code>branch_id</code> มาเองแล้วเชื่อ</td>
+<td><span class="m must">Must</span></td><td>เจ้าของร้าน</td></tr>
+
+<tr><td class="id">REQ-PAY-01</td><td>S1, S2</td>
+<td>ลูกค้าจ่ายด้วย QR PromptPay</td>
+<td class="ac">ยอดใน QR <b>ตรงกับ</b>ยอดออเดอร์ถึงหน่วยสตางค์ · เก็บเงินเป็นจำนวนเต็มหน่วยสตางค์ ไม่ใช้ทศนิยมลอยตัว<br>
+<b>ทดสอบด้วย</b>ออเดอร์ที่ส่วนลดทำให้เกิดเศษ เช่น 3 คนหาร 100 บาท</td>
+<td><span class="m must">Must</span></td><td>บัญชี</td></tr>
+
+<tr><td class="id">REQ-PAY-02</td><td>S1, S2</td>
+<td>ลูกค้าโอนแล้ว แต่สัญญาณยืนยันจากผู้ให้บริการมาช้า 3 นาที</td>
+<td class="ac">ออเดอร์<b>ต้องไม่</b>ค้างสถานะ "รอชำระ" ถาวร (มี poll + reconcile) ·
+เมื่อจ่ายสำเร็จแล้ว event ที่มาช้ากว่า<b>ต้องเปลี่ยนสถานะย้อนกลับไม่ได้</b></td>
+<td><span class="m must">Must</span></td><td>บัญชี</td></tr>
+
+<tr><td class="id">REQ-PAY-03</td><td>S1, S2</td>
+<td>ผู้ให้บริการยิง webhook ซ้ำ event เดิม 3 ครั้ง</td>
+<td class="ac">มีรายการรับเงิน<b>รายการเดียว</b> · ยอดในรายงานไม่บวกซ้ำ (ตรวจด้วย event id ที่เคยประมวลผลแล้ว)</td>
+<td><span class="m must">Must</span></td><td>บัญชี</td></tr>
+
+<tr><td class="id">REQ-PAY-04</td><td>S2</td>
+<td>เน็ตร้านหลุดตอนกำลังเก็บเงิน</td>
+<td class="ac"><b>ต้องตัดสินใจร่วมกันก่อนเริ่มพัฒนา</b> ว่า POS ทำงานต่อแบบออฟไลน์แล้วซิงก์ทีหลัง หรือหยุดรับออเดอร์<br>
+ถ้าเลือกออฟไลน์: ต้องระบุกติกาเมื่อยอดชนกันตอนซิงก์ (ดู Decision log DEC-03)</td>
+<td><span class="m should">Should</span></td><td>เจ้าของร้าน</td></tr>
+
+<tr><td class="id">REQ-KIT-01</td><td>S2, S3</td>
+<td>พนักงานยกเลิกรายการที่ครัวกดเริ่มทำไปแล้ว</td>
+<td class="ac">ระบบ<b>ต้อง</b>ขอเหตุผลก่อนยกเลิก · จอครัวขึ้นแจ้งเตือนทันที ·
+บันทึกลง audit log ว่าใครยกเลิก เวลาใด เหตุผลอะไร</td>
+<td><span class="m must">Must</span></td><td>หัวหน้าครัว</td></tr>
+
+<tr><td class="id">REQ-KIT-02</td><td>S3</td>
+<td>ออเดอร์มีทั้งอาหารและเครื่องดื่ม</td>
+<td class="ac">รายการอาหารขึ้น<b>จอครัว</b> เครื่องดื่มขึ้น<b>จอบาร์</b> จากออเดอร์เดียวกัน ·
+ออเดอร์ปิดได้ก็ต่อเมื่อทั้งสองจอกดเสร็จแล้ว</td>
+<td><span class="m should">Should</span></td><td>หัวหน้าครัว</td></tr>
+
+<tr><td class="id">REQ-INV-01</td><td>S4</td>
+<td>ขายเมนูเดียวกันที่ 2 สาขา</td>
+<td class="ac">เมนูและราคา<b>ใช้ร่วมกัน</b> แต่สต็อกและรายงาน<b>แยกสาขา</b> ·
+ตัดสต็อกสาขา A แล้วสต็อกสาขา B ต้องไม่ขยับ</td>
+<td><span class="m must">Must</span></td><td>เจ้าของร้าน</td></tr>
+
+<tr><td class="id">REQ-INV-02</td><td>S4</td>
+<td>ของหมดกลางวัน</td>
+<td class="ac">กดปิดเมนูที่สาขาหนึ่ง แล้วหน้าสั่งอาหาร (S1) ของสาขานั้น<b>ต้องซ่อนเมนูภายใน 5 วินาที</b> โดยลูกค้าไม่ต้องรีเฟรช</td>
+<td><span class="m should">Should</span></td><td>เจ้าของร้าน</td></tr>
+
+<tr><td class="id">REQ-DOC-01</td><td>S2, S4</td>
+<td>ลูกค้านิติบุคคลขอใบกำกับภาษี</td>
+<td class="ac">ออกไฟล์ PDF ที่มีเลขผู้เสียภาษีผู้ซื้อ ที่อยู่ และเลขที่เอกสารเรียงไม่ซ้ำ ·
+<b>ต้องยืนยันก่อน</b>ว่าต้องการ e-Tax Invoice ที่ยื่นสรรพากรได้หรือแค่ PDF (กระทบราคาและแพ็กมาก — ดู DEC-02)</td>
+<td><span class="m must">Must</span></td><td>บัญชี</td></tr>
+
+<tr><td class="id">REQ-RPT-01</td><td>S4</td>
+<td>เจ้าของเปิดรายงานสิ้นวัน</td>
+<td class="ac">ยอดรวมในรายงาน<b>ตรงกับ</b>ผลรวมออเดอร์ที่สถานะจ่ายแล้วในช่วงเวลาเดียวกัน (ทดสอบ 1 วันเต็ม) ·
+ผู้จัดการสาขาเห็นเฉพาะสาขาตัวเอง เจ้าของเห็นรวม</td>
+<td><span class="m must">Must</span></td><td>เจ้าของร้าน</td></tr>
+
+<tr><td class="id">REQ-DATA-01</td><td>S4</td>
+<td>ย้ายเมนู/ราคาเดิมจากไฟล์ Excel เข้าระบบ</td>
+<td class="ac">นำเข้าแล้ว<b>จำนวนรายการตรงกับต้นฉบับ</b> · ชื่อเมนูซ้ำต้องถูกจับได้และให้เลือกก่อนนำเข้า ไม่ใช่เขียนทับเงียบๆ ·
+รายการที่นำเข้าไม่ได้ต้องมีไฟล์สรุปว่าแถวไหนและเพราะอะไร</td>
+<td><span class="m must">Must</span></td><td>เจ้าของร้าน</td></tr>
+
+<tr><td class="id">REQ-UX-01</td><td>S1, S2</td>
+<td>พนักงานใหม่ที่ไม่เคยใช้ระบบมาก่อน</td>
+<td class="ac">รับออเดอร์ 1 รายการจบภายใน <b>≤ 3 การกด</b> จากหน้าแรก ·
+พนักงานใหม่ 2 ใน 3 คนทำครบลูปได้เองหลังสอน <b>≤ 30 นาที</b> โดยไม่ต้องถามระหว่างทาง</td>
+<td><span class="m should">Should</span></td><td>ผู้จัดการสาขา</td></tr>
+
+</table>
+</div>
+
+<h2>แผน UAT <span>· ใครทดสอบ ผ่านเมื่อไหร่ และบั๊กระดับไหนหยุดการส่งมอบ</span></h2>
+<div class="card">
+  <div class="grid">
+    <div class="g"><b>เงื่อนไขเริ่มทดสอบ (Entry)</b><span>ข้อ Must ทั้งหมดสร้างเสร็จบน Preview environment · มีข้อมูลตัวอย่างเมนูจริงอย่างน้อย 30 รายการ · บัญชีทดสอบครบ 4 บทบาท</span></div>
+    <div class="g"><b>เงื่อนไขผ่าน (Exit)</b><span>ข้อ Must ผ่าน 100% · ไม่มี P0/P1 ค้าง · P2 ที่เหลือถูกบันทึกและตกลงกำหนดแก้แล้ว · เจ้าของร้านเซ็นรับ</span></div>
+    <div class="g"><b>ผู้ทดสอบแยกบทบาท</b><span>เจ้าของร้าน (รายงาน+สิทธิ์) · แคชเชียร์ (POS+เก็บเงิน) · ครัว (KDS) · บัญชี (เอกสารภาษี)</span></div>
+    <div class="g"><b>รอบทดสอบ</b><span>2 รอบ — รอบแรกทดสอบตามสคริปต์ รอบสองทดสอบด้วยงานจริง 1 วันเต็มที่สาขาเดียวก่อนเปิดใช้ทั้ง 2 สาขา</span></div>
+  </div>
+  <h2 style="font-size:16px;margin-top:20px">ระดับข้อบกพร่อง</h2>
+  <ul>
+    <li><b>P0 — หยุดการส่งมอบทันที:</b> เก็บเงินไม่ได้ · ยอดเงินผิด · คนนอกสิทธิ์เห็นข้อมูลข้ามสาขา</li>
+    <li><b>P1 — ต้องแก้ก่อนเปิดใช้:</b> ออเดอร์ตกหล่นระหว่าง POS กับครัว · รายงานสิ้นวันไม่ตรงยอด</li>
+    <li><b>P2 — แก้หลังเปิดใช้ได้ แต่ต้องมีกำหนด:</b> ขั้นตอนอ้อม เสียเวลาแต่ทำงานได้</li>
+    <li><b>P3 — เก็บเข้าคิว:</b> ข้อความ/การจัดวางที่ไม่กระทบการทำงาน</li>
+  </ul>
+  <div class="note" style="margin-top:14px">
+    ระดับ P0–P3 ตั้งให้ล้อกับ SLA ที่ Stardeck ประกาศไว้เองในแพ็ก Adaptive (ตอบ P0 ภายในเวลาทำการ / Adaptive Pro ติดต่อกลับวันเดียวกัน)
+    เพื่อให้ตอนส่งมอบแล้วเข้าสู่ retainer ใช้เกณฑ์เดียวกันต่อได้เลย ไม่ต้องนิยามใหม่
+  </div>
+</div>
+
+<h2>Decision log <span>· สิ่งที่ยังไม่ตัดสิน ต้องปิดก่อนเริ่มพัฒนา ไม่ใช่ไปเจอตอน UAT</span></h2>
+<div class="card scroll">
+<table style="min-width:760px">
+<tr><th>ID</th><th>เรื่องที่ต้องตัดสิน</th><th>ทางเลือก</th><th>ผลกระทบถ้าตัดสินช้า</th><th>คนตัดสิน</th></tr>
+<tr><td class="id">DEC-01</td><td>2 สาขา = 1 app หรือ 2 app</td>
+<td>1 app แยกสาขาด้วยสิทธิ์ · หรือแยก app ต่อสาขา</td>
+<td>กระทบทั้งโครงข้อมูล ค่าแพ็กรายเดือน และงานรายงานรวม — แก้ทีหลังคือรื้อ</td><td>เจ้าของร้าน + สถาปนิก</td></tr>
+<tr><td class="id">DEC-02</td><td>ใบกำกับภาษีแบบไหน</td>
+<td>PDF ธรรมดา · หรือ e-Tax Invoice ที่ยื่นสรรพากรได้</td>
+<td>ต่างกันหลักหมื่นและบังคับใช้แพ็กสูงขึ้น ถ้ารู้ตอน UAT = เลื่อนเปิดร้าน</td><td>บัญชี + เจ้าของร้าน</td></tr>
+<tr><td class="id">DEC-03</td><td>POS ต้องทำงานตอนเน็ตหลุดไหม</td>
+<td>ออฟไลน์แล้วซิงก์ · หรือหยุดรับออเดอร์</td>
+<td>ถ้าเลือกออฟไลน์ทีหลัง ต้องรื้อวิธีเก็บออเดอร์ทั้งหมด</td><td>เจ้าของร้าน</td></tr>
+</table>
+</div>
+
+<h2>ใบเซ็นรับ MVP</h2>
+<div class="card">
+  <div style="font-size:14.5px;color:var(--dim);margin-bottom:6px">
+    ข้าพเจ้าได้ทดสอบตามแผน UAT ข้างต้นแล้ว และยอมรับการส่งมอบตามเงื่อนไขผ่าน (Exit criteria)
+  </div>
+  <div class="sign">
+    <div><b>เจ้าของร้าน</b>ลงชื่อ ____________ วันที่ ______</div>
+    <div><b>ผู้จัดการสาขา</b>ลงชื่อ ____________ วันที่ ______</div>
+    <div><b>บัญชี</b>ลงชื่อ ____________ วันที่ ______</div>
+    <div><b>ผู้ส่งมอบ (PM)</b>ลงชื่อ ____________ วันที่ ______</div>
+  </div>
+</div>
+
+<footer>
+  จักรกฤษณ์ (sIRImeta) · ผลงานอื่นที่กดดูได้จริง:
+  <a href="https://forex-ai-demo.onrender.com/portfolio">portfolio</a> ·
+  <a href="https://forex-ai-demo.onrender.com/shop">เดโมร้านค้า+รับเงิน</a> ·
+  <a href="https://forex-ai-demo.onrender.com/chatmaker/">เครื่องมือสร้างภาพแชท</a><br>
+  เอกสารนี้ทำขึ้นเป็นตัวอย่างงานสำหรับการสมัครงาน ไม่ใช่ข้อเสนอที่มีผลผูกพันต่อคู่สัญญาใด
+</footer>
+
+</div></body></html>

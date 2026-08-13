@@ -504,6 +504,26 @@ def chatapp(sub):
     return resp
 
 
+@app.route("/routewise")
+def routewise_app():
+    """RouteWise — แอปจัดสายวิ่งเซลล์ (ทำงานฝั่งเบราว์เซอร์ล้วน ข้อมูลลูกค้าไม่ออกจากเครื่องผู้ใช้)
+    ⚠️ ไฟล์ที่เสิร์ฟตรงนี้ต้องผ่าน store-map/verify_demo.py (ด่านตรวจ 7 ข้อ) ก่อนทุกครั้ง
+       เพราะข้อมูลต้นฉบับ 898 ร้านเป็นของนายจ้างเดิม ห้ามหลุดออกสาธารณะเด็ดขาด"""
+    from flask import send_from_directory
+    _track_visit()
+    return send_from_directory(
+        os.path.join(os.path.dirname(__file__), "static", "works"), "routewise.html")
+
+
+@app.route("/routewise/map")
+def routewise_map_demo():
+    """แผนที่ผลลัพธ์ 898 จุดที่ล้างข้อมูลแล้ว — เปิดดูได้ทันทีโดยไม่ต้องอัปโหลดไฟล์เอง
+    (ชื่อร้านสมมติ · ไม่มีเบอร์/ผู้ติดต่อ · พิกัดถูกเลื่อน 303–899 ม.)"""
+    from flask import send_from_directory
+    return send_from_directory(
+        os.path.join(os.path.dirname(__file__), "static", "works"), "routewise-map-demo.html")
+
+
 @app.route("/shop")
 def shop_demo_shortlink():
     """ทางลัดสำหรับใช้ในรูปโปรโมท/โพสต์: thailinebot.com/shop
