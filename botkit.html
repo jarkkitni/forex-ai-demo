@@ -153,7 +153,8 @@
   .faq q::before{content:"Q "}
   .faq p{color:var(--dim);font-size:13px;line-height:1.65}
 
-  footer{text-align:center;color:#2c3a5c;font-size:12px;margin-top:44px;line-height:1.8}
+  footer{text-align:center;color:#2c3a5c;font-size:12px;margin:34px auto 46px;
+         line-height:1.8;max-width:920px;padding:0 18px}
 
   /* ---------- จักรวาล + ทางช้างเผือกจางๆ หลังฮีโร่ ----------
      วาดด้วยเวกเตอร์ ตำแหน่งดาวตรึงค่าสุ่มไว้ (เปิดกี่ครั้งดาวอยู่ที่เดิม)
@@ -169,9 +170,9 @@
   /* ---------- บล็อกปิดท้าย: วิวดอยสุเทพ ----------
      ภาพวาดด้วยเวกเตอร์ทั้งหมด ไม่ได้ใช้ภาพจาก AI และไม่ได้หยิบรูปใครมาใช้
      อยากเปลี่ยนเป็นรูปถ่ายจริงวันหลัง: ใส่ background-image ที่ .closing แล้วซ่อน svg ได้เลย */
-  .closing{position:relative;margin-top:52px;border-radius:20px;overflow:hidden;
-           border:1px solid var(--border);min-height:430px;display:flex;
-           align-items:flex-start;justify-content:center;padding:62px 24px 0;
+  .closing{position:relative;margin-top:56px;overflow:hidden;
+           border-top:1px solid var(--border);min-height:min(560px,72vh);display:flex;
+           align-items:flex-start;justify-content:center;padding:86px 24px 0;
            background:#0a1020 url("/static/img/chiangmai-night.jpg") center 62%/cover no-repeat}
   /* ม่านทึบด้านบน — ให้ตัวหนังสืออ่านออกแน่นอนไม่ว่าจอกว้างแค่ไหน แล้วเปิดให้เห็นองค์พระธาตุด้านล่าง */
   .closing .veil{position:absolute;inset:0;
@@ -429,6 +430,8 @@
       <p>บอทตอบตามสคริปต์ที่เราเขียนให้ตรงกับร้านคุณ ถ้าเจอคำถามที่ตอบไม่ได้ จะส่งต่อให้แอดมินทันที ไม่มั่วแน่นอน</p></div>
   </div>
 
+</div>
+
   <!-- CLOSING — วิวดอยสุเทพ วาดด้วยเวกเตอร์ -->
   <div class="closing">
     <div class="veil"></div>
@@ -453,7 +456,6 @@
     <a href="https://www.facebook.com/profile.php?id=100086195540576" target="_blank" rel="noopener" style="color:#22d3ee">📘 AI Claude Academy (Facebook Page)</a> ·
     <a href="https://www.facebook.com/jakkar.jakkar.39545" target="_blank" rel="noopener" style="color:#22d3ee">👤 Jark Krit (Facebook)</a>
   </footer>
-</div>
 
 <script>
 const DC={beauty:'#f472b6',clinic:'#22d3ee',restaurant:'#f59e0b',spa:'#a78bfa'};
