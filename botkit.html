@@ -154,6 +154,35 @@
   .faq p{color:var(--dim);font-size:13px;line-height:1.65}
 
   footer{text-align:center;color:#2c3a5c;font-size:12px;margin-top:44px;line-height:1.8}
+
+  /* ---------- บล็อกปิดท้าย: วิวดอยสุเทพ ----------
+     ภาพวาดด้วยเวกเตอร์ทั้งหมด ไม่ได้ใช้ภาพจาก AI และไม่ได้หยิบรูปใครมาใช้
+     อยากเปลี่ยนเป็นรูปถ่ายจริงวันหลัง: ใส่ background-image ที่ .closing แล้วซ่อน svg ได้เลย */
+  .closing{position:relative;margin-top:52px;border-radius:20px;overflow:hidden;
+           border:1px solid var(--border);min-height:430px;display:flex;
+           align-items:flex-start;justify-content:center;padding:62px 24px 0}
+  .closing svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .closing .veil{position:absolute;inset:0;
+       background:linear-gradient(180deg,rgba(6,10,22,.86) 0%,rgba(6,10,22,.45) 42%,rgba(6,10,22,0) 70%)}
+  .closing .in{position:relative;text-align:center;max-width:640px}
+  .closing h2{font-size:34px;font-weight:800;line-height:1.25;letter-spacing:-.5px;
+       overflow-wrap:anywhere}
+  /* แต่ละวลีเป็นก้อน inline-block — ตัดบรรทัดได้เฉพาะ "ระหว่าง" ก้อน ไม่ตัดกลางคำ */
+  .closing h2 span{display:inline-block}
+  .closing h2 .hl{color:var(--green)}
+  .closing p{overflow-wrap:anywhere}
+  .closing p{color:#b9c6dc;font-size:15.5px;margin-top:12px;line-height:1.7}
+  .closing .row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:22px}
+  .closing .cta{background:var(--green);color:#04321a;font-weight:800;font-size:15px;
+       padding:13px 26px;border-radius:12px;text-decoration:none;display:inline-block}
+  .closing .cta.ghost{background:rgba(255,255,255,.08);color:#dbe6f5;
+       border:1px solid rgba(255,255,255,.22)}
+  .closing .place{position:absolute;left:0;right:0;bottom:14px;text-align:center;
+       color:#cfe0f5;font-size:12.5px;letter-spacing:1.5px;text-shadow:0 1px 6px rgba(0,0,0,.6)}
+  @media(max-width:640px){
+    .closing{min-height:390px;padding:44px 18px 0}
+    .closing h2{font-size:26px}
+  }
 </style>
 </head>
 <body>
@@ -353,6 +382,87 @@
       <p>ยกเลิกได้ทุกเมื่อ ไม่มีสัญญาผูกมัด ไม่มีค่าปรับครับ</p></div>
     <div class="faq"><q>บอทจะตอบมั่วไหม ทำให้ลูกค้าหนีเปล่า</q>
       <p>บอทตอบตามสคริปต์ที่เราเขียนให้ตรงกับร้านคุณ ถ้าเจอคำถามที่ตอบไม่ได้ จะส่งต่อให้แอดมินทันที ไม่มั่วแน่นอน</p></div>
+  </div>
+
+  <!-- CLOSING — วิวดอยสุเทพ วาดด้วยเวกเตอร์ -->
+  <div class="closing">
+    <svg viewBox="0 0 1200 460" preserveAspectRatio="xMidYMax slice" aria-label="ภาพวาดวิวดอยสุเทพยามเย็น">
+      <defs>
+        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stop-color="#060a16"/>
+          <stop offset="42%"  stop-color="#2a2350"/>
+          <stop offset="68%"  stop-color="#7b4a6e"/>
+          <stop offset="86%"  stop-color="#d98a72"/>
+          <stop offset="100%" stop-color="#f3b98a"/>
+        </linearGradient>
+        <radialGradient id="sun" cx="50%" cy="50%">
+          <stop offset="0%"   stop-color="#ffd9a8" stop-opacity=".95"/>
+          <stop offset="55%"  stop-color="#ff9e6b" stop-opacity=".45"/>
+          <stop offset="100%" stop-color="#ff8a5c" stop-opacity="0"/>
+        </radialGradient>
+        <linearGradient id="far" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#6d5f8f"/><stop offset="100%" stop-color="#4a4374"/>
+        </linearGradient>
+        <linearGradient id="mid" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#3b3560"/><stop offset="100%" stop-color="#241f3f"/>
+        </linearGradient>
+        <linearGradient id="near" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#161329"/><stop offset="100%" stop-color="#0a0a16"/>
+        </linearGradient>
+        <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#ffe9a8"/><stop offset="100%" stop-color="#e0a63c"/>
+        </linearGradient>
+      </defs>
+
+      <rect width="1200" height="460" fill="url(#sky)"/>
+      <circle cx="855" cy="330" r="200" fill="url(#sun)"/>
+      <circle cx="855" cy="332" r="34" fill="#ffdca6" opacity=".85"/>
+
+      <!-- สันเขาไกล — ชั้นบางสุด -->
+      <path d="M0 336 L120 300 L215 322 L330 268 L430 306 L520 286 L610 318 L700 292 L790 320 L900 296 L1010 326 L1105 306 L1200 330 L1200 460 L0 460 Z"
+            fill="url(#far)" opacity=".65"/>
+
+      <!-- ดอยสุเทพ — ยอดหลักฝั่งซ้าย พร้อมพระธาตุบนสัน -->
+      <path d="M0 372 L90 344 L190 292 L268 236 L352 288 L432 262 L520 316 L620 288 L720 330 L820 306 L930 340 L1040 318 L1140 344 L1200 332 L1200 460 L0 460 Z"
+            fill="url(#mid)"/>
+      <!-- องค์พระธาตุ (เงาทองบนยอดดอย) -->
+      <g transform="translate(268,236) scale(1.35)" opacity=".97">
+        <rect x="-15" y="-9" width="30" height="9" fill="url(#gold)"/>
+        <rect x="-11" y="-17" width="22" height="8" fill="url(#gold)"/>
+        <path d="M-9 -17 L9 -17 L5 -32 L-5 -32 Z" fill="url(#gold)"/>
+        <path d="M-5 -32 L5 -32 L1.6 -49 L-1.6 -49 Z" fill="url(#gold)"/>
+        <rect x="-1.1" y="-60" width="2.2" height="11" fill="url(#gold)"/>
+        <circle cx="0" cy="-62" r="2.6" fill="#fff3cf"/>
+      </g>
+
+      <!-- สันเขาหน้า — เข้มสุด + แนวต้นไม้ -->
+      <path d="M0 404 L110 380 L210 400 L320 366 L420 396 L520 374 L640 404 L760 380 L880 406 L1000 384 L1110 408 L1200 392 L1200 460 L0 460 Z"
+            fill="url(#near)"/>
+      <g fill="#07070f">
+        <path d="M96 398 l7-17 7 17z"/><path d="M118 401 l6-14 6 14z"/>
+        <path d="M330 372 l8-19 8 19z"/><path d="M352 376 l6-14 6 14z"/>
+        <path d="M636 402 l7-16 7 16z"/><path d="M658 405 l6-13 6 13z"/>
+        <path d="M986 388 l7-17 7 17z"/><path d="M1008 392 l6-14 6 14z"/>
+      </g>
+
+      <!-- หมอกบางคาดหุบเขา -->
+      <ellipse cx="420" cy="392" rx="330" ry="13" fill="#e9d8e6" opacity=".16"/>
+      <ellipse cx="880" cy="410" rx="300" ry="11" fill="#e9d8e6" opacity=".12"/>
+    </svg>
+    <div class="veil"></div>
+
+    <div class="in">
+      <h2><span>พร้อมให้ร้านคุณ</span><span class="hl">ทำงานเองได้</span><span>หรือยัง</span></h2>
+      <p>
+        เลือกเฉพาะสิ่งที่ร้านคุณใช้จริง เราทำให้ แล้วคุณใช้งานได้เลย<br>
+        ลองของจริงก่อนตัดสินใจได้ ไม่ต้องสมัคร ไม่เสียอะไร
+      </p>
+      <div class="row">
+        <a class="cta" href="#order">สั่งทำให้ร้านฉัน</a>
+        <a class="cta ghost" href="#demos">▶ ลองเล่นฟรีก่อน</a>
+      </div>
+    </div>
+    <div class="place">ดอยสุเทพ · เชียงใหม่</div>
   </div>
 
   <footer>
