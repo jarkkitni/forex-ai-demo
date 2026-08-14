@@ -171,10 +171,12 @@
      อยากเปลี่ยนเป็นรูปถ่ายจริงวันหลัง: ใส่ background-image ที่ .closing แล้วซ่อน svg ได้เลย */
   .closing{position:relative;margin-top:52px;border-radius:20px;overflow:hidden;
            border:1px solid var(--border);min-height:430px;display:flex;
-           align-items:flex-start;justify-content:center;padding:62px 24px 0}
-  .closing svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+           align-items:flex-start;justify-content:center;padding:62px 24px 0;
+           background:#0a1020 url("/static/img/doi-suthep-night.jpg") center 58%/cover no-repeat}
+  /* ม่านทึบด้านบน — ให้ตัวหนังสืออ่านออกแน่นอนไม่ว่าจอกว้างแค่ไหน แล้วเปิดให้เห็นองค์พระธาตุด้านล่าง */
   .closing .veil{position:absolute;inset:0;
-       background:linear-gradient(180deg,rgba(6,10,22,.86) 0%,rgba(6,10,22,.45) 42%,rgba(6,10,22,0) 70%)}
+       background:linear-gradient(180deg,rgba(5,8,18,.93) 0%,rgba(5,8,18,.82) 30%,
+                  rgba(5,8,18,.55) 52%,rgba(5,8,18,.18) 74%,rgba(5,8,18,.35) 100%)}
   .closing .in{position:relative;text-align:center;max-width:640px}
   .closing h2{font-size:34px;font-weight:800;line-height:1.25;letter-spacing:-.5px;
        overflow-wrap:anywhere}
@@ -429,69 +431,6 @@
 
   <!-- CLOSING — วิวดอยสุเทพ วาดด้วยเวกเตอร์ -->
   <div class="closing">
-    <svg viewBox="0 0 1200 460" preserveAspectRatio="xMidYMax slice" aria-label="ภาพวาดวิวดอยสุเทพยามเย็น">
-      <defs>
-        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stop-color="#060a16"/>
-          <stop offset="42%"  stop-color="#2a2350"/>
-          <stop offset="68%"  stop-color="#7b4a6e"/>
-          <stop offset="86%"  stop-color="#d98a72"/>
-          <stop offset="100%" stop-color="#f3b98a"/>
-        </linearGradient>
-        <radialGradient id="sun" cx="50%" cy="50%">
-          <stop offset="0%"   stop-color="#ffd9a8" stop-opacity=".95"/>
-          <stop offset="55%"  stop-color="#ff9e6b" stop-opacity=".45"/>
-          <stop offset="100%" stop-color="#ff8a5c" stop-opacity="0"/>
-        </radialGradient>
-        <linearGradient id="far" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#6d5f8f"/><stop offset="100%" stop-color="#4a4374"/>
-        </linearGradient>
-        <linearGradient id="mid" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#3b3560"/><stop offset="100%" stop-color="#241f3f"/>
-        </linearGradient>
-        <linearGradient id="near" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#161329"/><stop offset="100%" stop-color="#0a0a16"/>
-        </linearGradient>
-        <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#ffe9a8"/><stop offset="100%" stop-color="#e0a63c"/>
-        </linearGradient>
-      </defs>
-
-      <rect width="1200" height="460" fill="url(#sky)"/>
-      <circle cx="855" cy="330" r="200" fill="url(#sun)"/>
-      <circle cx="855" cy="332" r="34" fill="#ffdca6" opacity=".85"/>
-
-      <!-- สันเขาไกล — ชั้นบางสุด -->
-      <path d="M0 336 L120 300 L215 322 L330 268 L430 306 L520 286 L610 318 L700 292 L790 320 L900 296 L1010 326 L1105 306 L1200 330 L1200 460 L0 460 Z"
-            fill="url(#far)" opacity=".65"/>
-
-      <!-- ดอยสุเทพ — ยอดหลักฝั่งซ้าย พร้อมพระธาตุบนสัน -->
-      <path d="M0 372 L90 344 L190 292 L268 236 L352 288 L432 262 L520 316 L620 288 L720 330 L820 306 L930 340 L1040 318 L1140 344 L1200 332 L1200 460 L0 460 Z"
-            fill="url(#mid)"/>
-      <!-- องค์พระธาตุ (เงาทองบนยอดดอย) -->
-      <g transform="translate(268,236) scale(1.35)" opacity=".97">
-        <rect x="-15" y="-9" width="30" height="9" fill="url(#gold)"/>
-        <rect x="-11" y="-17" width="22" height="8" fill="url(#gold)"/>
-        <path d="M-9 -17 L9 -17 L5 -32 L-5 -32 Z" fill="url(#gold)"/>
-        <path d="M-5 -32 L5 -32 L1.6 -49 L-1.6 -49 Z" fill="url(#gold)"/>
-        <rect x="-1.1" y="-60" width="2.2" height="11" fill="url(#gold)"/>
-        <circle cx="0" cy="-62" r="2.6" fill="#fff3cf"/>
-      </g>
-
-      <!-- สันเขาหน้า — เข้มสุด + แนวต้นไม้ -->
-      <path d="M0 404 L110 380 L210 400 L320 366 L420 396 L520 374 L640 404 L760 380 L880 406 L1000 384 L1110 408 L1200 392 L1200 460 L0 460 Z"
-            fill="url(#near)"/>
-      <g fill="#07070f">
-        <path d="M96 398 l7-17 7 17z"/><path d="M118 401 l6-14 6 14z"/>
-        <path d="M330 372 l8-19 8 19z"/><path d="M352 376 l6-14 6 14z"/>
-        <path d="M636 402 l7-16 7 16z"/><path d="M658 405 l6-13 6 13z"/>
-        <path d="M986 388 l7-17 7 17z"/><path d="M1008 392 l6-14 6 14z"/>
-      </g>
-
-      <!-- หมอกบางคาดหุบเขา -->
-      <ellipse cx="420" cy="392" rx="330" ry="13" fill="#e9d8e6" opacity=".16"/>
-      <ellipse cx="880" cy="410" rx="300" ry="11" fill="#e9d8e6" opacity=".12"/>
-    </svg>
     <div class="veil"></div>
 
     <div class="in">
@@ -505,7 +444,7 @@
         <a class="cta ghost" href="#demos">▶ ลองเล่นฟรีก่อน</a>
       </div>
     </div>
-    <div class="place">ดอยสุเทพ · เชียงใหม่</div>
+    <div class="place">วัดพระธาตุดอยสุเทพ · เชียงใหม่ &nbsp;·&nbsp; ภาพ: Pexels</div>
   </div>
 
   <footer>
