@@ -339,8 +339,11 @@ def _call_gemini(prompt: str, max_tokens: int = 1000, slug: str = "") -> str:
         hint = (" | ListModels ไม่คืนโมเดลเลย"
                 f"{' (' + _gemini_discovered['error'] + ')' if _gemini_discovered.get('error') else ''}"
                 " → น่าจะเป็นที่ key/โปรเจกต์ ไม่ใช่ชื่อโมเดล — เช็ค /api/gemini-diag")
+    # เอา "สาเหตุจริง" ขึ้นหน้าสุดเสมอ แล้วค่อยตามด้วยรายชื่อโมเดลที่ลองไป — เพราะ last_error
+    # ใน /api/ai-health ถูกตัดที่ 190 ตัวอักษร ถ้าเอารายชื่อโมเดลขึ้นก่อน (ยาว ~150 ตัว)
+    # สาเหตุจริงจะโดนตัดหายทุกครั้ง ทำให้ endpoint ที่มีไว้ debug ใช้ debug ไม่ได้เลย
     raise RuntimeError(
-        f"Gemini ทุกโมเดลใช้ไม่ได้หมด ({', '.join(tried)}): {last_exc}{hint}"
+        f"Gemini ล้มหมด — {last_exc} | ลองไปแล้ว: {', '.join(tried)}{hint}"
     ) from last_exc
 
 
