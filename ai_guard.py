@@ -236,7 +236,24 @@ def _call_groq(prompt: str, max_tokens: int = 1000) -> str:
         return r.json()["choices"][0]["message"]["content"].strip()
 
 
-def _call_gemini(prompt: str, max_tokens: int = 1000) -> str:
+def _gemini_key_for(slug: str = "") -> str:
+    """คืน Gemini API key ของร้านนั้น ถ้าตั้งแยกไว้ ไม่งั้นใช้ตัวกลาง
+
+    ทำไมต้องแยก (19 ส.ค. 2026): โควต้าฟรีของ Gemini นับ "ต่อ Google Cloud project"
+    ไม่ใช่ต่อ key — key หลายอันใน project เดียวกันแชร์โควต้าก้อนเดียวกัน
+    เดิมทุกอย่างใช้ key เดียว: ลูกค้าที่จ่ายเงินจริง (lullabell) แย่งโควต้ากับ
+    job hunter cron / demo chat / ร้านอื่น / STT-TTS พอก้อนกลางเต็ม ลูกค้าตายด้วย
+    ตั้ง GEMINI_API_KEY_LULLABELL (project แยก) = ร้านนั้นมีโควต้า 1,500/วันของตัวเอง
+    ไม่มีใครมาเบียด และไม่ผิด ToS เพราะเป็นการแยก project ตามแอป ไม่ใช่หลายบัญชีเลี่ยงโควต้า
+    """
+    if slug:
+        k = os.environ.get(f"GEMINI_API_KEY_{slug.upper().replace('-', '_')}", "")
+        if k:
+            return k
+    return GEMINI_API_KEY
+
+
+def _call_gemini(prompt: str, max_tokens: int = 1000, slug: str = "") -> str:
     """เรียก Gemini API ตรงๆผ่าน requests (ไม่เพิ่ม dependency ใหม่ แพทเทิร์นเดียวกับ Groq)
     ใช้เป็นชั้นสำรองที่ 3 หลัง Claude+Groq ล่มทั้งคู่ — คนละ provider คนละโควต้า ลดโอกาสตายพร้อมกันทั้งหมด
 
@@ -252,13 +269,14 @@ def _call_gemini(prompt: str, max_tokens: int = 1000) -> str:
     เหลือโควต้าให้คำตอบจริงน้อยจนถูกตัดจบก่อนจะทันเขียนรายการโปรครบ ปิด thinking ไปเลยเพราะงานนี้เป็นแชทบอท
     ตอบไว ไม่ต้องการ multi-step reasoning อยู่แล้ว (คำสั่งอยู่ครบใน system prompt แล้ว) — ปลอดภัยสำหรับ
     gemini-2.0-flash ด้วยเพราะโมเดลนี้ไม่รองรับ thinking อยู่แล้ว ใส่ param นี้ไปจะถูกเมิน ไม่พัง"""
-    if not GEMINI_API_KEY:
+    api_key = _gemini_key_for(slug)
+    if not api_key:
         raise RuntimeError("GEMINI_API_KEY ยังไม่ได้ตั้ง — สร้างที่ aistudio.google.com แล้วใส่ค่าใน Render")
 
     def _try_model(model: str) -> str:
         r = requests.post(
             GEMINI_URL_TMPL.format(model=model),
-            params={"key": GEMINI_API_KEY},
+            params={"key": api_key},
             json={
                 "contents": [{"parts": [{"text": prompt}]}],
                 "generationConfig": {
@@ -268,7 +286,18 @@ def _call_gemini(prompt: str, max_tokens: int = 1000) -> str:
             },
             timeout=30,
         )
-        r.raise_for_status()
+        # เดิมใช้ r.raise_for_status() ตรงๆ ซึ่งทิ้ง response body ทั้งก้อน เหลือแค่ "429 Client Error"
+        # ทำให้แยกไม่ออกว่าโควต้าเต็ม (RESOURCE_EXHAUSTED) หรือ billing หลุด (FAILED_PRECONDITION)
+        # หรือ API ถูกปิด (PERMISSION_DENIED) — ทั้งสามอย่างแก้คนละวิธีกันสิ้นเชิง
+        # (19 ส.ค. 2026 — เสียเวลาไล่หาสาเหตุนานเพราะ log ไม่บอกอะไรเลย)
+        if r.status_code >= 400:
+            detail = ""
+            try:
+                err = r.json().get("error", {})
+                detail = f"{err.get('status', '')} {err.get('message', '')}".strip()
+            except Exception:
+                detail = r.text[:200]
+            raise RuntimeError(f"Gemini ({model}) HTTP {r.status_code}: {detail}")
         data = r.json()
         try:
             return data["candidates"][0]["content"]["parts"][0]["text"].strip()
@@ -399,7 +428,7 @@ def call(client, prompt: str, max_tokens: int = 1000, smart: bool = True,
 
     if tier == "free":
         try:
-            text = _call_gemini(prompt, max_tokens)
+            text = _call_gemini(prompt, max_tokens, slug=slug)
             b["ok"] = True
             b["last_provider"] = "gemini"
             b["last_ok"] = datetime.now(timezone.utc).isoformat()
@@ -457,9 +486,11 @@ def call(client, prompt: str, max_tokens: int = 1000, smart: bool = True,
         # Claude + Groq ล่มทั้งคู่ → ลอง Gemini (ชั้นสำรองที่ 3 คนละ provider คนละโควต้า) ก่อนยอมแพ้จริงๆ
         # (เพิ่ม 21 ก.ค. 2026 — เคสจริง Claude หมดเครดิต + Groq โดน rate limit พร้อมกันวันเดียว ทำให้ทาง
         # ตันพร้อมกันทั้งคู่ ลูกค้าโดน fallback message ล้วนๆ ทั้งที่ยังมี AI ตัวที่ 3 ใช้ได้อยู่)
-        if GEMINI_API_KEY:
+        # เช็คด้วย _gemini_key_for(slug) ไม่ใช่ GEMINI_API_KEY ตัวกลาง — ไม่งั้นร้านที่ตั้ง
+        # เฉพาะ key แยกของตัวเอง (ไม่มีตัวกลาง) จะถูกข้ามชั้น Gemini ไปเงียบๆ ทั้งที่ใช้ได้
+        if _gemini_key_for(slug):
             try:
-                text = _call_gemini(prompt, max_tokens)
+                text = _call_gemini(prompt, max_tokens, slug=slug)
                 b["ok"] = True
                 b["last_provider"] = "gemini (fallback)"
                 b["last_ok"] = datetime.now(timezone.utc).isoformat()
