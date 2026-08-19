@@ -549,6 +549,9 @@ def chatmaker(sub):
     if sub.endswith(".html"):
         # หน้าเดโมต้องได้ตัวใหม่เสมอ (ไม่มี service worker ช่วยอัปเดตให้เหมือนตัวแอปเต็ม)
         resp.headers["Cache-Control"] = "no-cache, must-revalidate"
+        # canonical ผ่าน HTTP header (ห้ามแก้ไฟล์ chatdemo/ ที่ปั๊มจากสคริปต์) — Google รองรับ
+        if sub == "index.html":
+            resp.headers["Link"] = f'<{BASE_URL}/chatmaker/>; rel="canonical"'
     return resp
 
 
@@ -2144,8 +2147,8 @@ def seo_landing(slug):
 @app.route("/sitemap.xml")
 def sitemap():
     # "/botkit" ไม่อยู่ในนี้แล้ว — มัน 301 มา "/" ซึ่งมีอยู่แล้ว (กัน duplicate content)
-    urls = ["/", "/chatmaker/"] + [f"/{k}" for k in SEO_PAGES] + \
-           [f"/demo/{k}" for k in _load_demo_configs()]
+    # /demo/* เป็นหน้าเดโม (noindex) — ไม่ใส่ใน sitemap กัน thin/duplicate
+    urls = ["/", "/chatmaker/"] + [f"/{k}" for k in SEO_PAGES]
     today = datetime.now().strftime("%Y-%m-%d")
     items = "".join(
         f"<url><loc>{BASE_URL}{u}</loc><lastmod>{today}</lastmod>"
