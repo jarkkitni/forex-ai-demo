@@ -4,16 +4,54 @@
     "kicker": "LINE BOT & AI AUTOMATION DEVELOPER",
     "title": "ผลงานพัฒนาระบบ LINE OA + AI + Backend Dashboard",
     "lead": "รับพัฒนาระบบตอบลูกค้าอัตโนมัติบน LINE OA / Facebook Messenger เชื่อม AI, ระบบหลังบ้าน (Admin Dashboard), งาน automation เชื่อม API ภายนอก และแอปมือถือ — ทุกระบบด้านล่างนี้ออกแบบ เขียน และดูแลเองทั้งหมด ส่งมอบพร้อม Source Code และเอกสารครบ",
-    "stack": ["LINE Messaging API", "Meta Graph API", "Python", "PostgreSQL / Supabase", "Claude AI", "Flutter", "n8n / Automation", "REST API / Webhook"]
+    "stack": [
+      "LINE Messaging API",
+      "Meta Graph API",
+      "Python",
+      "PostgreSQL / Supabase",
+      "Claude AI",
+      "Flutter",
+      "n8n / Automation",
+      "REST API / Webhook"
+    ]
   },
   "sectionTitle": "ผลงานที่เกี่ยวข้อง",
   "projects": [
     {
+      "tag": "🎬 เปิดใช้งานจริง · ลองได้เลย",
+      "title": "เว็บสร้างคลิปเล่าเรื่องด้วย AI (Storyteller Studio)",
+      "desc": "พิมพ์พล็อตสั้นๆ ระบบเขียนบทเป็นฉาก เจนภาพทุกฉาก พากย์เสียงไทย ใส่เพลงประกอบ แล้วอัดออกมาเป็นวิดีโอ 9:16 พร้อมลง YouTube Shorts/TikTok — ครบในเว็บเดียว พร้อมระบบเติมเงินที่ตรวจสลิปกับธนาคารอัตโนมัติ",
+      "matches": [
+        "เว็บแอปที่ผู้ใช้สร้างงานได้เอง (ไม่ต้องติดตั้ง)",
+        "เชื่อม AI หลายเจ้า + ระบบเก็บเงินออนไลน์ครบวงจร"
+      ],
+      "tech": [
+        "React 19",
+        "Vite",
+        "Express",
+        "Gemini",
+        "ElevenLabs",
+        "Slip2Go",
+        "Supabase"
+      ],
+      "link": "https://smarthook-viral-video-ai.onrender.com/",
+      "linkLabel": "🎬 เข้าไปลองสร้างคลิป →"
+    },
+    {
       "tag": "✅ ลูกค้าจ่ายจริง · ใช้งานอยู่",
       "title": "บอทตอบลูกค้าอัตโนมัติ + AI (ร้าน Lullabell)",
       "desc": "บอทบน LINE OA / Facebook Messenger ที่ตอบลูกค้าอัตโนมัติด้วย AI — ตอบเป็นภาษาธรรมชาติ ดึงราคา/เมนูจริงจากฐานข้อมูลมาตอบ ทำงานครบลูปจริงกับลูกค้าที่จ่ายเงินแล้ว",
-      "matches": ["ตอบกลับลูกค้าอัตโนมัติ + เชื่อมต่อ AI", "เก็บประวัติการสนทนาลงฐานข้อมูล"],
-      "tech": ["LINE Messaging API", "Meta Send API", "Claude AI", "Python", "Supabase"],
+      "matches": [
+        "ตอบกลับลูกค้าอัตโนมัติ + เชื่อมต่อ AI",
+        "เก็บประวัติการสนทนาลงฐานข้อมูล"
+      ],
+      "tech": [
+        "LINE Messaging API",
+        "Meta Send API",
+        "Claude AI",
+        "Python",
+        "Supabase"
+      ],
       "link": "/beauty",
       "linkLabel": "ดูตัวอย่างบอท →",
       "link2": "/go/lullabell-line",
@@ -23,8 +61,17 @@
       "tag": "📊 Dashboard + KPI เรียลไทม์",
       "title": "ระบบหลังบ้าน — NEXUS Monitor Dashboard",
       "desc": "Admin Dashboard แสดงสถิติและตัวชี้วัด (KPI) แบบเรียลไทม์ — จำนวนผู้ใช้ ยอดเข้าชม แหล่งที่มา สถานะระบบ อัปเดตอัตโนมัติ ออกแบบให้จัดการข้อมูลและดูภาพรวมได้ในหน้าเดียว",
-      "matches": ["Admin Dashboard สำหรับจัดการข้อมูลและดูสถิติ", "เชื่อมโยงข้อมูลกับ KPI แล้วแสดงผลผ่าน Dashboard"],
-      "tech": ["Python", "REST API", "PostgreSQL", "PWA", "Live stats"],
+      "matches": [
+        "Admin Dashboard สำหรับจัดการข้อมูลและดูสถิติ",
+        "เชื่อมโยงข้อมูลกับ KPI แล้วแสดงผลผ่าน Dashboard"
+      ],
+      "tech": [
+        "Python",
+        "REST API",
+        "PostgreSQL",
+        "PWA",
+        "Live stats"
+      ],
       "link": "/monitor",
       "linkLabel": "เปิด Dashboard จริง →"
     },
@@ -32,8 +79,16 @@
       "tag": "🗂️ เก็บข้อมูลเชิงรุก",
       "title": "LINE Bot เก็บข้อมูล + บันทึกประวัติผู้ใช้",
       "desc": "ระบบบันทึกข้อมูลผู้ใช้ผ่าน LINE — เก็บข้อมูลที่กรอก/กดเลือกในแต่ละครั้งลงฐานข้อมูล PostgreSQL, จำผู้ใช้เดิม, ดึงประวัติย้อนหลังมาแสดง (ตัวอย่าง: ระบบติดตามผู้ป่วยฟอกไต)",
-      "matches": ["เก็บข้อมูลลูกค้า (กดเมนู / ตอบแบบสอบถาม / พฤติกรรม) ลงฐานข้อมูล", "รองรับเชื่อม API ระบบอื่นในอนาคต + ส่งมอบ Source Code"],
-      "tech": ["LINE Messaging API", "Supabase", "Edge Functions", "Session state"],
+      "matches": [
+        "เก็บข้อมูลลูกค้า (กดเมนู / ตอบแบบสอบถาม / พฤติกรรม) ลงฐานข้อมูล",
+        "รองรับเชื่อม API ระบบอื่นในอนาคต + ส่งมอบ Source Code"
+      ],
+      "tech": [
+        "LINE Messaging API",
+        "Supabase",
+        "Edge Functions",
+        "Session state"
+      ],
       "link": "/demo/dialysis",
       "linkLabel": "ลองระบบเก็บข้อมูล →"
     },
@@ -41,8 +96,17 @@
       "tag": "🆕 จองคิวผ่านแชท AI",
       "title": "ระบบจองคิว — AI จับวัน-เวลาอัตโนมัติ",
       "desc": "ลูกค้าคุยกับ AI ผ่าน LINE ได้ตามธรรมชาติ พอบอกวัน-เวลาที่สะดวก ระบบจับข้อมูลอัตโนมัติแล้วแจ้งเตือนแอดมินทันที ไม่ต้องมานั่งเช็คแชทเอง เหมาะกับร้าน/คลินิกที่รับจองคิวผ่าน LINE",
-      "matches": ["ระบบจองคิวผ่าน LINE OA", "แจ้งเตือนคิวใหม่อัตโนมัติ", "ไม่ต้องเฝ้าแชทเอง"],
-      "tech": ["LINE Messaging API", "Claude AI", "Python", "LINE Push Notification"],
+      "matches": [
+        "ระบบจองคิวผ่าน LINE OA",
+        "แจ้งเตือนคิวใหม่อัตโนมัติ",
+        "ไม่ต้องเฝ้าแชทเอง"
+      ],
+      "tech": [
+        "LINE Messaging API",
+        "Claude AI",
+        "Python",
+        "LINE Push Notification"
+      ],
       "link": "/demo/chat/lullabell",
       "linkLabel": "ลองจองคิวผ่านแชทจริง →"
     },
@@ -50,8 +114,17 @@
       "tag": "📋 Excel Automation · ทดสอบอัตโนมัติ 733 จุด",
       "title": "ระบบจัดตารางเวรพนักงาน (Excel ไม่ใช้มาโคร)",
       "desc": "พิมพ์ตารางเดือนที่ชีตเดียว อีก 3 ชีตคำนวณให้เองทันที — ใบจัดเวรพิมพ์ A4 หน้าเดียว ชีตสรุปว่าใครได้เวรกี่วัน และชีตตรวจสอบที่ขึ้นแถบแดงเตือนเมื่อจัดเวรผิดกติกา (เข้าติดกันเกินกำหนด/ชื่อซ้ำ/ล้นช่อง) ล็อกสูตรกันลบ ไม่มีมาโคร จึงเปิดได้ทั้ง Windows และ Mac ไม่ต้องกดอนุญาตอะไร สร้างไฟล์ทั้งใบด้วย Python พร้อมชุดทดสอบอัตโนมัติ 733 จุดที่สั่ง Excel คำนวณจริงแล้วเทียบกับกติกาที่เขียนแยกอิสระ",
-      "matches": ["งานคำนวณ/จัดตารางที่เดิมทำมือแล้วผิดพลาดบ่อย", "ต้องการไฟล์ที่ส่งมอบแล้วใช้ต่อได้เอง ไม่ต้องพึ่งผู้พัฒนา"],
-      "tech": ["Python", "openpyxl", "Excel COM", "Conditional Formatting", "Automated testing"],
+      "matches": [
+        "งานคำนวณ/จัดตารางที่เดิมทำมือแล้วผิดพลาดบ่อย",
+        "ต้องการไฟล์ที่ส่งมอบแล้วใช้ต่อได้เอง ไม่ต้องพึ่งผู้พัฒนา"
+      ],
+      "tech": [
+        "Python",
+        "openpyxl",
+        "Excel COM",
+        "Conditional Formatting",
+        "Automated testing"
+      ],
       "link": "/static/works/nurse-roster-demo.xlsx",
       "linkLabel": "⬇ ดาวน์โหลดไฟล์ตัวอย่าง (ข้อมูลสมมติ)"
     },
@@ -59,8 +132,16 @@
       "tag": "🗺️ เชื่อม API ภายนอก",
       "title": "ระบบค้นหาพิกัดร้านค้าอัตโนมัติจากที่อยู่",
       "desc": "แก้ปัญหาข้อมูลร้านค้าหลายร้อยแห่งที่มีแต่ที่อยู่เป็นข้อความ ไม่มีพิกัด ทำให้วางแผนเส้นทางล่วงหน้าไม่ได้ — ให้ Excel เรียก API ค้นหาพิกัดของ OpenStreetMap เองจากที่อยู่ พร้อมปุ่มเปิด Google Maps ตรงหมุด และทางสำรองเปิดหน้าค้นหาให้ตรวจด้วยตาเมื่อหาพิกัดไม่พบ แถวที่มีพิกัดเดิมอยู่แล้วจะไม่ถูกเรียกซ้ำ เพื่อไม่ให้เกินโควตาของบริการฟรี",
-      "matches": ["ดึงข้อมูลจากบริการภายนอกมาเติมในระบบเดิมโดยอัตโนมัติ", "ออกแบบทางสำรองเมื่อบริการภายนอกตอบไม่ได้"],
-      "tech": ["Excel WEBSERVICE/FILTERXML", "OpenStreetMap Nominatim API", "Python", "openpyxl"],
+      "matches": [
+        "ดึงข้อมูลจากบริการภายนอกมาเติมในระบบเดิมโดยอัตโนมัติ",
+        "ออกแบบทางสำรองเมื่อบริการภายนอกตอบไม่ได้"
+      ],
+      "tech": [
+        "Excel WEBSERVICE/FILTERXML",
+        "OpenStreetMap Nominatim API",
+        "Python",
+        "openpyxl"
+      ],
       "link": "/static/works/store-geocoder-demo.xlsx",
       "linkLabel": "⬇ ดาวน์โหลดไฟล์ตัวอย่าง (ข้อมูลสมมติ)"
     },
@@ -68,8 +149,17 @@
       "tag": "📱 Mobile App · Flutter",
       "title": "แอปข้อมูลเส้นทางเดินป่าเชียงใหม่ (CNX Trail)",
       "desc": "แอปมือถือ Flutter ต่อฐานข้อมูล Supabase 10 ตารางพร้อม Row Level Security ทุกตาราง — มีโหมดออฟไลน์สำหรับพื้นที่ไม่มีสัญญาณ ข้อมูลสถานที่ 89 แห่งและเบอร์ติดต่อฉุกเฉิน 53 เบอร์ ออกแบบให้ตรวจเวอร์ชันข้อมูลขนาดไม่กี่สิบไบต์แทนการโหลดข้อมูลใหม่ทั้งก้อน เพื่อรองรับผู้ใช้จำนวนมากโดยไม่เกินโควตาฟรี",
-      "matches": ["พัฒนาแอปมือถือต่อฐานข้อมูลบนคลาวด์", "ออกแบบให้ทำงานได้เมื่อไม่มีสัญญาณอินเทอร์เน็ต"],
-      "tech": ["Flutter", "Dart", "Supabase", "PostgreSQL + RLS", "Offline-first"]
+      "matches": [
+        "พัฒนาแอปมือถือต่อฐานข้อมูลบนคลาวด์",
+        "ออกแบบให้ทำงานได้เมื่อไม่มีสัญญาณอินเทอร์เน็ต"
+      ],
+      "tech": [
+        "Flutter",
+        "Dart",
+        "Supabase",
+        "PostgreSQL + RLS",
+        "Offline-first"
+      ]
     }
   ],
   "why": {
