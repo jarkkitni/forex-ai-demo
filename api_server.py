@@ -3298,6 +3298,15 @@ def data_deletion_page():
         return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
 
 
+@app.route("/terms")
+def terms_page():
+    """Terms of Service — ช่อง "URL ข้อกำหนดของบริการ" ของ Meta App (24 ส.ค. 2026, ห้ามลบ)
+    เดิมช่องนั้นชี้ไป https://www.facebook.com/ (ค่าดีฟอลต์ที่ Meta เติมมา) เพราะเรายังไม่มีหน้านี้"""
+    p = os.path.join(os.path.dirname(__file__), "terms.html")
+    with open(p, "r", encoding="utf-8") as f:
+        return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
 @app.route("/portfolio")
 def portfolio_page():
     """หน้า Portfolio รวมผลงาน (ส่งลูกค้า FastWork) — render จาก portfolio.json · เพิ่มผลงาน = แก้ JSON · ห้ามลบ"""
