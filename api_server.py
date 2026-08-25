@@ -349,13 +349,14 @@ def _save_hunter_status(result: dict) -> None:
         pass  # เก็บสถานะพลาดไม่ควรทำให้ Hunter ล้ม
 
 
-@app.route("/api/hunter/status", methods=["GET"])
-def hunter_status():
-    """สถานะ Hunter ล่าสุด (สำหรับการ์ดบน Monitor) — อ่านจาก Supabase
+def _hunter_status_data() -> dict:
+    """สถานะ Hunter ล่าสุด (อ่านจาก Supabase) — คืน dict ธรรมดา
 
     22 ก.ค. 2026 เพิ่ม enabled + stale_minutes เพื่อให้ Monitor แยกออกว่า
     "ปิดสวิตช์อยู่" ต่างจาก "เปิดอยู่แต่ไม่ได้สแกนมานาน" — เดิมทั้งสองกรณีหน้าตาเหมือนกันหมด
-    ทำให้ Hunter หยุดไป 22 ชม. โดยไม่มีใครสังเกต"""
+    ทำให้ Hunter หยุดไป 22 ชม. โดยไม่มีใครสังเกต
+
+    25 ส.ค. 2026 แยกออกมาจาก view เพื่อให้ /morning-brief เรียกใช้ได้ด้วย (ไม่ก๊อปโค้ดซ้ำ)"""
     from datetime import timezone
     try:
         r = requests.get(
@@ -379,9 +380,15 @@ def hunter_status():
         except Exception:
             pass
 
-    return jsonify({"success": True, **st,
-                    "enabled": HUNTERS_ENABLED,
-                    "stale_minutes": stale})
+    return {"success": True, **st,
+            "enabled": HUNTERS_ENABLED,
+            "stale_minutes": stale}
+
+
+@app.route("/api/hunter/status", methods=["GET"])
+def hunter_status():
+    """สถานะ Hunter ล่าสุด (สำหรับการ์ดบน Monitor)"""
+    return jsonify(_hunter_status_data())
 
 
 @app.route("/api/hunter/log", methods=["GET"])
@@ -2768,6 +2775,250 @@ def api_pulse():
     return jsonify(out)
 
 
+# ────────────────────────────────────────────────────────────────────────────
+# ☀️ /morning-brief — สถานะสดทุกระบบ เรนเดอร์เป็น "หน้า HTML" (25 ส.ค. 2026)
+#
+# ทำไมต้องมี ทั้งที่มี /api/* ครบอยู่แล้ว:
+#   งานตั้งเวลา 7:00 (nexus-monitor-morning-update) ใช้ web_fetch ไปอ่าน
+#   /api/hunter/status, /api/seo, /api/meta-health แล้ว "ได้ค่าว่างทุกเช้า"
+#   (อ่าน JSON ไม่ได้ — อ่านได้แต่หน้า HTML เช่น /posttoday) ส่วน /monitor ก็ใช้แทน
+#   ไม่ได้ เพราะมันดึงข้อมูลด้วย JS ตอนหน้าโหลด และ web_fetch ไม่รัน JS
+#   จึงเห็นแต่โครงหน้าเปล่าเหมือนกัน
+#
+# กฎ 3 ข้อของหน้านี้ — ผิดข้อไหนก็กลับไปว่างเหมือนเดิม:
+#   1. ค่าทุกตัวต้องเรนเดอร์ฝังใน HTML จากฝั่งเซิร์ฟเวอร์ ห้ามใช้ JS ดึงข้อมูลมาเติมทีหลัง
+#   2. ทุกการ์ดหุ้ม try/except ของตัวเอง — การ์ดเดียวพังต้องไม่ทำให้ทั้งหน้าว่าง
+#   3. ห้ามพ่น token/key/ความลับออกมา (หน้านี้เปิดสาธารณะเหมือน /monitor)
+# ────────────────────────────────────────────────────────────────────────────
+_TH_MONTHS = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
+              "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]
+_TH_TZ_HOURS = 7
+
+
+def _mins_ago(iso_str):
+    """timestamp ISO → ผ่านมากี่นาทีแล้ว (None ถ้าไม่มีค่า/อ่านไม่ได้)"""
+    from datetime import timezone
+    if not iso_str:
+        return None
+    try:
+        t = datetime.fromisoformat(str(iso_str).replace("Z", "+00:00"))
+        if t.tzinfo is None:
+            t = t.replace(tzinfo=timezone.utc)
+        return int((datetime.now(timezone.utc) - t).total_seconds() // 60)
+    except Exception:
+        return None
+
+
+def _human_ago(iso_str, empty="ยังไม่เคยมี"):
+    """เขียนเวลาแบบคนอ่านรู้เรื่องทันที ไม่ต้องเอา timestamp ไปคิดต่อเอง"""
+    m = _mins_ago(iso_str)
+    if m is None:
+        return empty
+    if m < 60:
+        return f"{m} นาทีที่แล้ว"
+    if m < 60 * 24:
+        return f"{m // 60} ชม.ที่แล้ว"
+    return f"{m // (60 * 24)} วันที่แล้ว"
+
+
+@app.route("/morning-brief")
+def morning_brief():
+    """สรุปสถานะสดทุกระบบเป็นหน้า HTML — ทำไว้ให้งานตั้งเวลาตอนเช้าอ่านได้จริง
+    (อ่านกฎ 3 ข้อในหมายเหตุด้านบนก่อนแก้)"""
+    from html import escape as _esc
+    from datetime import timezone, timedelta
+
+    th_tz = timezone(timedelta(hours=_TH_TZ_HOURS))
+    now_th = datetime.now(th_tz)
+    stamp = (f"{now_th.day} {_TH_MONTHS[now_th.month - 1]} {now_th.year} "
+             f"{now_th:%H:%M} น. (เวลาไทย)")
+
+    cards = []   # (ok, ชื่อการ์ด, บรรทัดสรุป, [รายละเอียด])
+
+    # ── 1) Job Hunter — ดักงานฟรีแลนซ์ ────────────────────────────────
+    try:
+        h = _hunter_status_data()
+        stale = h.get("stale_minutes")
+        if not h.get("enabled"):
+            ok, head = False, "ปิดสวิตช์อยู่ (env HUNTERS_ENABLED ไม่ได้เปิด) — ไม่ได้ดักงานให้เลย"
+        elif stale is None:
+            ok, head = False, "เปิดสวิตช์อยู่ แต่ไม่มีบันทึกการสแกนเลยสักครั้ง"
+        elif stale > 120:
+            ok, head = False, f"เปิดอยู่ แต่ไม่ได้สแกนมา {stale} นาทีแล้ว (ปกติทุก 30 นาที = ค้าง)"
+        else:
+            ok, head = True, f"ปกติ — สแกนล่าสุด {stale} นาทีที่แล้ว"
+        detail = [
+            f"สแกนล่าสุด: {h.get('last_check') or 'ไม่มีข้อมูล'}",
+            f"รอบล่าสุด: ตรวจ {h.get('checked', 0)} งาน · เข้าเกณฑ์ {h.get('new_matching', 0)} งาน "
+            f"· คัดออก {h.get('triaged_out', 0)} งาน · แจ้งเตือนไลน์ {h.get('alerts_sent', 0)} ครั้ง",
+        ]
+    except Exception as e:
+        ok, head, detail = False, f"อ่านสถานะไม่ได้: {str(e)[:120]}", []
+    cards.append((ok, "Job Hunter (ดักงานฟรีแลนซ์)", head, detail))
+
+    # ── 2) SEO — คนหาเราเจอใน Google หรือยัง ──────────────────────────
+    try:
+        s = seo_tracker.summary()
+        if s.get("ok"):
+            ok = True
+            head = f"ขั้นที่ {s.get('stage')}/{s.get('stage_max')} — {s.get('label')}"
+            kws = ", ".join(k.get("kw", "") for k in (s.get("keywords") or [])[:5])
+            detail = [
+                f"7 วันล่าสุด: คนจริง {s.get('humans_7d', 0)} คน "
+                f"· มาจาก Google/Bing {s.get('organic_7d', 0)} คน "
+                f"· บอทเก็บข้อมูล {s.get('bot_hits_7d', 0)} ครั้ง",
+                f"Googlebot มาล่าสุด: {_human_ago(s.get('last_crawl'), 'ยังไม่เคยมา')}",
+                f"คนแรกที่มาจาก Google: {_human_ago(s.get('first_organic'), 'ยังไม่มี')}",
+                f"คำค้นที่พาคนมา: {kws or 'ยังไม่มีข้อมูลคำค้น'}",
+                f"ออเดอร์ 7 วัน: {s.get('orders_7d', 0)} รายการ "
+                f"(มาจาก Google/Bing {s.get('organic_orders_7d', 0)}) "
+                f"· กดปุ่มทักไลน์ {s.get('line_clicks_7d', 0)} ครั้ง",
+                f"ส่ง sitemap มาแล้ว {s.get('days_since_sitemap', 0)} วัน",
+            ]
+        else:
+            ok, head, detail = False, f"ยังไม่พร้อม: {s.get('error', '-')}", []
+    except Exception as e:
+        ok, head, detail = False, f"อ่านสถานะไม่ได้: {str(e)[:120]}", []
+    cards.append((ok, "SEO (คนหาเจอใน Google)", head, detail))
+
+    # ── 3) บอท Lullabell (Facebook Messenger) ─────────────────────────
+    try:
+        m = _meta_health_data()
+        detail = []
+        if m.get("ok"):
+            ok = True
+            head = f"token ใช้ได้ — ต่อกับเพจ {m.get('page') or '(ไม่ทราบชื่อ)'}"
+            exp = m.get("expires_at")
+            if exp == 0:
+                detail.append("อายุ token: ไม่มีกำหนด (ถาวร)")
+            elif exp:
+                try:
+                    t_exp = datetime.fromtimestamp(int(exp), th_tz)
+                    left = (t_exp - now_th).days
+                    detail.append(f"token หมดอายุ: {t_exp.day} {_TH_MONTHS[t_exp.month - 1]} "
+                                  f"{t_exp.year} (อีก {left} วัน)")
+                    if left <= 14:
+                        ok = False
+                        head += f" ⚠️ แต่เหลืออีกแค่ {left} วันจะหมดอายุ"
+                except Exception:
+                    pass
+            if "has_publish_scope" in m:
+                detail.append("สิทธิ์โพสต์ลงเพจ (pages_manage_posts): "
+                              + ("มี" if m.get("has_publish_scope") else "ไม่มี"))
+        else:
+            ok = False
+            err = m.get("error") or "ไม่ทราบสาเหตุ"
+            head = ("ยังไม่ได้ตั้ง META_PAGE_TOKEN บนเซิร์ฟเวอร์"
+                    if err == "no META_PAGE_TOKEN" else f"token ใช้ไม่ได้: {err}")
+    except Exception as e:
+        ok, head, detail = False, f"เช็คไม่ได้: {str(e)[:120]}", []
+    cards.append((ok, "บอท Lullabell (Facebook Messenger)", head, detail))
+
+    # ── 4) AI (Claude) — ตัวนี้ตาย ทุกอย่างตายตาม ─────────────────────
+    try:
+        a = ai_guard.health()
+        has_key = bool(ANTHROPIC_API_KEY)
+        ok = has_key and bool(a.get("ok"))
+        if not has_key:
+            head = "ยังไม่ได้ตั้ง ANTHROPIC_API_KEY บนเซิร์ฟเวอร์"
+        elif a.get("ok"):
+            head = "ปกติ"
+        else:
+            head = f"ล้มเหลว: {str(a.get('last_error') or '')[:150]}"
+        detail = [
+            f"เรียก AI ไปแล้ว {a.get('calls', 0)} ครั้ง · พลาด {a.get('fails', 0)} ครั้ง",
+            f"สำเร็จล่าสุด: {_human_ago(a.get('last_ok'), 'ยังไม่เคยเรียกสำเร็จ')}",
+        ]
+        if a.get("last_error_at"):
+            detail.append(f"พลาดล่าสุด: {_human_ago(a.get('last_error_at'))}")
+    except Exception as e:
+        ok, head, detail = False, f"เช็คไม่ได้: {str(e)[:120]}", []
+    cards.append((ok, "AI (Claude)", head, detail))
+
+    # ── 5) หน้า TikTok /posttoday (ที่ยื่นให้ TikTok ตรวจ) ─────────────
+    try:
+        page_ok = os.path.exists(os.path.join(os.path.dirname(__file__), "posttoday.html"))
+        key_ok = bool(TIKTOK_CLIENT_KEY)
+        ok = page_ok and key_ok
+        if not page_ok:
+            head = "หน้า /posttoday หายไปจากเซิร์ฟเวอร์ (ไม่พบไฟล์ posttoday.html)"
+        elif not key_ok:
+            head = "หน้าขึ้นแล้ว แต่ยังไม่ได้ตั้ง TIKTOK_CLIENT_KEY (เชื่อมบัญชี TikTok ไม่ได้)"
+        else:
+            head = "หน้าขึ้นแล้ว และตั้งค่า TikTok ครบ"
+        detail = [
+            f"4 URL ที่ต้องกรอกในแอป TikTok: {BASE_URL}/posttoday · /posttoday/privacy "
+            f"· /posttoday/terms · /posttoday/callback",
+        ]
+    except Exception as e:
+        ok, head, detail = False, f"เช็คไม่ได้: {str(e)[:120]}", []
+    cards.append((ok, "หน้า TikTok /posttoday", head, detail))
+
+    # ── 6) ฐานข้อมูล Supabase ─────────────────────────────────────────
+    try:
+        ok = seo_tracker.is_configured()
+        head = "เชื่อมต่อแล้ว" if ok else "ยังไม่ได้ตั้งค่า Supabase (SEO/Hunter จะว่างทั้งคู่)"
+        detail = []
+    except Exception as e:
+        ok, head, detail = False, f"เช็คไม่ได้: {str(e)[:120]}", []
+    cards.append((ok, "ฐานข้อมูล Supabase", head, detail))
+
+    # ── สรุปบรรทัดเดียว (ให้อ่านจบตั้งแต่บรรทัดแรก) ───────────────────
+    bad = [c[1] for c in cards if not c[0]]
+    verdict_short = f"{len(cards) - len(bad)} ปกติ / {len(bad)} มีปัญหา"
+    verdict = verdict_short + (" — ทุกระบบปกติ" if not bad
+                               else " — ต้องดู: " + ", ".join(bad))
+
+    body = []
+    for c_ok, c_name, c_head, c_detail in cards:
+        rows = "".join(f"<li>{_esc(str(x))}</li>" for x in c_detail)
+        body.append(
+            f'<section class="card {"ok" if c_ok else "bad"}">'
+            f'<h2>{"✅" if c_ok else "❌"} {_esc(c_name)} — '
+            f'{"ปกติ" if c_ok else "มีปัญหา"}</h2>'
+            f'<p class="head">{_esc(str(c_head))}</p>'
+            + (f"<ul>{rows}</ul>" if rows else "")
+            + "</section>")
+
+    page = f"""<!DOCTYPE html>
+<html lang="th"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="{_esc(verdict)}">
+<title>สรุปสถานะเช้า NEXUS — {_esc(verdict_short)}</title>
+<style>
+ body{{margin:0;padding:20px;background:#0f1420;color:#e8edf7;
+      font-family:'Segoe UI',Tahoma,sans-serif;line-height:1.65;max-width:820px}}
+ h1{{font-size:1.5rem;margin:0 0 4px}}
+ .stamp{{color:#8fa3c8;margin:0 0 14px}}
+ .verdict{{background:#1b2336;border-left:4px solid #4a9eff;padding:10px 14px;
+          border-radius:6px;font-weight:600;margin:0 0 20px}}
+ .card{{background:#161d2e;border-radius:10px;padding:14px 18px;margin:0 0 14px;
+       border-left:4px solid #2a3550}}
+ .card.ok{{border-left-color:#35c46a}} .card.bad{{border-left-color:#ff5c5c}}
+ .card h2{{font-size:1.05rem;margin:0 0 6px}}
+ .head{{margin:0 0 8px}}
+ ul{{margin:0;padding-left:20px;color:#b9c7e0;font-size:.94rem}}
+ hr{{border:0;border-top:1px solid #2a3550;margin:22px 0 12px}}
+ .foot{{color:#7e90b3;font-size:.88rem}} a{{color:#6cb3ff}}
+</style></head>
+<body>
+<h1>☀️ สรุปสถานะเช้า — NEXUS</h1>
+<p class="stamp">ข้อมูลสด ณ {_esc(stamp)}</p>
+<p class="verdict">สรุป: {_esc(verdict)}</p>
+{"".join(body)}
+<hr>
+<p class="foot">หน้านี้เรนเดอร์ค่าทั้งหมดจากฝั่งเซิร์ฟเวอร์ (ไม่มี JS ดึงข้อมูล)
+ทำไว้ให้งานตั้งเวลาตอนเช้าอ่านค่าได้จริง — ถ้าเห็นหน้านี้แปลว่าเซิร์ฟเวอร์ตื่นแล้ว ·
+ดูรายละเอียดเต็มที่ <a href="/monitor">/monitor</a></p>
+</body></html>"""
+
+    return page, 200, {"Content-Type": "text/html; charset=utf-8",
+                       "X-Robots-Tag": "noindex, nofollow",
+                       "Cache-Control": "no-store"}
+
+
 def _build_daily_summary_text() -> str:
     """รวมสถานะธุรกิจสั้นๆ — เงิน/ดีล, roadmap, hunter, SEO, AI health"""
     lines = ["📊 สรุปสถานะธุรกิจวันนี้", "━━━━━━━━━━━━"]
@@ -2889,6 +3140,7 @@ def robots():
         "User-agent: *\n"
         "Allow: /\n"
         "Disallow: /monitor\n"          # จอภายใน ไม่ให้ index
+        "Disallow: /morning-brief\n"    # สรุปสถานะเช้า จอภายใน
         "Disallow: /hunter\n"           # เครื่องมือภายใน
         "Disallow: /chat-demo\n"        # เดโมส่งลูกค้าเฉพาะราย ไม่ใช่หน้าขาย
         "Disallow: /chatapp/\n"         # ตัวแอปจริงของลูกค้ารายนี้
@@ -2920,12 +3172,13 @@ def tiktok_verify():
             {"Content-Type": "text/plain; charset=utf-8"})
 
 
-@app.route("/api/meta-health")
-def meta_health():
-    """เช็คสุขภาพ token บอท Meta (Lullabell) — ใช้บนการ์ด Monitor
-    ถ้าตั้ง META_APP_SECRET จะบอกวันหมดอายุ token ด้วย"""
+def _meta_health_data() -> dict:
+    """เช็คสุขภาพ token บอท Meta (Lullabell) — คืน dict ธรรมดา
+    ถ้าตั้ง META_APP_SECRET จะบอกวันหมดอายุ token ด้วย
+
+    25 ส.ค. 2026 แยกออกมาจาก view เพื่อให้ /morning-brief เรียกใช้ได้ด้วย (ไม่ก๊อปโค้ดซ้ำ)"""
     if not META_PAGE_TOKEN:
-        return jsonify({"ok": False, "error": "no META_PAGE_TOKEN"})
+        return {"ok": False, "error": "no META_PAGE_TOKEN"}
     out = {"ok": False}
     try:
         r = requests.get(f"{meta_bot.GRAPH}/me",
@@ -2951,7 +3204,13 @@ def meta_health():
             out["has_publish_scope"] = "pages_manage_posts" in out["scopes"]
     except Exception as e:
         out["error"] = str(e)[:200]
-    return jsonify(out)
+    return out
+
+
+@app.route("/api/meta-health")
+def meta_health():
+    """เช็คสุขภาพ token บอท Meta (Lullabell) — ใช้บนการ์ด Monitor"""
+    return jsonify(_meta_health_data())
 
 
 @app.route("/api/n8n/facebook-post", methods=["POST"])
