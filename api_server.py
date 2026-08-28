@@ -531,6 +531,20 @@ def routewise_map_demo():
         os.path.join(os.path.dirname(__file__), "static", "works"), "routewise-map-demo.html")
 
 
+@app.route("/moto")
+def moto_demo():
+    """MotoCare — เดโมแอปธุรกิจมอเตอร์ไซค์ (เช่ารถ / จองคิวศูนย์บริการ / ติดตามสถานะซ่อม)
+    ทำไว้ตอบลูกค้าที่ประกาศหาคนทำ App / Mini Program ให้ธุรกิจมอเตอร์ไซค์ (28 ส.ค. 2026)
+    รองรับ 3 ภาษา ไทย/จีน/อังกฤษ เพราะโจทย์ลูกค้าระบุ 小程序 = กลุ่มผู้ใช้จีนด้วย
+    ทำงานฝั่งเบราว์เซอร์ล้วน ไม่มี backend/ฐานข้อมูล — ข้อมูลในเดโมเป็นตัวอย่างทั้งหมด"""
+    from flask import send_from_directory
+    _track_visit()
+    resp = send_from_directory(
+        os.path.join(os.path.dirname(__file__), "static", "works"), "motoshop.html")
+    resp.headers["Cache-Control"] = "no-cache, must-revalidate"
+    return resp
+
+
 @app.route("/shop")
 def shop_demo_shortlink():
     """ทางลัดสำหรับใช้ในรูปโปรโมท/โพสต์: thailinebot.com/shop
