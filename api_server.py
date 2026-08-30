@@ -3205,9 +3205,18 @@ def api_line_diag():
         except Exception as e:
             return 0, str(e)[:200]
 
+    def _mask(v: str) -> str:
+        """โชว์พอให้เทียบกับที่ก๊อปมาได้ แต่ไม่เปิดค่าเต็ม"""
+        return f"{v[:6]}…{v[-4:]} ({len(v)} ตัว)" if v and len(v) > 12 else f"({len(v or '')} ตัว)"
+
     results = []
     for name, token, uid in chans:
-        ch = {"channel": name, "user_id_configured": bool(uid)}
+        ch = {"channel": name, "user_id_configured": bool(uid),
+              # เซิร์ฟเวอร์เห็นค่าอะไรอยู่จริง — ไว้เทียบกับที่กรอกใน Render
+              # (เพิ่ม 30 ส.ค. 2026 หลังเสียเวลาไปหลายรอบกับ "แก้แล้วแต่ค่าไม่เปลี่ยน")
+              "user_id_masked": _mask(uid),
+              # กับดักที่เจอจริง: ก๊อป userId ของช่องหลักมาใส่ช่องสำรอง = ใช้ไม่ได้
+              "same_id_as_primary": bool(uid and uid == LINE_USER_ID and name != "หลัก")}
 
         code, info = _get(token, "/v2/bot/info")
         ch["token_http"] = code
