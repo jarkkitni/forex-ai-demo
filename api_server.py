@@ -3232,7 +3232,21 @@ def api_line_diag():
         if isinstance(limit, int) and isinstance(used, int):
             ch["quota_left"] = limit - used
             ch["quota_exhausted"] = used >= limit
-        ch["usable"] = bool(ch.get("token_ok")) and not ch.get("quota_exhausted")
+
+        # userId คู่กับ token ถูกช่องไหม — ถามโปรไฟล์ดู (GET ไม่กินโควตา ไม่ส่งข้อความ)
+        # ปิดกับดักหลัก: userId ผูกกับ "คน × ช่อง" หยิบ id จาก OA อื่นมาใส่คู่ token นี้
+        # = LINE คืน 400 ตอน push ซึ่งหน้าตาเหมือน "token เสีย" ทั้งที่ token ดีทุกอย่าง
+        # 404 = ไม่รู้จัก userId นี้ หรือยังไม่ได้เป็นเพื่อนกับ OA ตัวนี้
+        code, prof = _get(token, f"/v2/bot/profile/{uid}")
+        ch["user_http"] = code
+        ch["user_ok"] = (code == 200)
+        if code == 200 and isinstance(prof, dict):
+            ch["user_name"] = prof.get("displayName")
+        else:
+            ch["user_error"] = prof
+
+        ch["usable"] = (bool(ch.get("token_ok")) and bool(ch.get("user_ok"))
+                        and not ch.get("quota_exhausted"))
         results.append(ch)
 
     usable = [c for c in results if c["usable"]]
@@ -3247,8 +3261,10 @@ def api_line_diag():
     if not out["ok"]:
         out["hint"] = ("ส่งไม่ออกทุกช่อง — token_ok=false → สร้าง Channel access token ใหม่ที่ "
                        "LINE Developers แล้วอัปเดต env บน Render | "
+                       "user_ok=false → userId ไม่ใช่ของช่องนี้ (เอามาจาก OA อื่น) หรือยังไม่ได้ "
+                       "เพิ่ม OA ตัวนี้เป็นเพื่อนในแอป LINE | "
                        "quota_exhausted=true ทุกช่อง → โควตาเดือนนี้หมดหมด "
-                       "ต้องรอต้นเดือนใหม่ อัปแพ็กเกจ หรือเพิ่ม LINE_TOKEN_2/LINE_USER_ID_2 อีกช่อง")
+                       "ต้องรอต้นเดือนใหม่ อัปแพ็กเกจ หรือเพิ่มอีกช่อง")
     return jsonify(out)
 
 
