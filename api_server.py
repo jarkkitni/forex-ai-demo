@@ -173,19 +173,35 @@ def _track_visit():
 # ---------- LINE Helpers ----------
 
 def _push_line(user_id: str, text: str) -> bool:
-    """Push message ไปยัง user_id"""
+    """Push message ไปยัง user_id
+
+    🔴 บทเรียน 30 ส.ค. 2026 — เดิมบรรทัดสุดท้ายคือ `return r.status_code == 200` เฉยๆ
+    LINE ปฏิเสธก็ **เงียบสนิท** ไม่มี log ไม่มี error เคสจริง: Job Hunter แจ้งไม่ออก 6 งานติด
+    (alerted:false ทุกตัว) แต่หาสาเหตุไม่ได้เลยเพราะไม่มีอะไรถูกบันทึกไว้
+    ตอนนี้ log status + body ทุกครั้งที่ไม่ผ่าน → แยกออกทันทีว่า
+    โควตาเดือนหมด (429) / token เสียหรือถูก revoke (401) / ข้อความผิดรูป (400)
+    """
     if not LINE_TOKEN or not user_id:
+        print("[LINE] push ข้าม — ไม่มี LINE_TOKEN หรือ user_id", flush=True)
         return False
-    r = requests.post(
-        "https://api.line.me/v2/bot/message/push",
-        headers={
-            "Authorization": f"Bearer {LINE_TOKEN}",
-            "Content-Type":  "application/json",
-        },
-        json={"to": user_id, "messages": [{"type": "text", "text": text}]},
-        timeout=10,
-    )
-    return r.status_code == 200
+    try:
+        r = requests.post(
+            "https://api.line.me/v2/bot/message/push",
+            headers={
+                "Authorization": f"Bearer {LINE_TOKEN}",
+                "Content-Type":  "application/json",
+            },
+            json={"to": user_id, "messages": [{"type": "text", "text": text}]},
+            timeout=10,
+        )
+    except Exception as e:
+        # เดิมไม่ดักไว้ → exception ทะลุขึ้นไปทำให้ทั้งรอบของ Hunter ล้ม (คืน 500)
+        print(f"[LINE] push ล้ม (network): {e}", flush=True)
+        return False
+    if r.status_code != 200:
+        print(f"[LINE] push ถูกปฏิเสธ HTTP {r.status_code}: {r.text[:300]}", flush=True)
+        return False
+    return True
 
 
 def _reply_line(reply_token: str, text: str):
@@ -3119,6 +3135,69 @@ def api_gemini_diag():
         return jsonify(ai_guard.gemini_diag())
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)[:300]}), 500
+
+
+@app.route("/api/line-diag")
+def api_line_diag():
+    """LINE ยังส่งข้อความออกได้ไหม — ถาม LINE ตรงๆ โดย **ไม่ส่งข้อความสักข้อความ**
+
+    ทำไมต้องมี (30 ส.ค. 2026): /api/health บอกได้แค่ "LINE_TOKEN ถูกตั้งไว้" ซึ่ง
+    *ตั้งไว้ ≠ ใช้ได้* วันที่ Hunter แจ้งไม่ออก 6 งานติด health ยังเขียวสนิททุกช่อง
+    แพทเทิร์นเดียวกับ gemini-diag ที่ ListModels เขียวแต่ generate ตาย
+
+    อ่าน 3 อย่างจาก LINE Messaging API (ทั้งหมดเป็น GET ไม่คิดโควตา):
+      /v2/bot/info                    → token ใช้ได้จริงไหม (401 = เสีย/ถูก revoke)
+      /v2/bot/message/quota           → โควตาส่งต่อเดือนเท่าไหร่
+      /v2/bot/message/quota/consumption → ใช้ไปแล้วเท่าไหร่ (เต็ม = push คืน 429)
+    ไม่คืนค่า token ออกไป"""
+    if not LINE_TOKEN:
+        return jsonify({"ok": False, "error": "ไม่มี LINE_TOKEN บนเซิร์ฟเวอร์"}), 500
+
+    hdr = {"Authorization": f"Bearer {LINE_TOKEN}"}
+    out = {"ok": False, "user_id_configured": bool(LINE_USER_ID)}
+
+    def _get(path):
+        try:
+            r = requests.get(f"https://api.line.me{path}", headers=hdr, timeout=10)
+            try:
+                return r.status_code, r.json()
+            except Exception:
+                return r.status_code, r.text[:200]
+        except Exception as e:
+            return 0, str(e)[:200]
+
+    code, info = _get("/v2/bot/info")
+    out["token_http"] = code
+    out["token_ok"] = (code == 200)
+    if code == 200 and isinstance(info, dict):
+        out["bot_name"] = info.get("displayName")
+        out["bot_user_id"] = info.get("userId")
+    else:
+        out["token_error"] = info
+
+    code, q = _get("/v2/bot/message/quota")
+    out["quota_http"] = code
+    if isinstance(q, dict):
+        out["quota_type"] = q.get("type")      # "limited" = มีเพดาน | "none" = ไม่จำกัด
+        out["quota_limit"] = q.get("value")
+
+    code, c = _get("/v2/bot/message/quota/consumption")
+    out["consumption_http"] = code
+    if isinstance(c, dict):
+        out["quota_used"] = c.get("totalUsage")
+
+    limit, used = out.get("quota_limit"), out.get("quota_used")
+    if isinstance(limit, int) and isinstance(used, int):
+        out["quota_left"] = limit - used
+        out["quota_exhausted"] = used >= limit
+
+    out["ok"] = bool(out.get("token_ok")) and not out.get("quota_exhausted")
+    if not out["ok"]:
+        out["hint"] = ("token_ok=false → สร้าง Channel access token ใหม่ที่ LINE Developers "
+                       "แล้วอัปเดต env LINE_TOKEN บน Render | "
+                       "quota_exhausted=true → โควตาส่งเดือนนี้หมด ต้องรอรอบเดือนใหม่ "
+                       "หรืออัปแพ็กเกจที่ LINE OA Manager")
+    return jsonify(out)
 
 
 @app.route("/api/ai-health")

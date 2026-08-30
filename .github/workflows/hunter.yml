@@ -1,0 +1,84 @@
+# ตัวยิง Job Hunter — แทน cron-job.org (30 ส.ค. 2026)
+#
+# ทำไมย้ายมา: cron-job.org ล้มๆ ลุกๆ มาทั้งเดือน ก.ค.-ส.ค. แล้ว "หายไปเฉยๆ" ตั้งแต่ 25 ส.ค.
+# โดยไม่ส่งอีเมลบอกสักฉบับ — Hunter หยุดหางาน 4.6 วันโดยไม่มีใครรู้
+#   สาเหตุที่มันล้มประจำ: Render free tier หลับหลังไม่มีคนเข้า 15 นาที → boot ใหม่ 30-60 วิ
+#   แต่ cron-job.org แพลนฟรีตั้ง timeout ได้สูงสุดแค่ 30 วิ = ชนเพดานแทบทุกรอบ
+# ที่นี่ตั้ง timeout ยาวเท่าไหร่ก็ได้ + ไฟล์อยู่ใน git (หายเงียบไม่ได้) + repo public = ฟรีไม่จำกัดนาที
+
+name: Job Hunter
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"   # ทุก 30 นาที (เวลา UTC · GitHub อาจดีเลย์ได้ไม่กี่นาที ไม่เป็นไร)
+  workflow_dispatch:          # ปุ่ม "Run workflow" กดยิงเองได้ทันที
+
+permissions:
+  contents: read
+
+concurrency:
+  group: job-hunter
+  cancel-in-progress: false   # ห้ามตัดรอบที่กำลังวิ่ง ไม่งั้นสแกนค้างกลางทาง
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      BASE: https://forex-ai-demo.onrender.com
+
+    steps:
+      - name: ปลุกเครื่องก่อน (Render free tier boot 30-60 วิ)
+        run: |
+          curl -sS -o /dev/null \
+               -w 'health: HTTP %{http_code} in %{time_total}s\n' \
+               --max-time 120 --retry 3 --retry-delay 15 --retry-connrefused \
+               "$BASE/api/health"
+
+      - name: ยิงรอบสแกน
+        run: |
+          code=$(curl -sS -o hunter.json -w '%{http_code}' \
+                      --max-time 240 --retry 2 --retry-delay 20 \
+                      "$BASE/api/hunter/check")
+          echo "hunter/check: HTTP $code"
+          cat hunter.json; echo
+          if [ "$code" != "200" ]; then
+            # 503 = HUNTERS_ENABLED ถูกปิด (ตั้งใจให้ดังกว่าพัง — บทเรียน 22 ก.ค. 2026)
+            echo "::error::hunter/check คืน HTTP $code — 503 แปลว่า HUNTERS_ENABLED ปิดอยู่บน Render"
+            exit 1
+          fi
+
+      - name: ตรวจผลจริง (ห้ามเชื่อแค่ HTTP 200)
+        run: |
+          curl -sS --max-time 60 -o status.json "$BASE/api/hunter/status"
+          cat status.json; echo
+
+          enabled=$(jq -r '.enabled'            status.json)
+          stale=$(  jq -r '.stale_minutes // -1' status.json)
+          checked=$(jq -r '.checked      // 0'   hunter.json)
+          matched=$(jq -r '.new_matching // 0'   hunter.json)
+          sent=$(   jq -r '.alerts_sent  // 0'   hunter.json)
+          failed=$( jq -r '.alert_failed // 0'   hunter.json)
+          deferred=$(jq -r '.deferred    // 0'   hunter.json)
+
+          {
+            echo "### Job Hunter"
+            echo ""
+            echo "| ตรวจ | ตรงสกิล | แจ้งสำเร็จ | แจ้งไม่ออก | ยกยอด | ค้างมา (นาที) |"
+            echo "|---|---|---|---|---|---|"
+            echo "| $checked | $matched | $sent | $failed | $deferred | $stale |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          bad=0
+          if [ "$enabled" != "true" ]; then
+            echo "::error::HUNTERS_ENABLED ปิดอยู่ — Hunter ไม่ได้ดักงานให้เลย"; bad=1
+          fi
+          if [ "$stale" -lt 0 ] || [ "$stale" -gt 90 ]; then
+            echo "::error::สแกนไม่สำเร็จ — last_check ค้างมา $stale นาที (ปกติต้องใกล้ 0)"; bad=1
+          fi
+          if [ "$failed" -gt 0 ]; then
+            # ไม่ใช่ error เพราะงานไม่หายแล้ว (mark seen เฉพาะที่แจ้งสำเร็จ ตั้งแต่ 30 ส.ค. 2026)
+            # แค่ค้างคิวรอ LINE กลับมา — ถ้าทำเป็น error จะได้อีเมลแดงวันละ 48 ฉบับจนชินแล้วเลิกอ่าน
+            echo "::warning::แจ้ง LINE ไม่ออก $failed งาน (งานยังไม่หาย ค้างคิวรออยู่) — เช็ค $BASE/api/line-diag"
+          fi
+          exit $bad

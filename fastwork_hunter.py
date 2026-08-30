@@ -435,15 +435,25 @@ def run_hunter(anthropic_client, push_line_fn, line_user_id: str,
 
     triaged_out = 0
     offline_alerts = 0
-    considered_ids = []      # งานที่ "ดูจริง" แล้ว — เฉพาะพวกนี้ถึงจะ mark seen ได้
+    alert_failed = 0
+    considered_ids = []      # งานที่ "ดูจริง" รอบนี้ — ใช้คำนวณ deferred เท่านั้น
+    # 🔴 แก้บั๊ก 30 ส.ค. 2026 — "งานถูกเผาทิ้งเมื่อแจ้ง LINE ไม่ออก"
+    # เดิม mark seen ทุกงานที่ "ดูจริง" โดยไม่สนว่า push LINE สำเร็จไหม
+    # เคสจริงวันนี้: LINE คืนไม่ใช่ 200 ทั้ง 6 งาน (alerted:false ทุกตัว) แต่ทุกงานถูกบันทึกว่าเห็นแล้ว
+    # → งานเกรด A ฿10,000 หายถาวร รอบหน้าก็ข้ามเพราะ dedup แม้ LINE จะกลับมาแล้ว
+    # ใหม่: mark seen เฉพาะงานที่ "จบเรื่อง" จริง = คัดออก / คะแนนไม่ถึง / แจ้งสำเร็จ
+    #       ถ้าแจ้งไม่ออก → ไม่ mark เก็บไว้ให้รอบหน้าลองใหม่
+    settled_ids = []
     for job, grade, matched in new_matched[:max_alerts * 2]:
         if alerts_sent >= max_alerts:
             break
-        considered_ids.append(job.get("id"))
+        jid = job.get("id")
+        considered_ids.append(jid)
 
         # ด่าน 1: คัดขยะทิ้งก่อน (ถูก) — ผ่านแล้วค่อยจ่ายค่าวิเคราะห์เต็ม
         if not _triage(anthropic_client, job, matched, push_line_fn, line_user_id):
             triaged_out += 1
+            settled_ids.append(jid)   # ตัดสินแล้วว่าไม่เอา = จบเรื่อง
             print(f"[Hunter] คัดออก: {(job.get('title') or '')[:50]}", flush=True)
             continue
 
@@ -472,6 +482,9 @@ def run_hunter(anthropic_client, push_line_fn, line_user_id: str,
             if ok:
                 alerts_sent += 1
                 offline_alerts += 1
+                settled_ids.append(jid)
+            else:
+                alert_failed += 1     # แจ้งไม่ออก → ห้าม mark seen เก็บไว้รอบหน้า
             results.append(entry)
             _hunter_log = (_hunter_log + [entry])[-20:]
             continue
@@ -483,22 +496,28 @@ def run_hunter(anthropic_client, push_line_fn, line_user_id: str,
         # เกรด A/B คะแนน 55-69 → ข้อความสั้น
         if score >= 70 and grade == "A":
             ok = push_line_fn(line_user_id, _build_line_message(job, analysis, matched))
-            entry["alerted"] = ok
-            alerts_sent += 1 if ok else 0
         elif score >= min_score:
             ok = push_line_fn(line_user_id, _build_line_message_short(job, analysis, matched))
-            entry["alerted"] = ok
-            alerts_sent += 1 if ok else 0
         else:
-            entry["alerted"] = False
+            ok = None   # คะแนนไม่ถึงเกณฑ์ = ตัดสินแล้วว่าไม่แจ้ง ≠ "แจ้งไม่ออก"
+
+        entry["alerted"] = bool(ok)
+        if ok:
+            alerts_sent += 1
+            settled_ids.append(jid)
+        elif ok is None:
+            settled_ids.append(jid)   # จบเรื่อง ไม่ต้องกลับมาดูอีก
+        else:
+            alert_failed += 1         # แจ้งไม่ออก → ห้าม mark seen
 
         results.append(entry)
         _hunter_log = (_hunter_log + [entry])[-20:]
 
-    # mark seen เฉพาะงานที่พิจารณาจริงในรอบนี้ — ที่เหลือปล่อยไว้ให้รอบหน้าเก็บต่อ
-    for jid in considered_ids:
+    # mark seen เฉพาะงานที่ "จบเรื่อง" แล้วเท่านั้น (ดูเหตุผลตอนประกาศ settled_ids)
+    # ที่ดูแล้วแต่แจ้งไม่ออก + ที่ยังไม่ได้ดู → ปล่อยไว้ให้รอบหน้าเก็บต่อ
+    for jid in settled_ids:
         _seen_job_ids.add(str(jid))
-    _save_seen(considered_ids)
+    _save_seen(settled_ids)
 
     deferred = len(new_matched) - len(considered_ids)
     if deferred:
@@ -512,6 +531,8 @@ def run_hunter(anthropic_client, push_line_fn, line_user_id: str,
         "triaged_out": triaged_out,      # คัดออกกี่งาน = ประหยัดค่าวิเคราะห์ไปเท่านั้น
         "analyzed": len(results),
         "alerts_sent": alerts_sent,
+        "alert_failed": alert_failed,      # แจ้ง LINE ไม่ออกกี่งาน — ต้องเป็น 0 ในภาวะปกติ
+                                           # ถ้าไม่ 0 = งานพวกนี้ยังไม่ถูก mark seen รอบหน้าจะลองใหม่
         "offline_alerts": offline_alerts,  # กี่งานที่แจ้งได้ทั้งที่ AI ล่ม (นกน้อยทำลัง)
         "deferred": deferred,              # ยกยอดไปรอบหน้ากี่งาน (ต้องเป็น 0 ในภาวะปกติ)
         "results": results,
