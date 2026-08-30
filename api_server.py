@@ -28,6 +28,22 @@ ANTHROPIC_API_KEY   = os.environ.get("ANTHROPIC_API_KEY", "")
 LINE_TOKEN          = os.environ.get("LINE_TOKEN", "")
 LINE_USER_ID        = os.environ.get("LINE_USER_ID", "")
 LINE_CHANNEL_SECRET = os.environ.get("LINE_CHANNEL_SECRET", "")
+
+# ---- ช่องแจ้งเตือนสำรองของเราเอง (เพิ่ม 30 ส.ค. 2026) ----
+# LINE OA ฟรีส่ง push ได้ 300 ข้อความ/เดือนต่อ 1 OA · วันที่โควตาของ SiriAriyaMate เต็ม
+# Job Hunter แจ้งงานไม่ออกเลยสักงาน และ "ตั้ง token ไว้" ก็ยังเขียวอยู่ดี หาสาเหตุไม่เจอ
+# แต่ละ OA มีโควตาแยกกันคนละถัง → มีสำรอง = เพดานรวมเพิ่มเป็นเท่าตัว
+# ⚠️ userId ผูกกับ "คน × ช่อง" ไม่ใช่คนอย่างเดียว — เปลี่ยน token ต้องเปลี่ยน userId คู่กันเสมอ
+#    (เอา userId ของช่องไหน ไปดูที่ LINE Developers > channel นั้น > Basic settings > Your user ID)
+LINE_TOKEN_2        = os.environ.get("LINE_TOKEN_2", "")
+LINE_USER_ID_2      = os.environ.get("LINE_USER_ID_2", "")
+
+# เรียงตามลำดับที่จะลอง — ช่องแรกคือช่องหลัก เติมช่องที่ 3 ได้โดยต่อท้ายลิสต์
+def _alert_channels() -> list:
+    """คืน [(ชื่อ, token, user_id)] เฉพาะช่องที่ตั้งค่าครบ"""
+    raw = [("หลัก", LINE_TOKEN, LINE_USER_ID),
+           ("สำรอง", LINE_TOKEN_2, LINE_USER_ID_2)]
+    return [c for c in raw if c[1] and c[2]]
 # ---- ที่อยู่สาธารณะของเซิร์ฟเวอร์นี้ ----
 # เดิมเขียน URL ตายตัวไว้ 8 จุดกระจายทั้งไฟล์ พอจะเปลี่ยนโดเมนทีต้องไล่แก้ทีละที่
 # และมีจุดที่ลืมง่ายมาก (เช็ก Referer ของ seo_tracker) รวบมาไว้ตัวเดียวตรงนี้
@@ -181,14 +197,38 @@ def _push_line(user_id: str, text: str) -> bool:
     ตอนนี้ log status + body ทุกครั้งที่ไม่ผ่าน → แยกออกทันทีว่า
     โควตาเดือนหมด (429) / token เสียหรือถูก revoke (401) / ข้อความผิดรูป (400)
     """
-    if not LINE_TOKEN or not user_id:
-        print("[LINE] push ข้าม — ไม่มี LINE_TOKEN หรือ user_id", flush=True)
+    if _push_via(LINE_TOKEN, user_id, text, "หลัก"):
+        return True
+
+    # ช่องหลักส่งไม่ออก (ส่วนใหญ่คือโควตาเดือนเต็ม = 429) → สลับไปช่องสำรอง
+    # ทำเฉพาะข้อความที่ส่งหา "ตัวเราเอง" เท่านั้น — ข้อความของบอทลูกค้าห้ามข้ามช่องเด็ดขาด
+    # เพราะ userId ของลูกค้าใช้กับ OA อื่นไม่ได้ (ผูกกับช่อง) และผิดตัวผิดร้านด้วย
+    if not user_id or user_id != LINE_USER_ID:
+        return False
+    for name, tok, uid in _alert_channels()[1:]:
+        if _push_via(tok, uid, text, name):
+            print(f"[LINE] ส่งผ่านช่อง{name}แทน (ช่องหลักส่งไม่ออก)", flush=True)
+            return True
+    print("[LINE] ส่งไม่ออกทุกช่องที่ตั้งค่าไว้", flush=True)
+    return False
+
+
+def _push_via(token: str, user_id: str, text: str, name: str = "") -> bool:
+    """ยิง push ผ่าน token ที่ระบุ — ตัวจริงที่คุยกับ LINE
+
+    🔴 บทเรียน 30 ส.ค. 2026 — เดิมบรรทัดสุดท้ายคือ `return r.status_code == 200` เฉยๆ
+    LINE ปฏิเสธก็ **เงียบสนิท** ไม่มี log ไม่มี error เคสจริง: Job Hunter แจ้งไม่ออก 6 งานติด
+    (alerted:false ทุกตัว) แต่หาสาเหตุไม่ได้เลยเพราะไม่มีอะไรถูกบันทึกไว้
+    ตอนนี้ log status + body ทุกครั้งที่ไม่ผ่าน → แยกออกทันทีว่า
+    โควตาเดือนหมด (429) / token เสียหรือถูก revoke (401) / ข้อความผิดรูป (400)
+    """
+    if not token or not user_id:
         return False
     try:
         r = requests.post(
             "https://api.line.me/v2/bot/message/push",
             headers={
-                "Authorization": f"Bearer {LINE_TOKEN}",
+                "Authorization": f"Bearer {token}",
                 "Content-Type":  "application/json",
             },
             json={"to": user_id, "messages": [{"type": "text", "text": text}]},
@@ -196,10 +236,10 @@ def _push_line(user_id: str, text: str) -> bool:
         )
     except Exception as e:
         # เดิมไม่ดักไว้ → exception ทะลุขึ้นไปทำให้ทั้งรอบของ Hunter ล้ม (คืน 500)
-        print(f"[LINE] push ล้ม (network): {e}", flush=True)
+        print(f"[LINE:{name}] push ล้ม (network): {e}", flush=True)
         return False
     if r.status_code != 200:
-        print(f"[LINE] push ถูกปฏิเสธ HTTP {r.status_code}: {r.text[:300]}", flush=True)
+        print(f"[LINE:{name}] push ถูกปฏิเสธ HTTP {r.status_code}: {r.text[:300]}", flush=True)
         return False
     return True
 
@@ -3150,15 +3190,14 @@ def api_line_diag():
       /v2/bot/message/quota           → โควตาส่งต่อเดือนเท่าไหร่
       /v2/bot/message/quota/consumption → ใช้ไปแล้วเท่าไหร่ (เต็ม = push คืน 429)
     ไม่คืนค่า token ออกไป"""
-    if not LINE_TOKEN:
-        return jsonify({"ok": False, "error": "ไม่มี LINE_TOKEN บนเซิร์ฟเวอร์"}), 500
+    chans = _alert_channels()
+    if not chans:
+        return jsonify({"ok": False, "error": "ยังไม่มีช่องไหนตั้งค่าครบ (ต้องมีทั้ง token และ user id)"}), 500
 
-    hdr = {"Authorization": f"Bearer {LINE_TOKEN}"}
-    out = {"ok": False, "user_id_configured": bool(LINE_USER_ID)}
-
-    def _get(path):
+    def _get(token, path):
         try:
-            r = requests.get(f"https://api.line.me{path}", headers=hdr, timeout=10)
+            r = requests.get(f"https://api.line.me{path}",
+                             headers={"Authorization": f"Bearer {token}"}, timeout=10)
             try:
                 return r.status_code, r.json()
             except Exception:
@@ -3166,37 +3205,50 @@ def api_line_diag():
         except Exception as e:
             return 0, str(e)[:200]
 
-    code, info = _get("/v2/bot/info")
-    out["token_http"] = code
-    out["token_ok"] = (code == 200)
-    if code == 200 and isinstance(info, dict):
-        out["bot_name"] = info.get("displayName")
-        out["bot_user_id"] = info.get("userId")
-    else:
-        out["token_error"] = info
+    results = []
+    for name, token, uid in chans:
+        ch = {"channel": name, "user_id_configured": bool(uid)}
 
-    code, q = _get("/v2/bot/message/quota")
-    out["quota_http"] = code
-    if isinstance(q, dict):
-        out["quota_type"] = q.get("type")      # "limited" = มีเพดาน | "none" = ไม่จำกัด
-        out["quota_limit"] = q.get("value")
+        code, info = _get(token, "/v2/bot/info")
+        ch["token_http"] = code
+        ch["token_ok"] = (code == 200)
+        if code == 200 and isinstance(info, dict):
+            ch["bot_name"] = info.get("displayName")
+            ch["basic_id"] = info.get("basicId")     # เช่น @377fjobt — ไว้ยืนยันว่าใส่ token ถูกตัว
+        else:
+            ch["token_error"] = info
 
-    code, c = _get("/v2/bot/message/quota/consumption")
-    out["consumption_http"] = code
-    if isinstance(c, dict):
-        out["quota_used"] = c.get("totalUsage")
+        code, q = _get(token, "/v2/bot/message/quota")
+        ch["quota_http"] = code
+        if isinstance(q, dict):
+            ch["quota_type"] = q.get("type")     # "limited" = มีเพดาน | "none" = ไม่จำกัด
+            ch["quota_limit"] = q.get("value")
 
-    limit, used = out.get("quota_limit"), out.get("quota_used")
-    if isinstance(limit, int) and isinstance(used, int):
-        out["quota_left"] = limit - used
-        out["quota_exhausted"] = used >= limit
+        code, c = _get(token, "/v2/bot/message/quota/consumption")
+        if isinstance(c, dict):
+            ch["quota_used"] = c.get("totalUsage")
 
-    out["ok"] = bool(out.get("token_ok")) and not out.get("quota_exhausted")
+        limit, used = ch.get("quota_limit"), ch.get("quota_used")
+        if isinstance(limit, int) and isinstance(used, int):
+            ch["quota_left"] = limit - used
+            ch["quota_exhausted"] = used >= limit
+        ch["usable"] = bool(ch.get("token_ok")) and not ch.get("quota_exhausted")
+        results.append(ch)
+
+    usable = [c for c in results if c["usable"]]
+    out = {
+        "ok": bool(usable),                       # ยังส่งออกได้ไหม (ขอแค่ช่องใดช่องหนึ่งพอ)
+        "channels": results,
+        "channels_configured": len(results),
+        "channels_usable": len(usable),
+        "next_channel": usable[0]["channel"] if usable else None,
+        "quota_left_total": sum(c.get("quota_left") or 0 for c in usable),
+    }
     if not out["ok"]:
-        out["hint"] = ("token_ok=false → สร้าง Channel access token ใหม่ที่ LINE Developers "
-                       "แล้วอัปเดต env LINE_TOKEN บน Render | "
-                       "quota_exhausted=true → โควตาส่งเดือนนี้หมด ต้องรอรอบเดือนใหม่ "
-                       "หรืออัปแพ็กเกจที่ LINE OA Manager")
+        out["hint"] = ("ส่งไม่ออกทุกช่อง — token_ok=false → สร้าง Channel access token ใหม่ที่ "
+                       "LINE Developers แล้วอัปเดต env บน Render | "
+                       "quota_exhausted=true ทุกช่อง → โควตาเดือนนี้หมดหมด "
+                       "ต้องรอต้นเดือนใหม่ อัปแพ็กเกจ หรือเพิ่ม LINE_TOKEN_2/LINE_USER_ID_2 อีกช่อง")
     return jsonify(out)
 
 
