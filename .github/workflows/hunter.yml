@@ -12,6 +12,12 @@ on:
   schedule:
     - cron: "*/30 * * * *"   # ทุก 30 นาที (เวลา UTC · GitHub อาจดีเลย์ได้ไม่กี่นาที ไม่เป็นไร)
   workflow_dispatch:          # ปุ่ม "Run workflow" กดยิงเองได้ทันที
+  push:
+    paths:
+      - ".github/workflows/hunter.yml"
+    # แก้ไฟล์ตัวยิงเมื่อไหร่ = ให้มันลองวิ่งทันที 1 รอบ
+    # (เพิ่ม 30 ส.ค. 2026: schedule ของ GitHub ดีเลย์ได้หลายสิบนาทีตอนสร้างใหม่
+    #  ถ้าไม่มีทางนี้จะไม่มีทางรู้เลยว่า workflow ที่เพิ่ง push ขึ้นไป "วิ่งได้จริงไหม")
 
 permissions:
   contents: read
