@@ -33,8 +33,10 @@ LINE_CHANNEL_SECRET = os.environ.get("LINE_CHANNEL_SECRET", "")
 # LINE OA ฟรีส่ง push ได้ 300 ข้อความ/เดือนต่อ 1 OA · วันที่โควตาของ SiriAriyaMate เต็ม
 # Job Hunter แจ้งงานไม่ออกเลยสักงาน และ "ตั้ง token ไว้" ก็ยังเขียวอยู่ดี หาสาเหตุไม่เจอ
 # แต่ละ OA มีโควตาแยกกันคนละถัง → มีสำรอง = เพดานรวมเพิ่มเป็นเท่าตัว
-# ⚠️ userId ผูกกับ "คน × ช่อง" ไม่ใช่คนอย่างเดียว — เปลี่ยน token ต้องเปลี่ยน userId คู่กันเสมอ
-#    (เอา userId ของช่องไหน ไปดูที่ LINE Developers > channel นั้น > Basic settings > Your user ID)
+# ℹ️ userId ผูกกับ "คน × provider" — OA หลายตัวใต้ provider เดียวกันใช้ userId ตัวเดิมได้ (วัดแล้ว 30 ส.ค. 2026)
+#    ต้องใช้คนละตัวก็ต่อเมื่ออยู่คนละ provider
+#    ⚠️ ที่พลาดกันจริงคือหยิบ "Bot basic ID" (@xxxx, 9 ตัว, แท็บ Messaging API) มาใส่แทน
+#       "Your user ID" (U+32 ตัว = 33 ตัว, แท็บ Basic settings ล่างสุด) — เช็คจำนวนตัวอักษรก่อนเสมอ
 LINE_TOKEN_2        = os.environ.get("LINE_TOKEN_2", "")
 LINE_USER_ID_2      = os.environ.get("LINE_USER_ID_2", "")
 
@@ -3215,7 +3217,8 @@ def api_line_diag():
               # เซิร์ฟเวอร์เห็นค่าอะไรอยู่จริง — ไว้เทียบกับที่กรอกใน Render
               # (เพิ่ม 30 ส.ค. 2026 หลังเสียเวลาไปหลายรอบกับ "แก้แล้วแต่ค่าไม่เปลี่ยน")
               "user_id_masked": _mask(uid),
-              # กับดักที่เจอจริง: ก๊อป userId ของช่องหลักมาใส่ช่องสำรอง = ใช้ไม่ได้
+              # ใช้ id เดียวกับช่องหลักไหม — ปกติ *ถูกต้อง* ถ้าอยู่ provider เดียวกัน
+              # (เก็บไว้เป็นข้อมูลเฉยๆ ไม่ได้ใช้ตัดสิน usable)
               "same_id_as_primary": bool(uid and uid == LINE_USER_ID and name != "หลัก")}
 
         code, info = _get(token, "/v2/bot/info")
@@ -3242,10 +3245,10 @@ def api_line_diag():
             ch["quota_left"] = limit - used
             ch["quota_exhausted"] = used >= limit
 
-        # userId คู่กับ token ถูกช่องไหม — ถามโปรไฟล์ดู (GET ไม่กินโควตา ไม่ส่งข้อความ)
-        # ปิดกับดักหลัก: userId ผูกกับ "คน × ช่อง" หยิบ id จาก OA อื่นมาใส่คู่ token นี้
-        # = LINE คืน 400 ตอน push ซึ่งหน้าตาเหมือน "token เสีย" ทั้งที่ token ดีทุกอย่าง
-        # 404 = ไม่รู้จัก userId นี้ หรือยังไม่ได้เป็นเพื่อนกับ OA ตัวนี้
+        # userId ใช้กับ token ตัวนี้ได้จริงไหม — ถามโปรไฟล์ดู (GET ไม่กินโควตา ไม่ส่งข้อความ)
+        # เคสจริง 30 ส.ค. 2026: ใส่ Bot basic ID (@199gfwfd) แทน user ID → LINE คืน
+        # "The value for the 'userId' parameter is invalid" ซึ่งหน้าตาเหมือน "token เสีย" ทั้งที่ token ดี
+        # ไม่ผ่าน = userId ผิดรูป / คนละ provider / หรือยังไม่ได้เป็นเพื่อนกับ OA ตัวนี้
         code, prof = _get(token, f"/v2/bot/profile/{uid}")
         ch["user_http"] = code
         ch["user_ok"] = (code == 200)
