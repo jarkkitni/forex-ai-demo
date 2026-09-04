@@ -3313,7 +3313,6 @@ def robots():
         "User-agent: *\n"
         "Allow: /\n"
         "Disallow: /monitor\n"          # จอภายใน ไม่ให้ index
-        "Disallow: /morning-brief\n"    # สรุปสถานะเช้า จอภายใน
         "Disallow: /hunter\n"           # เครื่องมือภายใน
         "Disallow: /chat-demo\n"        # เดโมส่งลูกค้าเฉพาะราย ไม่ใช่หน้าขาย
         "Disallow: /chatapp/\n"         # ตัวแอปจริงของลูกค้ารายนี้
