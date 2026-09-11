@@ -3386,9 +3386,16 @@ def _meta_health_data() -> dict:
             out["scopes"] = dd.get("scopes", [])
             out["has_publish_scope"] = "pages_manage_posts" in out["scopes"]
             out["can_message"] = "pages_messaging" in out["scopes"]
-            if out["scopes"] and not out["can_message"]:
-                out["ok"] = False
-                out["error"] = "token ไม่มี pages_messaging"
+            if out["scopes"]:
+                # token ที่มีแค่ pages_messaging เรียก /me ไม่ได้เลย (แม้ขอ id) แต่ส่งข้อความได้
+                # → ตัดสิน ok จาก scope ที่ Meta รับรองผ่าน debug_token แทน
+                if out["can_message"]:
+                    if not out["ok"]:
+                        out["me_note"] = out.pop("error", "")
+                    out["ok"] = True
+                else:
+                    out["ok"] = False
+                    out["error"] = "token ไม่มี pages_messaging"
     except Exception as e:
         out["error"] = str(e)[:200]
     return out
