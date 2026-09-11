@@ -3354,18 +3354,28 @@ def _meta_health_data() -> dict:
         return {"ok": False, "error": "no META_PAGE_TOKEN"}
     out = {"ok": False}
     try:
+        # 12 ก.ย. 2026: token จากแอปใหม่ (dev mode) ไม่มี pages_read_engagement → /me?fields=name
+        # ตอบ (#100) ทั้งที่ส่งข้อความได้ปกติ จึงขอแค่ id ก่อน แล้วค่อยลองขอ name แยก (ไม่บังคับ)
         r = requests.get(f"{meta_bot.GRAPH}/me",
-                         params={"access_token": META_PAGE_TOKEN, "fields": "name,id"},
+                         params={"access_token": META_PAGE_TOKEN, "fields": "id"},
                          timeout=10)
         d = r.json()
         if r.ok:
             out["ok"] = True
-            out["page"] = d.get("name")
+            out["page_id"] = d.get("id")
+            rn = requests.get(f"{meta_bot.GRAPH}/me",
+                              params={"access_token": META_PAGE_TOKEN, "fields": "name"},
+                              timeout=10)
+            if rn.ok:
+                out["page"] = rn.json().get("name")
+            else:
+                out["page_note"] = "อ่านชื่อเพจไม่ได้ (ไม่มี pages_read_engagement) — ไม่กระทบการตอบแชท"
         else:
             out["error"] = ((d.get("error") or {}).get("message") or "")[:200]
         # ถ้ามี app secret → ถาม Meta ตรงๆ ว่า token หมดอายุเมื่อไหร่ (0 = ไม่มีกำหนด)
+        # ค่าดีฟอลต์ = แอปใหม่ ThaiLineBot Chat (24 ส.ค. 2026) — แอปเก่า 1558681259271673 ตายไปกับบัญชี FB เก่า
         if META_APP_SECRET:
-            app_id = os.environ.get("META_APP_ID", "1558681259271673")
+            app_id = os.environ.get("META_APP_ID", "918453644145747")
             rd = requests.get(f"{meta_bot.GRAPH}/debug_token",
                               params={"input_token": META_PAGE_TOKEN,
                                       "access_token": f"{app_id}|{META_APP_SECRET}"},
@@ -3375,6 +3385,10 @@ def _meta_health_data() -> dict:
             out["data_access_expires_at"] = dd.get("data_access_expires_at")
             out["scopes"] = dd.get("scopes", [])
             out["has_publish_scope"] = "pages_manage_posts" in out["scopes"]
+            out["can_message"] = "pages_messaging" in out["scopes"]
+            if out["scopes"] and not out["can_message"]:
+                out["ok"] = False
+                out["error"] = "token ไม่มี pages_messaging"
     except Exception as e:
         out["error"] = str(e)[:200]
     return out
