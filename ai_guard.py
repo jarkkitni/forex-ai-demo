@@ -57,8 +57,10 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 GEMINI_MODELS = [m.strip() for m in
                  os.environ.get(
                      "GEMINI_MODEL",
-                     "gemini-2.5-flash,gemini-flash-latest,gemini-2.5-flash-lite,"
-                     "gemini-2.0-flash-001,gemini-2.0-flash").split(",")
+                     # 12 ก.ย. 2026 วัดจริง: 2.5-flash / 2.5-flash-lite / 2.0-flash* → 404 "no longer available" ทั้งหมด
+                     # gemini-3.1-flash-lite ตอบ 0.4 วิ ผ่านทุกครั้ง · gemini-flash-latest ใช้ได้แต่ 429 เมื่อโควตาหมด
+                     "gemini-3.1-flash-lite,gemini-flash-latest,gemini-3.8-flash,"
+                     "gemini-3.5-flash,gemini-flash-lite-latest").split(",")
                  if m.strip()]
 GEMINI_URL_TMPL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 LAST_GEMINI_TRACE: list = []   # โมเดลที่ลองในการเรียกล่าสุด + เวลา/ผล (ดูผ่าน /api/ai-diag)
@@ -274,19 +276,23 @@ def _call_gemini(prompt: str, max_tokens: int = 1000, slug: str = "", models: li
     if not api_key:
         raise RuntimeError("GEMINI_API_KEY ยังไม่ได้ตั้ง — สร้างที่ aistudio.google.com แล้วใส่ค่าใน Render")
 
-    def _try_model(model: str) -> str:
+    def _try_model(model: str, _no_thinking_cfg: bool = False) -> str:
+        gen_cfg = {"maxOutputTokens": max_tokens}
+        if not _no_thinking_cfg:
+            gen_cfg["thinkingConfig"] = {"thinkingBudget": 0}
         r = requests.post(
             GEMINI_URL_TMPL.format(model=model),
             params={"key": api_key},
             json={
                 "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {
-                    "maxOutputTokens": max_tokens,
-                    "thinkingConfig": {"thinkingBudget": 0},
-                },
+                "generationConfig": gen_cfg,
             },
             timeout=30,
         )
+        # 12 ก.ย. 2026: โมเดลรุ่น lite/3.x บางตัวไม่รับ thinkingConfig → 400 INVALID_ARGUMENT
+        # ลองซ้ำครั้งเดียวแบบไม่ส่ง thinkingConfig ก่อนจะถือว่าโมเดลนั้นใช้ไม่ได้
+        if r.status_code == 400 and not _no_thinking_cfg and "INVALID_ARGUMENT" in r.text:
+            return _try_model(model, _no_thinking_cfg=True)
         # เดิมใช้ r.raise_for_status() ตรงๆ ซึ่งทิ้ง response body ทั้งก้อน เหลือแค่ "429 Client Error"
         # ทำให้แยกไม่ออกว่าโควต้าเต็ม (RESOURCE_EXHAUSTED) หรือ billing หลุด (FAILED_PRECONDITION)
         # หรือ API ถูกปิด (PERMISSION_DENIED) — ทั้งสามอย่างแก้คนละวิธีกันสิ้นเชิง
