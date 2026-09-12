@@ -3491,7 +3491,11 @@ def meta_webhook():
     except Exception:
         return "bad json", 400
     try:
-        for _e in data.get("entry", []):
+        _entries = data.get("entry", []) or []
+        _trace("post", obj=data.get("object"), entries=len(_entries),
+               fmt=",".join(sorted({k for _e in _entries for k in ("messaging", "changes", "standby")
+                                    if _e.get(k)})) or "other")
+        for _e in _entries:
             for _m in _e.get("messaging", []) or []:
                 _msg = _m.get("message") or {}
                 _trace("in", obj=data.get("object"), page=str(_e.get("id", "")),
