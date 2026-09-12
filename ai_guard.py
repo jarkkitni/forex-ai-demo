@@ -333,12 +333,17 @@ def _call_gemini(prompt: str, max_tokens: int = 1000, slug: str = "") -> str:
         print(f"[ai_guard] ลิสต์ที่ตั้งไว้ตายหมด — ListModels เสนอ {discovered[:3]} ลองต่อ", flush=True)
     for model in discovered[:3]:      # พอ 3 ตัว ไม่ต้องไล่ทั้งลิสต์ให้ลูกค้ารอนาน
         tried.append(model)
+        t0 = time.time()
         try:
             text = _try_model(model)
+            LAST_GEMINI_TRACE.append({"model": model, "ms": int((time.time() - t0) * 1000), "ok": True,
+                                      "discovered": True})
             print(f"[ai_guard] ✅ Gemini ใช้ '{model}' ได้ — ควรตั้ง env GEMINI_MODEL={model} "
                   f"ให้เป็นตัวแรกจะได้ไม่ต้องลองพลาดก่อนทุกครั้ง", flush=True)
             return text
         except Exception as e:
+            LAST_GEMINI_TRACE.append({"model": model, "ms": int((time.time() - t0) * 1000), "ok": False,
+                                      "discovered": True, "err": str(e)[:160]})
             print(f"[ai_guard] Gemini (discovered) '{model}' ก็ใช้ไม่ได้ ({e})", flush=True)
             last_exc = e
 

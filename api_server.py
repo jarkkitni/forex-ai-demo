@@ -3458,7 +3458,8 @@ def api_ai_diag():
         return jsonify({"ok": True, "slug": slug, "tier": tier, "provider": b.get("last_provider"),
                         "reply": (text or "")[:40], "ms": int((_time.time() - t0) * 1000),
                         "gemini_trace": list(ai_guard.LAST_GEMINI_TRACE),
-                        "gemini_models": ai_guard.GEMINI_MODELS})
+                        "gemini_models": ai_guard.GEMINI_MODELS,
+                        "gemini_discovered": list(ai_guard._gemini_discovered.get("models", []))[:12]})
     except Exception as e:
         b = ai_guard.health(slug)
         return jsonify({"ok": False, "slug": slug, "error": str(e)[:300],
