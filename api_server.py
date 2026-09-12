@@ -3401,6 +3401,43 @@ def _meta_health_data() -> dict:
     return out
 
 
+# ---- 12 ก.ย. 2026: ร่องรอย webhook Meta ล่าสุด (in-memory, หายเมื่อ restart) ----
+# ไว้พิสูจน์ว่า "ลูกค้าทักแล้วบอทตอบจริงไหม" โดยไม่ต้องเปิด Render logs (บัญชี jarkkitni ซึ่งเครื่องอื่นเข้าไม่ถึง)
+# เก็บแค่ปลายทาง PSID 4 ตัวท้าย + หัวข้อความ 40 ตัว — ไม่เก็บโทเค็น/ข้อความเต็ม
+import collections as _collections
+import time as _time
+META_TRACE = _collections.deque(maxlen=60)
+
+
+def _trace(kind: str, **kw):
+    kw["t"] = _time.strftime("%Y-%m-%d %H:%M:%S", _time.gmtime()) + "Z"
+    kw["kind"] = kind
+    META_TRACE.append(kw)
+
+
+_orig_send_message = meta_bot.send_message
+
+
+def _traced_send_message(page_token, recipient_id, text, quick_replies=None):
+    status, resp = _orig_send_message(page_token, recipient_id, text, quick_replies=quick_replies)
+    _trace("send", to="…" + str(recipient_id)[-4:], status=status,
+           ok=(status == 200), head=(text or "")[:40],
+           err=None if status == 200 else str(resp)[:160])
+    return status, resp
+
+
+meta_bot.send_message = _traced_send_message
+
+
+@app.route("/api/meta-trace")
+def meta_trace():
+    """ร่องรอย webhook/การส่งล่าสุด — ล็อกด้วย META_VERIFY_TOKEN (ของที่มีอยู่แล้ว)"""
+    token = request.args.get("token", "")
+    if not token or token != META_VERIFY_TOKEN or not META_VERIFY_TOKEN:
+        return jsonify({"ok": False, "error": "unauthorized"}), 403
+    return jsonify({"ok": True, "count": len(META_TRACE), "events": list(META_TRACE)})
+
+
 @app.route("/api/meta-health")
 def meta_health():
     """เช็คสุขภาพ token บอท Meta (Lullabell) — ใช้บนการ์ด Monitor"""
@@ -3447,11 +3484,23 @@ def meta_webhook():
     body = request.get_data()
     sig = request.headers.get("X-Hub-Signature-256", "")
     if not meta_bot.verify_signature(META_APP_SECRET, body, sig):
+        _trace("bad_signature", has_header=bool(sig))
         return "bad signature", 403
     try:
         data = json.loads(body or b"{}")
     except Exception:
         return "bad json", 400
+    try:
+        for _e in data.get("entry", []):
+            for _m in _e.get("messaging", []) or []:
+                _msg = _m.get("message") or {}
+                _trace("in", obj=data.get("object"), page=str(_e.get("id", "")),
+                       frm="…" + str((_m.get("sender") or {}).get("id", ""))[-4:],
+                       head=(_msg.get("text") or ("[attachment]" if _msg.get("attachments") else
+                             ("[postback]" if _m.get("postback") else "")))[:40],
+                       echo=bool(_msg.get("is_echo")))
+    except Exception:
+        pass
 
     # ---- Lullabell แยกดีพลอยแล้ว (21 ก.ค. 2026): ถ้า event นี้มาจากเพจ Lullabell ให้ forward
     # raw body + signature ไปยัง service เดี่ยวแทน ไม่ handle เองที่นี่ (กันตอบซ้ำ 2 รอบ)
