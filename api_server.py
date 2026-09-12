@@ -3448,11 +3448,18 @@ def api_ai_diag():
         return jsonify({"ok": False, "error": "unauthorized"}), 403
     slug = request.args.get("slug", "lullabell")
     t0 = _time.time()
+    # ?discover=1 → ถาม ListModels สดๆ ว่าโปรเจกต์นี้ใช้โมเดลอะไรได้บ้าง (ไว้เลือกตัวแรกของลิสต์ให้ถูก)
+    if request.args.get("discover"):
+        models = ai_guard._gemini_discover_models(force=True)
+        return jsonify({"ok": bool(models), "gemini_available": models[:20],
+                        "error": ai_guard._gemini_discovered.get("error", ""),
+                        "ms": int((_time.time() - t0) * 1000)})
     try:
         cfg = meta_bot.load_cfg(slug)
         tier = cfg.get("ai_tier", "smart")
         client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
-        text = ai_guard.call(client, "ตอบสั้นๆ แค่คำว่า OK", max_tokens=8, smart=False,
+        # max_tokens 64 ไม่ใช่ 8 — โมเดลที่ยังคิดในใจแม้สั่ง thinkingBudget=0 จะกินโควตาจนคำตอบว่าง (เจอ 12 ก.ย.)
+        text = ai_guard.call(client, "ตอบสั้นๆ แค่คำว่า OK", max_tokens=64, smart=False,
                              tier=tier, slug=slug)
         b = ai_guard.health(slug)
         return jsonify({"ok": True, "slug": slug, "tier": tier, "provider": b.get("last_provider"),
