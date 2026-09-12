@@ -61,6 +61,7 @@ GEMINI_MODELS = [m.strip() for m in
                      "gemini-2.0-flash-001,gemini-2.0-flash").split(",")
                  if m.strip()]
 GEMINI_URL_TMPL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+LAST_GEMINI_TRACE: list = []   # โมเดลที่ลองในการเรียกล่าสุด + เวลา/ผล (ดูผ่าน /api/ai-diag)
 GEMINI_LIST_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 
 # ---- Google Cloud Text-to-Speech (23 ก.ค. 2026) — ทดลองฟีเจอร์เสียง เฉพาะ demo รังกาแฟ
@@ -308,13 +309,20 @@ def _call_gemini(prompt: str, max_tokens: int = 1000, slug: str = "") -> str:
 
     last_exc: Exception | None = None
     tried: list = []
+    # 12 ก.ย. 2026: จดว่าแต่ละโมเดลใช้เวลาเท่าไหร่/พังเพราะอะไร ให้ /api/ai-diag ดูได้ (ตอบช้า 20+ วิ = ไล่ลิสต์ตาย)
+    LAST_GEMINI_TRACE.clear()
 
     # รอบ 1 — ลิสต์ที่ตั้งไว้ (เร็วสุด ไม่ต้องเสีย request ถาม Google ก่อน)
     for model in GEMINI_MODELS:
         tried.append(model)
+        t0 = time.time()
         try:
-            return _try_model(model)
+            text = _try_model(model)
+            LAST_GEMINI_TRACE.append({"model": model, "ms": int((time.time() - t0) * 1000), "ok": True})
+            return text
         except Exception as e:
+            LAST_GEMINI_TRACE.append({"model": model, "ms": int((time.time() - t0) * 1000), "ok": False,
+                                      "err": str(e)[:160]})
             print(f"[ai_guard] Gemini model '{model}' ใช้ไม่ได้ ({e}) — ลองโมเดลถัดไปในลิสต์", flush=True)
             last_exc = e
 

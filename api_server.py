@@ -3456,11 +3456,14 @@ def api_ai_diag():
                              tier=tier, slug=slug)
         b = ai_guard.health(slug)
         return jsonify({"ok": True, "slug": slug, "tier": tier, "provider": b.get("last_provider"),
-                        "reply": (text or "")[:40], "ms": int((_time.time() - t0) * 1000)})
+                        "reply": (text or "")[:40], "ms": int((_time.time() - t0) * 1000),
+                        "gemini_trace": list(ai_guard.LAST_GEMINI_TRACE),
+                        "gemini_models": ai_guard.GEMINI_MODELS})
     except Exception as e:
         b = ai_guard.health(slug)
         return jsonify({"ok": False, "slug": slug, "error": str(e)[:300],
-                        "last_error": b.get("last_error"), "ms": int((_time.time() - t0) * 1000)}), 502
+                        "last_error": b.get("last_error"), "ms": int((_time.time() - t0) * 1000),
+                        "gemini_trace": list(ai_guard.LAST_GEMINI_TRACE)}), 502
 
 
 @app.route("/api/meta-health")
