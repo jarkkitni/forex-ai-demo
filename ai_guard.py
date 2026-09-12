@@ -254,7 +254,7 @@ def _gemini_key_for(slug: str = "") -> str:
     return GEMINI_API_KEY
 
 
-def _call_gemini(prompt: str, max_tokens: int = 1000, slug: str = "") -> str:
+def _call_gemini(prompt: str, max_tokens: int = 1000, slug: str = "", models: list = None) -> str:
     """เรียก Gemini API ตรงๆผ่าน requests (ไม่เพิ่ม dependency ใหม่ แพทเทิร์นเดียวกับ Groq)
     ใช้เป็นชั้นสำรองที่ 3 หลัง Claude+Groq ล่มทั้งคู่ — คนละ provider คนละโควต้า ลดโอกาสตายพร้อมกันทั้งหมด
 
@@ -312,8 +312,8 @@ def _call_gemini(prompt: str, max_tokens: int = 1000, slug: str = "") -> str:
     # 12 ก.ย. 2026: จดว่าแต่ละโมเดลใช้เวลาเท่าไหร่/พังเพราะอะไร ให้ /api/ai-diag ดูได้ (ตอบช้า 20+ วิ = ไล่ลิสต์ตาย)
     LAST_GEMINI_TRACE.clear()
 
-    # รอบ 1 — ลิสต์ที่ตั้งไว้ (เร็วสุด ไม่ต้องเสีย request ถาม Google ก่อน)
-    for model in GEMINI_MODELS:
+    # รอบ 1 — ลิสต์ที่ตั้งไว้ (เร็วสุด ไม่ต้องเสีย request ถาม Google ก่อน) · models= ใช้เจาะจงตอน diag
+    for model in (models or GEMINI_MODELS):
         tried.append(model)
         t0 = time.time()
         try:
@@ -328,7 +328,7 @@ def _call_gemini(prompt: str, max_tokens: int = 1000, slug: str = "") -> str:
 
     # รอบ 2 — ลิสต์ที่ตั้งไว้ตายหมด (เคส 22 ก.ค. 2026) ให้ถาม ListModels ว่าจริงๆ key นี้ใช้อะไรได้
     # แล้วลองตัวที่ Google ยืนยันเองว่ามีอยู่ — จุดนี้แหละที่ทำให้ไม่ต้องแก้โค้ดทุกครั้งที่ Google เปลี่ยนชื่อ
-    discovered = [m for m in _gemini_discover_models() if m not in tried]
+    discovered = [] if models else [m for m in _gemini_discover_models() if m not in tried]
     if discovered:
         print(f"[ai_guard] ลิสต์ที่ตั้งไว้ตายหมด — ListModels เสนอ {discovered[:3]} ลองต่อ", flush=True)
     for model in discovered[:3]:      # พอ 3 ตัว ไม่ต้องไล่ทั้งลิสต์ให้ลูกค้ารอนาน

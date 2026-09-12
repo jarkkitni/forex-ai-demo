@@ -3454,6 +3454,16 @@ def api_ai_diag():
         return jsonify({"ok": bool(models), "gemini_available": models[:20],
                         "error": ai_guard._gemini_discovered.get("error", ""),
                         "ms": int((_time.time() - t0) * 1000)})
+    # ?model=<gemini model> → ยิงโมเดลนั้นตัวเดียวตรงๆ (วัดความเร็ว/ใช้ได้ไหม ก่อนเอาขึ้นเป็นตัวแรกของลิสต์)
+    one_model = request.args.get("model", "")
+    if one_model:
+        try:
+            text = ai_guard._call_gemini("ตอบสั้นๆ แค่คำว่า OK", 64, slug=slug, models=[one_model])
+            return jsonify({"ok": True, "model": one_model, "reply": (text or "")[:40],
+                            "ms": int((_time.time() - t0) * 1000)})
+        except Exception as e:
+            return jsonify({"ok": False, "model": one_model, "error": str(e)[:300],
+                            "ms": int((_time.time() - t0) * 1000)}), 502
     try:
         cfg = meta_bot.load_cfg(slug)
         tier = cfg.get("ai_tier", "smart")
