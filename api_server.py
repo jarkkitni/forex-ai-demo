@@ -3438,6 +3438,31 @@ def meta_trace():
     return jsonify({"ok": True, "count": len(META_TRACE), "events": list(META_TRACE)})
 
 
+@app.route("/api/ai-diag")
+def api_ai_diag():
+    """ยิง AI จริง 1 ครั้งตาม tier ของร้าน (คำตอบสั้นมาก) — พิสูจน์ว่า "generate ได้" ไม่ใช่แค่ key อยู่
+    บทเรียน 21 ส.ค. 2026: /api/ai-health เขียวได้ทั้งที่เครดิต Gemini หมด (ListModels ผ่านแต่ generate 429)
+    ล็อกด้วย META_VERIFY_TOKEN เหมือน /api/meta-trace · ?slug=lullabell (ค่าเริ่มต้น)"""
+    token = request.args.get("token", "")
+    if not token or token != META_VERIFY_TOKEN or not META_VERIFY_TOKEN:
+        return jsonify({"ok": False, "error": "unauthorized"}), 403
+    slug = request.args.get("slug", "lullabell")
+    t0 = _time.time()
+    try:
+        cfg = meta_bot.load_cfg(slug)
+        tier = cfg.get("ai_tier", "smart")
+        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
+        text = ai_guard.call(client, "ตอบสั้นๆ แค่คำว่า OK", max_tokens=8, smart=False,
+                             tier=tier, slug=slug)
+        b = ai_guard.health(slug)
+        return jsonify({"ok": True, "slug": slug, "tier": tier, "provider": b.get("last_provider"),
+                        "reply": (text or "")[:40], "ms": int((_time.time() - t0) * 1000)})
+    except Exception as e:
+        b = ai_guard.health(slug)
+        return jsonify({"ok": False, "slug": slug, "error": str(e)[:300],
+                        "last_error": b.get("last_error"), "ms": int((_time.time() - t0) * 1000)}), 502
+
+
 @app.route("/api/meta-health")
 def meta_health():
     """เช็คสุขภาพ token บอท Meta (Lullabell) — ใช้บนการ์ด Monitor"""
