@@ -527,6 +527,12 @@ async function submitOrder(e){
       headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
     const j=await r.json();
     if(j.success){
+      // Google Ads conversion "BotKit Order" — label มาจาก env บน Render ผ่าน _gtag_snippet()
+      // (ไม่มี tag = ข้ามเงียบ; value = ยอดที่ต้องจ่ายถ้ามี QR ไม่งั้น 0 เป็น lead เฉยๆ)
+      if(window.gtag && window.__adsConvOrder){
+        gtag('event','conversion',{send_to:window.__adsConvOrder,
+          value:Number(j.pay&&j.pay.amount||0),currency:'THB'});
+      }
       msg.className='ok'; msg.style.display='block';
       if(j.pay){
         // มี QR = จ่ายได้เลยทันที ไม่ต้องรอเราทักกลับก่อน

@@ -53,6 +53,31 @@ def _alert_channels() -> list:
 # เปลี่ยนโดเมนเมื่อไหร่: ตั้ง PUBLIC_BASE_URL บน Render อย่างเดียว ไม่ต้องแตะโค้ด
 BASE_URL  = os.environ.get("PUBLIC_BASE_URL", "https://forex-ai-demo.onrender.com").rstrip("/")
 BASE_HOST = BASE_URL.split("://", 1)[-1]     # ใช้ตอนพิมพ์ให้คนอ่าน ไม่ต้องมี https://
+# ---- Google tag (Google Ads / GA4) — 15 ก.ย. 2026 สนามฝึก Google Ads ของ thailinebot.com ----
+# GTAG_IDS = "AW-xxxxxxxxx" หรือ "AW-xxxxxxxxx,G-xxxxxxxxxx" (คั่นด้วยจุลภาค) · ว่าง = ไม่แทรกอะไรเลย
+# GOOGLE_ADS_CONV_ORDER = "AW-xxxxxxxxx/LABEL" ของ conversion action "BotKit Order" — ยิงตอนฟอร์มสั่งซื้อสำเร็จ
+# ทั้งคู่ตั้งบน Render เท่านั้น ห้าม hardcode (local/เทสต์จะไม่มี tag = พฤติกรรมเดิม)
+GTAG_IDS = [x.strip() for x in os.environ.get("GTAG_IDS", "").split(",") if x.strip()]
+GOOGLE_ADS_CONV_ORDER = os.environ.get("GOOGLE_ADS_CONV_ORDER", "").strip()
+
+
+def _gtag_snippet() -> str:
+    """สคริปต์ gtag.js สำหรับแทรกใน <head> ทุกหน้าที่เป็น landing/conversion ของแอด
+    - ไม่มี GTAG_IDS → คืนสตริงว่าง (หน้าเว็บเหมือนเดิมทุกไบต์)
+    - ส่ง config ให้ทุก ID (Ads + GA4 ใช้สคริปต์เดียว) และฝาก label conversion ไว้ที่ window.__adsConvOrder
+      ให้ submitOrder() ใน botkit.html ยิง gtag('event','conversion') เอง
+    - คลิกลิงก์ที่ชี้ fastwork.co → event 'fastwork_click' (micro-conversion ไว้ import จาก GA4 ทีหลัง)"""
+    if not GTAG_IDS:
+        return ""
+    configs = "".join(f"gtag('config','{i}');" for i in GTAG_IDS)
+    return (
+        f'<script async src="https://www.googletagmanager.com/gtag/js?id={GTAG_IDS[0]}"></script>\n'
+        "<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}"
+        f"gtag('js',new Date());{configs}"
+        f"window.__adsConvOrder={json.dumps(GOOGLE_ADS_CONV_ORDER)};"
+        "document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href*=\"fastwork.co\"]');"
+        "if(a){gtag('event','fastwork_click',{link_url:a.href});}});</script>\n"
+    )
 # ---- รับเงินด้วย PromptPay ----
 # เบอร์มือถือหรือเลขบัตรประชาชนที่ผูกพร้อมเพย์ไว้ — ตั้งบน Render เป็น env ห้าม hardcode
 # ไม่ตั้ง = ระบบจ่ายเงินปิดเงียบ ๆ (ฟอร์มสั่งซื้อยังทำงานเหมือนเดิมทุกอย่าง)
@@ -2444,7 +2469,7 @@ def _seo_page(slug: str) -> str:
     )
     return f"""<!DOCTYPE html><html lang="th"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{p['title']}</title>
+{_gtag_snippet()}<title>{p['title']}</title>
 <meta name="description" content="{p['desc']}">
 <meta name="keywords" content="{p['kw']}">
 <link rel="canonical" href="{BASE_URL}/{slug}">
@@ -4523,6 +4548,9 @@ def index():
     # ทำตรงนี้ที่เดียว เปลี่ยนโดเมนครั้งหน้าตั้ง PUBLIC_BASE_URL อย่างเดียว ไม่ต้องไล่แก้ HTML อีก
     # (ถ้าไม่ตั้ง env ค่า BASE_URL = โดเมนเดิม การแทนที่จะไม่เปลี่ยนอะไร ปลอดภัย)
     html = html.replace("https://forex-ai-demo.onrender.com/", f"{BASE_URL}/")
+    # Google tag แทรกตอนเสิร์ฟด้วยวิธีเดียวกัน — ไฟล์ botkit.html ไม่ต้องรู้จัก ID (ว่าง = ไม่เปลี่ยนอะไร)
+    if GTAG_IDS:
+        html = html.replace("</head>", _gtag_snippet() + "</head>", 1)
     return html, 200, {"Content-Type": "text/html; charset=utf-8"}
 
 
