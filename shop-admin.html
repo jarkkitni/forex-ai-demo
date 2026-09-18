@@ -115,7 +115,25 @@ const FIELD_DEFS = [
   {key: 'friend_promo', label: '👯 โปรพิเศษ (เช่น พาเพื่อน / Beauty Day)'},
   {key: 'topup_promo',  label: '💎 โปรสมาชิก / สะสมแต้ม / เติมเครดิต'},
   {key: 'coming_soon',  label: '🔜 บริการที่กำลังจะเปิด'},
+  {key: 'promo_end',    label: '⏰ โปรโมชั่นหมดเขต — ใส่เป็นวันที่ เช่น 31 ตุลาคม 2569 / 31 ต.ค. 2569 / 2026-10-31 (บอทจะแจ้งทุกครั้งที่บอกราคาโปร และเลิกเสนอโปรอัตโนมัติเมื่อเลยวันนี้)', rows: 1},
+  {key: 'hours',        label: '🕙 เวลาเปิด-ปิดร้าน (เช่น ทุกวัน 10:00–20:00 น.)', rows: 1},
+  {key: 'style_rules',  label: '📜 กติกาการตอบเพิ่มเติมของร้าน (บรรทัดละ 1 ข้อ)', list: 'lines', rows: 5},
+  {key: 'close_lines',  label: '🔚 ประโยคชวนจองปิดท้าย (บรรทัดละ 1 ประโยค)', list: 'lines', rows: 3},
+  {key: 'reply_scripts', label: '💬 สคริปต์ตัวอย่างตอบลูกค้า (คั่นแต่ละสคริปต์ด้วยบรรทัดว่าง · ขึ้นต้นด้วย [สถานการณ์] แล้วตามด้วยคำตอบ · บอทใช้เป็นแนวทาง ไม่ได้อ่านซ้ำทั้งหมด และราคายึดเมนูเสมอ)', list: 'blocks', rows: 10},
 ];
+const FIELD_DEF = Object.fromEntries(FIELD_DEFS.map(f => [f.key, f]));
+
+// ฟิลด์แบบรายการโชว์ใน textarea เดียว: 'lines' = บรรทัดละ 1 รายการ · 'blocks' = คั่นด้วยบรรทัดว่าง
+function fieldToText(f, v) {
+  if (!f || !f.list) return v || '';
+  const arr = Array.isArray(v) ? v : [];
+  return arr.join(f.list === 'blocks' ? '\n\n' : '\n');
+}
+function textToField(f, t) {
+  if (!f || !f.list) return t;
+  const parts = f.list === 'blocks' ? t.split(/\n\s*\n/) : t.split('\n');
+  return parts.map(s => s.trim()).filter(Boolean);
+}
 
 let fieldsDirty = false;   // ข้อความในกล่อง "สิทธิพิเศษ/โปรพิเศษ" ที่แก้แล้วยังไม่กด "บันทึกข้อความ"
 
@@ -168,10 +186,10 @@ function renderEditor(categories, botEnabled, showDetails, fields) {
   const fieldsHtml = `
       <div class="card" id="fieldsCard">
         <div style="font-weight:700;margin-bottom:4px">สิทธิพิเศษ / โปรพิเศษ (ข้อความอิสระ)</div>
-        <div class="hint">บอทจะพูดถึงข้อความพวกนี้ตอนลูกค้าถามสิทธิพิเศษ/ส่วนลด หรือตอนสรุปก่อนจอง — โปรไหนเลิกแล้วให้ลบข้อความทิ้งให้ว่าง บอทจะเลิกพูดถึงทันที</div>
+        <div class="hint">บอทจะพูดถึงข้อความพวกนี้ตอนลูกค้าถามสิทธิพิเศษ/ส่วนลด หรือตอนสรุปก่อนจอง — โปรไหนเลิกแล้วให้ลบข้อความทิ้งให้ว่าง บอทจะเลิกพูดถึงทันที · ช่อง "กติกา/สคริปต์" ด้านล่างคือวิธีที่ร้านอยากให้บอทพูด (ราคายึดจากเมนูเสมอ)</div>
         ${FIELD_DEFS.map(f => `
           <label class="field-label">${esc(f.label)}</label>
-          <textarea class="field-input" data-field="${f.key}" rows="2">${esc(fields[f.key] || '')}</textarea>`).join('')}
+          <textarea class="field-input" data-field="${f.key}" rows="${f.rows || 2}">${esc(fieldToText(f, fields[f.key]))}</textarea>`).join('')}
         <div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
           <button id="fieldsSaveBtn" disabled>บันทึกข้อความ</button>
           <span class="hint" id="fieldsMsg"></span>
@@ -337,7 +355,7 @@ function renderEditor(categories, botEnabled, showDetails, fields) {
 function bindFieldsCard(fields) {
   const inputs = Array.from(document.querySelectorAll('.field-input'));
   const btn = $('#fieldsSaveBtn'), msg = $('#fieldsMsg');
-  const changed = () => inputs.filter(t => (t.value || '') !== (fields[t.dataset.field] || ''));
+  const changed = () => inputs.filter(t => (t.value || '') !== fieldToText(FIELD_DEF[t.dataset.field], fields[t.dataset.field]));
   inputs.forEach(t => t.addEventListener('input', () => {
     fieldsDirty = changed().length > 0;
     btn.disabled = !fieldsDirty;
@@ -345,14 +363,14 @@ function bindFieldsCard(fields) {
   }));
   btn.onclick = async () => {
     const payload = {};
-    changed().forEach(t => { payload[t.dataset.field] = t.value; });
+    changed().forEach(t => { payload[t.dataset.field] = textToField(FIELD_DEF[t.dataset.field], t.value); });
     if (!Object.keys(payload).length) return;
     btn.disabled = true;
     msg.textContent = 'กำลังบันทึก...';
     const r = await api('/fields', {method: 'POST', body: JSON.stringify({fields: payload})});
     if (r.success) {
       Object.assign(fields, r.fields || payload);
-      inputs.forEach(t => { t.value = fields[t.dataset.field] || ''; });
+      inputs.forEach(t => { t.value = fieldToText(FIELD_DEF[t.dataset.field], fields[t.dataset.field]); });
       fieldsDirty = false;
       msg.textContent = 'บันทึกสำเร็จ ✓ บอทใช้ข้อความใหม่ทันที';
     } else {

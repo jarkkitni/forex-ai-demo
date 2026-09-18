@@ -935,13 +935,21 @@ _CAT_ID_RE = re.compile(r"^[a-z0-9_-]{1,20}$")
 # ข้อความอิสระที่ไม่ใช่รายการเมนู แต่บอทเอาไปพูดในหัวข้อ "สิทธิพิเศษ/ของแถม" (meta_bot._system_prompt)
 # 18 ก.ย. 2026 — ลูกค้า Lullabell แจ้งว่า "พาเพื่อนมาลด 5%" เลิกไปแล้วแต่บอทยังพูดอยู่ เพราะฟิลด์พวกนี้
 # เดิมแก้ได้แค่ผ่าน DB ตรงๆ ไม่มีทางแก้เองจากหน้า shop-admin เลย
-_SHOP_ADMIN_TEXT_FIELDS = ("gift", "perks", "friend_promo", "topup_promo", "coming_soon")
+_SHOP_ADMIN_TEXT_FIELDS = ("gift", "perks", "friend_promo", "topup_promo", "coming_soon", "promo_end", "hours")
 _SHOP_ADMIN_TEXT_MAX = 1000
+# ฟิลด์แบบรายการ (18 ก.ย. 2026 รอบค่ำ — เจ้าของร้าน Lullabell ส่ง "สคริปต์ตอบแชต" มาให้บอทตอบตามนั้น):
+# style_rules = กติกาเพิ่มเติมของร้าน · reply_scripts = สคริปต์ตัวอย่างต่อสถานการณ์ · close_lines = ประโยคชวนจอง
+# ค่า = (จำนวนรายการสูงสุด, ความยาวต่อรายการ)
+_SHOP_ADMIN_LIST_FIELDS = {"style_rules": (30, 400), "reply_scripts": (40, 1000), "close_lines": (10, 300)}
 _ADVISOR_RULES_MAX = 30
 
 
 def _shop_admin_fields(cfg: dict) -> dict:
-    return {k: str(cfg.get(k) or "") for k in _SHOP_ADMIN_TEXT_FIELDS}
+    out = {k: str(cfg.get(k) or "") for k in _SHOP_ADMIN_TEXT_FIELDS}
+    for k in _SHOP_ADMIN_LIST_FIELDS:
+        v = cfg.get(k) or []
+        out[k] = [x for x in v if isinstance(x, str)] if isinstance(v, list) else []
+    return out
 
 
 def _clean_advisor_rules(rules):
@@ -988,7 +996,21 @@ def _apply_field_ops(cfg: dict, fields: dict):
             v = v.strip()
             if len(v) > _SHOP_ADMIN_TEXT_MAX:
                 return False, f"'{k}' ยาวเกิน {_SHOP_ADMIN_TEXT_MAX} ตัวอักษร"
+            if k == "promo_end" and v and meta_bot.parse_promo_end(v) is None:
+                return False, "วันหมดเขตโปรต้องเป็นวันที่ที่อ่านได้ เช่น 31 ตุลาคม 2569 / 31 ต.ค. 2569 / 2026-10-31"
             cfg[k] = v
+        elif k in _SHOP_ADMIN_LIST_FIELDS:
+            n_max, len_max = _SHOP_ADMIN_LIST_FIELDS[k]
+            if v is None:
+                v = []
+            if not isinstance(v, list) or not all(isinstance(x, str) for x in v):
+                return False, f"'{k}' ต้องเป็นรายการข้อความ"
+            clean = [x.strip() for x in v if x.strip()]
+            if len(clean) > n_max:
+                return False, f"'{k}' มีได้ไม่เกิน {n_max} รายการ"
+            if any(len(x) > len_max for x in clean):
+                return False, f"'{k}' แต่ละรายการยาวเกิน {len_max} ตัวอักษร"
+            cfg[k] = clean
         elif k == "advisor_rules":
             clean, err = _clean_advisor_rules(v)
             if err:
