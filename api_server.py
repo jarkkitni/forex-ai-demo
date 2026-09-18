@@ -922,10 +922,85 @@ def shop_admin_get_promos(slug):
         return jsonify({"success": False, "error": "unauthorized"}), 403
     return jsonify({"success": True, "categories": _shop_admin_promo_categories(cfg),
                      "bot_enabled": cfg.get("bot_enabled", True),
-                     "promo_show_details": cfg.get("promo_show_details", True)})
+                     "promo_show_details": cfg.get("promo_show_details", True),
+                     "fields": _shop_admin_fields(cfg),
+                     "advisor_rules": (cfg.get("advisor") or {}).get("rules", [])})
 
 
 _PROMO_ITEMS_PER_GROUP_MAX = 30  # กันเมนูบวมจนข้อความลิสต์โปรยาวเกินลิมิต Messenger
+_PROMO_CATS_MAX = 12
+_PROMO_GROUPS_PER_CAT_MAX = 12
+_CAT_ID_RE = re.compile(r"^[a-z0-9_-]{1,20}$")
+
+# ข้อความอิสระที่ไม่ใช่รายการเมนู แต่บอทเอาไปพูดในหัวข้อ "สิทธิพิเศษ/ของแถม" (meta_bot._system_prompt)
+# 18 ก.ย. 2026 — ลูกค้า Lullabell แจ้งว่า "พาเพื่อนมาลด 5%" เลิกไปแล้วแต่บอทยังพูดอยู่ เพราะฟิลด์พวกนี้
+# เดิมแก้ได้แค่ผ่าน DB ตรงๆ ไม่มีทางแก้เองจากหน้า shop-admin เลย
+_SHOP_ADMIN_TEXT_FIELDS = ("gift", "perks", "friend_promo", "topup_promo", "coming_soon")
+_SHOP_ADMIN_TEXT_MAX = 1000
+_ADVISOR_RULES_MAX = 30
+
+
+def _shop_admin_fields(cfg: dict) -> dict:
+    return {k: str(cfg.get(k) or "") for k in _SHOP_ADMIN_TEXT_FIELDS}
+
+
+def _clean_advisor_rules(rules):
+    """ตรวจรูปแบบ advisor.rules ที่ส่งมาแก้ทั้งชุด — คืน (list สะอาด, None) หรือ (None, error)
+    รูปแบบต่อข้อ: {"if": [คำที่ลูกค้าพูด...], "say": "ประโยคอธิบาย", "rec": ["บริการ ราคา", ...], "handoff": bool}"""
+    if not isinstance(rules, list):
+        return None, "advisor_rules ต้องเป็นรายการ"
+    if len(rules) > _ADVISOR_RULES_MAX:
+        return None, f"advisor_rules มีได้ไม่เกิน {_ADVISOR_RULES_MAX} ข้อ"
+    out = []
+    for i, r in enumerate(rules):
+        if not isinstance(r, dict):
+            return None, f"advisor_rules ข้อ {i + 1} ไม่ใช่ object"
+        ifs = r.get("if")
+        if not isinstance(ifs, list) or not ifs or not all(isinstance(x, str) and x.strip() for x in ifs):
+            return None, f"advisor_rules ข้อ {i + 1}: 'if' ต้องเป็นรายการคำอย่างน้อย 1 คำ"
+        recs = r.get("rec", [])
+        if not isinstance(recs, list) or not all(isinstance(x, str) for x in recs):
+            return None, f"advisor_rules ข้อ {i + 1}: 'rec' ต้องเป็นรายการข้อความ"
+        say = r.get("say", "")
+        if not isinstance(say, str):
+            return None, f"advisor_rules ข้อ {i + 1}: 'say' ต้องเป็นข้อความ"
+        clean = {"if": [x.strip()[:40] for x in ifs][:20],
+                 "rec": [x.strip()[:200] for x in recs if x.strip()][:10]}
+        if say.strip():
+            clean["say"] = say.strip()[:300]
+        if r.get("handoff"):
+            clean["handoff"] = True
+        out.append(clean)
+    return out, None
+
+
+def _apply_field_ops(cfg: dict, fields: dict):
+    """ตั้งค่าฟิลด์ข้อความอิสระ (gift/perks/friend_promo/topup_promo/coming_soon) และ advisor_rules ใน cfg
+    pure เหมือน _apply_promo_ops — ส่งเฉพาะ key ที่จะแก้ · ค่าว่าง = ลบข้อความนั้น (บอทจะเลิกพูดถึง)"""
+    if not isinstance(fields, dict) or not fields:
+        return False, "ไม่มีฟิลด์ที่แก้ไข"
+    for k, v in fields.items():
+        if k in _SHOP_ADMIN_TEXT_FIELDS:
+            if v is None:
+                v = ""
+            if not isinstance(v, str):
+                return False, f"'{k}' ต้องเป็นข้อความ"
+            v = v.strip()
+            if len(v) > _SHOP_ADMIN_TEXT_MAX:
+                return False, f"'{k}' ยาวเกิน {_SHOP_ADMIN_TEXT_MAX} ตัวอักษร"
+            cfg[k] = v
+        elif k == "advisor_rules":
+            clean, err = _clean_advisor_rules(v)
+            if err:
+                return False, err
+            adv = cfg.get("advisor")
+            if not isinstance(adv, dict):
+                adv = {}
+                cfg["advisor"] = adv
+            adv["rules"] = clean
+        else:
+            return False, f"ไม่รู้จักฟิลด์ '{k}'"
+    return True, None
 
 
 def _apply_promo_ops(cfg: dict, changes: list):
@@ -933,9 +1008,9 @@ def _apply_promo_ops(cfg: dict, changes: list):
     แยกเป็นฟังก์ชัน pure (ไม่แตะ DB/request) เพื่อเทสออฟไลน์ได้ · mutate cfg ตรงๆ แล้วคืน (ok, error)
     ผู้เรียกต้องส่ง cfg ที่ deep-copy มาแล้วเท่านั้น — ถ้า batch พังกลางทางให้ทิ้งสำเนาไปทั้งก้อน
 
-    ลำดับประมวลผล: edit → del (item_idx มาก→น้อย) → add
-    edit ไม่ขยับตำแหน่ง · del เรียงถอยหลังทำให้ index จาก snapshot หน้าเว็บยังชี้ถูกตัวเสมอ
-    · add ต่อท้าย group ไม่ชนใคร"""
+    ลำดับประมวลผล: add_cat → add_group → edit → del (item_idx มาก→น้อย) → add
+    หมวด/หมวดย่อยใหม่เกิดก่อน (18 ก.ย. 2026) ให้ op add ในชุดเดียวกันชี้ถึงได้ · edit ไม่ขยับตำแหน่ง
+    · del เรียงถอยหลังทำให้ index จาก snapshot หน้าเว็บยังชี้ถูกตัวเสมอ · add ต่อท้าย group ไม่ชนใคร"""
     cats_by_id = {c.get("id"): c for c in cfg.get("categories", [])}
 
     def _group_of(ch):
@@ -957,7 +1032,7 @@ def _apply_promo_ops(cfg: dict, changes: list):
             return None, "ราคาห้ามเว้นว่าง"
         return {"n": n, "p": p, "d": str(ch.get("d", "")).strip()[:300]}, None
 
-    edits, dels, adds = [], [], []
+    edits, dels, adds, cat_adds, group_adds = [], [], [], [], []
     for ch in changes:
         if not isinstance(ch, dict):
             return False, "รูปแบบรายการแก้ไขไม่ถูกต้อง"
@@ -968,8 +1043,49 @@ def _apply_promo_ops(cfg: dict, changes: list):
             dels.append(ch)
         elif op == "add":
             adds.append(ch)
+        elif op == "add_cat":
+            cat_adds.append(ch)
+        elif op == "add_group":
+            group_adds.append(ch)
         else:
             return False, f"ไม่รู้จักคำสั่ง '{op}'"
+
+    # หมวดใหม่ (add_cat) — id ต้องเป็น a-z/0-9/_/- สั้นๆ เพราะใช้อ้างอิงใน op อื่นและใน _detect_promo_category
+    cats = cfg.setdefault("categories", [])
+    for ch in cat_adds:
+        cid = str(ch.get("id", "")).strip().lower()
+        if not _CAT_ID_RE.match(cid):
+            return False, "รหัสหมวด (id) ต้องเป็นตัวอักษร a-z ตัวเลข _ หรือ - ไม่เกิน 20 ตัว"
+        if cid in cats_by_id:
+            return False, f"มีหมวด '{cid}' อยู่แล้ว"
+        if len(cats) >= _PROMO_CATS_MAX:
+            return False, f"หมวดบริการมีได้ไม่เกิน {_PROMO_CATS_MAX} หมวด"
+        name = str(ch.get("name", "")).strip()[:40]
+        if not name:
+            return False, "ชื่อหมวดห้ามเว้นว่าง"
+        cat = {"id": cid, "name": name, "emoji": str(ch.get("emoji", "")).strip()[:8],
+               "desc": str(ch.get("desc", "")).strip()[:200], "groups": []}
+        note = str(ch.get("note", "")).strip()[:300]
+        if note:
+            cat["note"] = note
+        cats.append(cat)
+        cats_by_id[cid] = cat
+
+    # หมวดย่อยใหม่ (add_group) — hot=true คือกลุ่มโปรฮอตที่ _render_promo_list/ปุ่ม "ดูราคา" หยิบไปโชว์
+    for ch in group_adds:
+        cat = cats_by_id.get(ch.get("cat_id"))
+        if cat is None:
+            return False, f"ไม่พบหมวด {ch.get('cat_id')}"
+        groups = cat.setdefault("groups", [])
+        if len(groups) >= _PROMO_GROUPS_PER_CAT_MAX:
+            return False, f"หมวดย่อยในหมวดนี้มีได้ไม่เกิน {_PROMO_GROUPS_PER_CAT_MAX} กลุ่ม"
+        name = str(ch.get("name", "")).strip()[:60]
+        if not name:
+            return False, "ชื่อหมวดย่อยห้ามเว้นว่าง"
+        grp = {"name": name, "items": []}
+        if ch.get("hot"):
+            grp["hot"] = True
+        groups.append(grp)
 
     for ch in edits:
         grp, err = _group_of(ch)
@@ -1049,6 +1165,30 @@ def shop_admin_save_promos(slug):
         traceback.print_exc()
         return jsonify({"success": False, "error": f"บันทึกไม่สำเร็จ: {err}"}), 502
     return jsonify({"success": True})
+
+
+@app.route("/api/shop-admin/<slug>/fields", methods=["POST"])
+def shop_admin_save_fields(slug):
+    """แก้ข้อความ "สิทธิพิเศษ/โปรพิเศษ" ที่ไม่ใช่รายการเมนู (gift/perks/friend_promo/topup_promo/coming_soon)
+    และ advisor_rules (คำแนะนำตามอาการ) — body: {"fields": {key: value, ...}} ส่งเฉพาะ key ที่จะแก้
+    ค่าว่าง = ลบข้อความนั้นออก บอทจะเลิกพูดถึงทันที (18 ก.ย. 2026 — ตามที่ลูกค้า Lullabell แจ้งว่าโปรเก่าเลิกแล้ว)"""
+    try:
+        cfg = meta_bot.load_cfg(slug)
+    except Exception:
+        return jsonify({"success": False, "error": "ไม่พบร้านนี้"}), 404
+    if not _shop_admin_pin_ok(cfg):
+        return jsonify({"success": False, "error": "unauthorized"}), 403
+    d = request.get_json(force=True) or {}
+    new_cfg = json.loads(json.dumps(cfg))   # สำเนาเสมอ เหตุผลเดียวกับ shop_admin_save_promos
+    ok, err = _apply_field_ops(new_cfg, d.get("fields"))
+    if not ok:
+        return jsonify({"success": False, "error": err}), 400
+    ok, err = meta_bot.save_config(slug, new_cfg)
+    if not ok:
+        traceback.print_exc()
+        return jsonify({"success": False, "error": f"บันทึกไม่สำเร็จ: {err}"}), 502
+    return jsonify({"success": True, "fields": _shop_admin_fields(new_cfg),
+                    "advisor_rules": (new_cfg.get("advisor") or {}).get("rules", [])})
 
 
 @app.route("/api/shop-admin/<slug>/bot-toggle", methods=["POST"])

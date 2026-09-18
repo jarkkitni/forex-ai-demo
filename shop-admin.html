@@ -13,6 +13,11 @@
   .sub{color:var(--muted);font-size:14px;margin-bottom:28px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px;margin-bottom:16px}
   input[type=password],input[type=text]{width:100%;background:#0d1117;border:1px solid var(--line);border-radius:8px;color:var(--text);padding:11px 12px;font-size:16px}
+  textarea{width:100%;background:#0d1117;border:1px solid var(--line);border-radius:8px;color:var(--text);padding:10px 12px;font-size:15px;font-family:inherit;line-height:1.5;resize:vertical}
+  .field-label{display:block;font-size:12px;color:var(--muted);margin:12px 0 4px}
+  .add-group-row,.add-cat-row{display:flex;gap:8px;align-items:center;margin:12px 0 4px;flex-wrap:wrap}
+  .add-group-row input[type=text],.add-cat-row input[type=text]{flex:1;min-width:160px}
+  .add-cat-row input.emoji-input{flex:0 0 72px;min-width:72px}
   button{background:var(--accent);color:#062015;font-weight:700;border:none;border-radius:8px;padding:11px 20px;font-size:15px;cursor:pointer}
   button:disabled{opacity:.5;cursor:not-allowed}
   .msg{margin-top:12px;font-size:14px}
@@ -104,11 +109,27 @@ let newRowSeq = 0;
 
 function itemKey(catId, gIdx, iIdx) { return catId + ':' + gIdx + ':' + iIdx; }
 
-function renderEditor(categories, botEnabled, showDetails) {
+const FIELD_DEFS = [
+  {key: 'gift',         label: '🎁 ของแถม / ของขวัญลูกค้า'},
+  {key: 'perks',        label: '🍰 สิทธิพิเศษทุกบริการ'},
+  {key: 'friend_promo', label: '👯 โปรพิเศษ (เช่น พาเพื่อน / Beauty Day)'},
+  {key: 'topup_promo',  label: '💎 โปรสมาชิก / สะสมแต้ม / เติมเครดิต'},
+  {key: 'coming_soon',  label: '🔜 บริการที่กำลังจะเปิด'},
+];
+
+let fieldsDirty = false;   // ข้อความในกล่อง "สิทธิพิเศษ/โปรพิเศษ" ที่แก้แล้วยังไม่กด "บันทึกข้อความ"
+
+function hasPendingChanges() {
+  return fieldsDirty || Object.keys(dirty).length + Object.keys(added).length + Object.keys(deleted).length > 0;
+}
+
+function renderEditor(categories, botEnabled, showDetails, fields) {
+  fields = fields || {};
   originalItems = {};
   dirty = {};
   added = {};
   deleted = {};
+  fieldsDirty = false;
   const catsHtml = categories.map(cat => `
     <div class="cat-title">${esc(cat.emoji)} ${esc(cat.name)}</div>
     ${cat.groups.map(grp => `
@@ -138,7 +159,34 @@ function renderEditor(categories, botEnabled, showDetails) {
       <div class="add-slot" data-slot="${esc(cat.id)}:${grp.group_idx}"></div>
       <div><button class="link-btn add-item-btn" type="button" data-cat="${esc(cat.id)}" data-gidx="${grp.group_idx}">＋ เพิ่มรายการ</button></div>
     `).join('')}
+    <div class="add-group-row" data-cat="${esc(cat.id)}">
+      <input type="text" class="grp-name-input" placeholder="ชื่อหมวดย่อยใหม่ในหมวด ${esc(cat.name)} เช่น เมนูต่อขนตา">
+      <label class="hint" style="white-space:nowrap"><input type="checkbox" class="grp-hot-input"> โปรฮอต</label>
+      <button class="link-btn add-group-btn" type="button">＋ เพิ่มหมวดย่อย</button>
+    </div>
   `).join('');
+  const fieldsHtml = `
+      <div class="card" id="fieldsCard">
+        <div style="font-weight:700;margin-bottom:4px">สิทธิพิเศษ / โปรพิเศษ (ข้อความอิสระ)</div>
+        <div class="hint">บอทจะพูดถึงข้อความพวกนี้ตอนลูกค้าถามสิทธิพิเศษ/ส่วนลด หรือตอนสรุปก่อนจอง — โปรไหนเลิกแล้วให้ลบข้อความทิ้งให้ว่าง บอทจะเลิกพูดถึงทันที</div>
+        ${FIELD_DEFS.map(f => `
+          <label class="field-label">${esc(f.label)}</label>
+          <textarea class="field-input" data-field="${f.key}" rows="2">${esc(fields[f.key] || '')}</textarea>`).join('')}
+        <div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <button id="fieldsSaveBtn" disabled>บันทึกข้อความ</button>
+          <span class="hint" id="fieldsMsg"></span>
+        </div>
+      </div>`;
+  const addCatHtml = `
+      <div class="card" style="margin-top:28px">
+        <div style="font-weight:700;margin-bottom:6px">＋ เพิ่มหมวดบริการใหม่</div>
+        <div class="add-cat-row">
+          <input type="text" id="newCatEmoji" class="emoji-input" placeholder="อีโมจิ">
+          <input type="text" id="newCatName" placeholder="ชื่อหมวด เช่น ต่อขนตา">
+          <button id="addCatBtn" type="button">เพิ่มหมวด</button>
+        </div>
+        <div class="hint" style="margin-top:8px">เพิ่มหมวดแล้วค่อยกด "＋ เพิ่มหมวดย่อย" (ติ๊ก "โปรฮอต" ถ้าเป็นกลุ่มโปร) และ "＋ เพิ่มรายการ" ในหมวดนั้น</div>
+      </div>`;
   const helpKey = 'shopadmin_help_dismissed_' + SLUG;
   const showHelp = !localStorage.getItem(helpKey);
   const helpBannerHtml = `
@@ -150,6 +198,8 @@ function renderEditor(categories, botEnabled, showDetails) {
           <li>แก้ชื่อรายการ ราคา หรือรายละเอียดในช่องนั้นๆ ได้เลย</li>
           <li>กด "＋ เพิ่มรายการ" ท้ายหมวดเพื่อเพิ่มบริการใหม่ · กดปุ่ม "ลบ" ข้างชื่อเพื่อเอารายการออก</li>
           <li>กดปุ่ม "บันทึกการเปลี่ยนแปลง" ด้านล่างขวา — บอทจะตอบข้อมูลใหม่ให้ลูกค้าทันที ไม่ต้องรอทีมพัฒนา</li>
+          <li>กล่อง "สิทธิพิเศษ / โปรพิเศษ" ด้านบน = ข้อความโปรที่ไม่ใช่รายการเมนู (ของแถม, พาเพื่อน, สะสมแต้ม) แก้แล้วกด "บันทึกข้อความ" · โปรไหนเลิกแล้วลบให้ว่าง</li>
+          <li>เปิดบริการใหม่ทั้งหมวด (เช่น ต่อขนตา) ใช้ "＋ เพิ่มหมวดบริการใหม่" ท้ายหน้า แล้ว "＋ เพิ่มหมวดย่อย" ในหมวดนั้น</li>
         </ol>
       </div>`;
   $('#app').innerHTML = `
@@ -181,7 +231,9 @@ function renderEditor(categories, botEnabled, showDetails) {
         </label>
       </div>
       <div id="helpBannerSlot">${showHelp ? helpBannerHtml : ''}</div>
+      ${fieldsHtml}
       ${catsHtml}
+      ${addCatHtml}
       <div class="save-bar">
         <span class="hint" id="dirtyHint"></span>
         <button id="saveBtn" disabled>บันทึกการเปลี่ยนแปลง</button>
@@ -274,7 +326,75 @@ function renderEditor(categories, botEnabled, showDetails) {
     btn.onclick = () => addNewRow(btn.dataset.cat, Number(btn.dataset.gidx));
   });
   $('#saveBtn').onclick = doSave;
+  bindFieldsCard(fields);
+  document.querySelectorAll('.add-group-btn').forEach(btn => {
+    btn.onclick = () => addGroup(btn.closest('.add-group-row'));
+  });
+  $('#addCatBtn').onclick = addCategory;
   updateSaveBar();
+}
+
+function bindFieldsCard(fields) {
+  const inputs = Array.from(document.querySelectorAll('.field-input'));
+  const btn = $('#fieldsSaveBtn'), msg = $('#fieldsMsg');
+  const changed = () => inputs.filter(t => (t.value || '') !== (fields[t.dataset.field] || ''));
+  inputs.forEach(t => t.addEventListener('input', () => {
+    fieldsDirty = changed().length > 0;
+    btn.disabled = !fieldsDirty;
+    msg.textContent = '';
+  }));
+  btn.onclick = async () => {
+    const payload = {};
+    changed().forEach(t => { payload[t.dataset.field] = t.value; });
+    if (!Object.keys(payload).length) return;
+    btn.disabled = true;
+    msg.textContent = 'กำลังบันทึก...';
+    const r = await api('/fields', {method: 'POST', body: JSON.stringify({fields: payload})});
+    if (r.success) {
+      Object.assign(fields, r.fields || payload);
+      inputs.forEach(t => { t.value = fields[t.dataset.field] || ''; });
+      fieldsDirty = false;
+      msg.textContent = 'บันทึกสำเร็จ ✓ บอทใช้ข้อความใหม่ทันที';
+    } else {
+      btn.disabled = false;
+      msg.textContent = 'บันทึกไม่สำเร็จ: ' + (r.error || 'ลองใหม่อีกครั้ง');
+    }
+  };
+}
+
+// เพิ่มหมวดย่อย/หมวดใหม่ = บันทึกทันที (ไม่รอปุ่มบันทึกรวม) เพราะต้องรู้ตำแหน่งจริงจากเซิร์ฟเวอร์ก่อนถึงจะเพิ่มรายการข้างในได้
+const PENDING_WARN = 'มีรายการที่แก้ค้างอยู่ยังไม่บันทึก — ทำต่อจะโหลดหน้าใหม่และทิ้งการแก้ที่ค้างอยู่ ต้องการทำต่อไหม?';
+
+async function addGroup(row) {
+  const name = row.querySelector('.grp-name-input').value.trim();
+  if (!name) { alert('กรอกชื่อหมวดย่อยก่อนครับ'); return; }
+  if (hasPendingChanges() && !confirm(PENDING_WARN)) return;
+  const hot = row.querySelector('.grp-hot-input').checked;
+  const btn = row.querySelector('.add-group-btn');
+  btn.disabled = true;
+  const r = await api('/promos', {method: 'POST', body: JSON.stringify({changes: [{op: 'add_group', cat_id: row.dataset.cat, name, hot}]})});
+  if (r.success) {
+    loadEditor(true);
+  } else {
+    btn.disabled = false;
+    alert('เพิ่มหมวดย่อยไม่สำเร็จ: ' + (r.error || 'unknown error'));
+  }
+}
+
+async function addCategory() {
+  const name = $('#newCatName').value.trim(), emoji = $('#newCatEmoji').value.trim();
+  if (!name) { alert('กรอกชื่อหมวดก่อนครับ'); return; }
+  if (hasPendingChanges() && !confirm(PENDING_WARN)) return;
+  const id = 'c' + Date.now().toString(36);   // รหัสภายใน a-z0-9 ไม่ต้องให้ผู้ใช้คิดเอง
+  const btn = $('#addCatBtn');
+  btn.disabled = true;
+  const r = await api('/promos', {method: 'POST', body: JSON.stringify({changes: [{op: 'add_cat', id, name, emoji}]})});
+  if (r.success) {
+    loadEditor(true);
+  } else {
+    btn.disabled = false;
+    alert('เพิ่มหมวดไม่สำเร็จ: ' + (r.error || 'unknown error'));
+  }
 }
 
 function addNewRow(catId, gIdx) {
@@ -331,6 +451,8 @@ function updateSaveBar() {
 }
 
 async function doSave() {
+  // กล่องข้อความสิทธิพิเศษมีของค้าง — บันทึกรายการแล้วหน้าจะโหลดใหม่ ข้อความนั้นจะหาย ต้องเตือนก่อน
+  if (fieldsDirty && !confirm('มีข้อความในกล่อง "สิทธิพิเศษ / โปรพิเศษ" ที่ยังไม่ได้กด "บันทึกข้อความ" — บันทึกรายการตอนนี้จะทิ้งข้อความนั้น กด "บันทึกข้อความ" ก่อนไหม? (ยกเลิก = กลับไปกดก่อน)')) return;
   // แถวใหม่: ว่างสนิท = ตัดทิ้งเงียบๆ · กรอกครึ่งเดียว = บล็อกพร้อมบอกเหตุผล
   const addOps = [];
   for (const id of Object.keys(added)) {
@@ -380,13 +502,13 @@ async function doSave() {
 async function loadEditor(justSaved) {
   const r = await api('/promos');
   if (r.success) {
-    renderEditor(r.categories, r.bot_enabled, r.promo_show_details);
+    renderEditor(r.categories, r.bot_enabled, r.promo_show_details, r.fields);
     if (justSaved) {
       const hint = document.createElement('div');
       hint.className = 'msg ok';
       hint.style.marginTop = '14px';
       hint.textContent = 'บันทึกสำเร็จ ✓';
-      $('.wrap').insertBefore(hint, $('.cat-title'));
+      $('.wrap').insertBefore(hint, $('.cat-title') || $('.save-bar'));
     }
   } else {
     localStorage.removeItem(pinKey);
