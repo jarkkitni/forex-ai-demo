@@ -565,12 +565,19 @@ def assetlinks():
     """Digital Asset Links — ไฟล์ที่ทำให้แอป APK (TWA) เปิดแบบเต็มจอไม่มีแถบ URL ของเบราว์เซอร์
     ถ้าไม่มีไฟล์นี้หรือ fingerprint ไม่ตรง แอปจะโชว์แถบ URL คาไว้ หรือแย่กว่านั้นคือเปิดแล้วปิดตัวเอง
     วิธีใช้: เอาไฟล์ assetlinks.json ที่ได้จาก zip ของ PWABuilder มาวางที่ chatapp/assetlinks.json"""
-    p = os.path.join(os.path.dirname(__file__), "chatapp", "assetlinks.json")
-    if not os.path.exists(p):
+    # โดเมนเดียวมีไฟล์นี้ได้ไฟล์เดียว → รวมทุกแอปที่มี APK (chatapp + tarot) เป็น array เดียว
+    import json as _json
+    entries = []
+    for sub in ("chatapp", "tarot"):
+        p = os.path.join(os.path.dirname(__file__), sub, "assetlinks.json")
+        if os.path.exists(p):
+            with open(p, "r", encoding="utf-8") as f:
+                data = _json.load(f)
+            entries.extend(data if isinstance(data, list) else [data])
+    if not entries:
         return ('{"error":"ยังไม่ได้วางไฟล์ assetlinks.json จาก PWABuilder"}', 404,
                 {"Content-Type": "application/json; charset=utf-8"})
-    with open(p, "r", encoding="utf-8") as f:
-        return f.read(), 200, {"Content-Type": "application/json; charset=utf-8"}
+    return _json.dumps(entries, ensure_ascii=False, indent=1), 200, {"Content-Type": "application/json; charset=utf-8"}
 
 
 @app.route("/chatapp/", defaults={"sub": "index.html"})
@@ -591,6 +598,35 @@ def chatapp(sub):
         resp.headers["Service-Worker-Allowed"] = "/chatapp/"
     elif sub.endswith("manifest.json"):
         resp.headers["Content-Type"] = "application/manifest+json; charset=utf-8"
+    return resp
+
+
+@app.route("/tarot")
+def tarot_redirect():
+    return redirect("/tarot/", code=301)
+
+
+@app.route("/tarot/", defaults={"sub": "index.html"})
+@app.route("/tarot/<path:sub>")
+def tarot(sub):
+    """Nocturne — ไพ่ทาโรต์สายมู (PWA ติดตั้งเป็นแอปได้) · ต้นฉบับอยู่ Ai Agen/nocturne-tarot/
+    แก้ที่ต้นฉบับแล้วรัน tools/deploy_copy.py ก่อน push เสมอ
+    ภาพไพ่ = Rider-Waite-Smith 1909 (สาธารณสมบัติ) ดู tarot/cards/credits.json"""
+    from flask import send_from_directory, abort
+    d = os.path.join(os.path.dirname(__file__), "tarot")
+    if sub == "assetlinks.json":
+        abort(404)   # เสิร์ฟผ่าน /.well-known/assetlinks.json เท่านั้น
+    resp = send_from_directory(d, sub)
+    if sub.endswith(".apk"):
+        resp.headers["Content-Type"] = "application/vnd.android.package-archive"
+        resp.headers["Content-Disposition"] = 'attachment; filename="NocturneTarot.apk"'
+    elif sub.endswith("sw.js"):
+        resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        resp.headers["Service-Worker-Allowed"] = "/tarot/"
+    elif sub.endswith("manifest.json"):
+        resp.headers["Content-Type"] = "application/manifest+json; charset=utf-8"
+    elif sub.endswith(".webp") or sub.startswith("icons/"):
+        resp.headers["Cache-Control"] = "public, max-age=2592000"   # ภาพไพ่ไม่เปลี่ยน แคช 30 วัน
     return resp
 
 

@@ -1,0 +1,471 @@
+<meta charset="utf-8">
+<title>Nocturne Tarot</title>
+<meta name="theme-color" content="#07060d">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Noto+Serif+Thai:wght@400;600&family=Srisakdi:wght@700&display=swap">
+<style>
+:root{
+  color-scheme:dark;
+  --ink:#07060d; --indigo:#15122b; --indigo2:#1f1a3d;
+  --gold:#c9a45c; --gold-hi:#efdcaa; --gold-lo:#7d6536;
+  --mist:#a49dba; --text:#e9e3d3; --line:rgba(201,164,92,.28); --rev:#f0b3a8;
+  --display:"Cinzel","Trajan Pro",Georgia,serif;
+  --thai-d:"Srisakdi","Noto Serif Thai",serif;
+  --body:"Noto Serif Thai","Sarabun",Tahoma,serif;
+  --ease:cubic-bezier(.22,.8,.24,1);
+}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--ink);color:var(--text);font-family:var(--body);font-size:15px;line-height:1.6;overflow-x:hidden}
+#sky{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.app{position:relative;z-index:1;height:100%;display:grid;grid-template-rows:auto 1fr auto;padding-inline:16px;box-sizing:border-box}
+header{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding-block:14px 4px;gap:12px}
+.brand{font-family:var(--display);letter-spacing:.32em;font-size:15px;color:var(--gold-hi)}
+.brand small{display:block;font-family:var(--body);letter-spacing:.04em;font-size:11px;color:var(--mist)}
+.moons{display:flex;gap:10px;align-items:center}
+.moons svg{width:14px;height:14px;opacity:.55}
+.moons svg.now{opacity:1;filter:drop-shadow(0 0 5px rgba(239,220,170,.8));width:18px;height:18px}
+.hdr-r{justify-self:end;display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.lunar{font-size:12px;color:var(--mist);text-align:right}
+.lunar b{color:var(--gold-hi);font-weight:600}
+.ibtn{background:none;border:1px solid var(--line);color:var(--gold-hi);border-radius:999px;font:12px var(--body);padding:5px 12px;cursor:pointer;white-space:nowrap}
+.ibtn:hover{border-color:var(--gold)}
+.streak{font-size:12px;color:var(--gold-hi);white-space:nowrap}
+button:focus-visible,.card:focus-visible,textarea:focus-visible,.hitem:focus-visible{outline:2px solid var(--gold-hi);outline-offset:3px}
+
+.stage{position:relative;min-height:300px;overflow:hidden}
+.astro{position:absolute;left:50%;top:50%;width:min(96vmin,760px);aspect-ratio:1;transform:translate(-50%,-50%);pointer-events:none;opacity:.9}
+.astro .spin{transform-origin:50% 50%;animation:spin 240s linear infinite}
+.astro .spin2{transform-origin:50% 50%;animation:spin 400s linear infinite reverse}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.card{position:absolute;left:0;top:0;transition:transform .8s var(--ease),width .8s var(--ease),height .8s var(--ease),opacity .5s;cursor:pointer;will-change:transform;-webkit-tap-highlight-color:transparent}
+.card.gone{opacity:0;pointer-events:none}
+.card .lift{width:100%;height:100%;transition:transform .3s var(--ease);perspective:900px}
+.mode-pick .card:not(.picked):hover .lift,.mode-pick .card:not(.picked):focus-visible .lift{transform:translateY(-14%)}
+.card .inner{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .9s var(--ease)}
+.card.flipped .inner{transform:rotateY(180deg)}
+.back,.face{position:absolute;inset:0;border-radius:7px;backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:hidden}
+.back{background:linear-gradient(125deg,#2b2a78,#4a2a7a 22%,#1f4f86 45%,#3b8a8a 58%,#6d3f8f 75%,#2b2a78);background-size:320% 320%;animation:foil 9s ease-in-out infinite alternate;box-shadow:0 6px 18px rgba(0,0,0,.55)}
+.back::after,.face::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,240,210,.26) 45%,rgba(160,230,255,.2) 52%,transparent 66%);background-size:250% 100%;animation:sheen 6s ease-in-out infinite;mix-blend-mode:screen;pointer-events:none}
+.back svg{position:absolute;inset:0;width:100%;height:100%}
+@keyframes foil{to{background-position:100% 100%}}
+@keyframes sheen{0%{background-position:120% 0}100%{background-position:-120% 0}}
+.face{transform:rotateY(180deg);padding:4.5%;box-sizing:border-box;background:linear-gradient(135deg,#e8d39a,#9fd6d2 28%,#e9b7d8 52%,#c9a45c 76%,#f3e2b0);box-shadow:0 8px 26px rgba(0,0,0,.6)}
+.facein{position:relative;height:100%;border-radius:4px;overflow:hidden;background:#e9dcc0;box-shadow:inset 0 0 0 1px rgba(60,40,10,.35)}
+.facein img{width:100%;height:100%;object-fit:cover;display:block;transform:scale(1.07)}
+.facein.rev img{transform:rotate(180deg) scale(1.07)}
+.revtag{position:absolute;left:50%;bottom:4%;transform:translateX(-50%);font-size:max(9px,.6em);background:rgba(7,6,13,.8);color:var(--rev);padding:.1em .6em;border-radius:99px;white-space:nowrap}
+
+.slot{position:absolute;left:0;top:0;border:1px dashed rgba(201,164,92,.45);border-radius:7px;transition:transform .8s var(--ease),width .8s var(--ease),height .8s var(--ease),opacity .4s;pointer-events:none}
+.slot-label{position:absolute;left:0;top:0;font-family:var(--display);font-size:12px;letter-spacing:.2em;color:var(--gold);text-align:center;transition:transform .8s var(--ease),opacity .4s;pointer-events:none;white-space:nowrap}
+.slot-label span{display:block;font-family:var(--body);letter-spacing:0;font-size:12px;color:var(--mist)}
+.slot-label em{display:block;font-style:normal;font-family:var(--thai-d);font-size:17px;letter-spacing:0;color:#f3e6c4;line-height:1.3}
+.slot-label em.r{color:var(--rev)}
+.hidden-o{opacity:0}
+
+.dock{padding-block:10px 18px;display:grid;justify-items:center;gap:12px;text-align:center}
+.hint{font-size:15px;color:var(--gold-hi);min-height:1.6em;text-wrap:balance}
+.hint small{display:block;color:var(--mist);font-size:12px}
+.form{display:grid;gap:10px;width:min(600px,100%)}
+.row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.chip{border:1px solid var(--line);background:rgba(21,18,43,.7);color:var(--text);border-radius:999px;padding:6px 14px;font:14px var(--body);cursor:pointer}
+.chip[aria-pressed="true"]{border-color:var(--gold);color:#1a1405;background:linear-gradient(180deg,var(--gold-hi),var(--gold))}
+.lbl{font-size:11px;letter-spacing:.18em;color:var(--mist);font-family:var(--display);align-self:center}
+textarea{width:100%;box-sizing:border-box;resize:none;background:rgba(21,18,43,.75);border:1px solid var(--line);border-radius:10px;color:var(--text);font:15px var(--body);padding:10px 12px;height:48px}
+textarea::placeholder{color:#6f6888}
+.cta{font-family:var(--display);letter-spacing:.2em;font-size:14px;color:#1a1405;background:linear-gradient(180deg,#f4e3b4,#c9a45c);border:0;border-radius:999px;padding:12px 30px;cursor:pointer;box-shadow:0 0 24px rgba(201,164,92,.35)}
+.cta:hover{filter:brightness(1.08)}
+.ghost{font-family:var(--body);font-size:14px;color:var(--gold-hi);background:none;border:1px solid var(--gold-lo);border-radius:999px;padding:9px 18px;cursor:pointer}
+.ghost:hover{border-color:var(--gold)}
+.note{font-size:11px;color:#6f6888}
+.daily{font-size:13px;color:var(--gold-hi)}
+
+.sheet{position:fixed;top:0;right:0;bottom:0;width:min(440px,100%);z-index:20;background:linear-gradient(180deg,rgba(21,18,43,.97),rgba(9,8,20,.98));border-left:1px solid var(--line);transform:translateX(105%);transition:transform .6s var(--ease);display:grid;grid-template-rows:auto 1fr auto;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.sheet.open{transform:none}
+.sheet-h{display:flex;justify-content:space-between;align-items:center;padding:16px 20px 8px;border-bottom:1px solid var(--line)}
+.sheet-h h2{margin:0;font-family:var(--display);font-weight:500;letter-spacing:.24em;font-size:15px;color:var(--gold-hi)}
+.sheet-b{overflow-y:auto;padding:14px 20px 20px}
+.sheet-f{display:flex;gap:8px;padding:12px 20px;border-top:1px solid var(--line);flex-wrap:wrap}
+.q{font-size:14px;color:var(--mist);border-left:2px solid var(--gold-lo);padding-left:10px;margin:0 0 14px}
+.meta{font-size:12px;color:var(--mist);margin-bottom:6px}
+.entry{display:grid;grid-template-columns:64px 1fr;gap:12px;padding-block:12px;border-bottom:1px solid rgba(201,164,92,.14)}
+.thumb{width:64px;aspect-ratio:.58;border-radius:4px;overflow:hidden;border:1px solid var(--gold-lo);background:#e9dcc0}
+.thumb img{width:100%;height:100%;object-fit:cover;transform:scale(1.07)}
+.thumb.rev img{transform:rotate(180deg) scale(1.07)}
+.entry .pos{font-family:var(--display);font-size:11px;letter-spacing:.22em;color:var(--gold)}
+.entry h3{margin:2px 0 2px;font-family:var(--thai-d);font-size:21px;font-weight:700;color:#f3e6c4;line-height:1.4}
+.entry h3 small{display:block;font-family:var(--display);font-size:11px;color:var(--mist);letter-spacing:.06em}
+.kw{font-size:13px;color:var(--gold-hi);margin-bottom:4px}
+.entry p{margin:4px 0;max-width:62ch}
+.rv{color:var(--rev)}
+.msg{margin-top:16px;padding:14px;border:1px solid var(--line);border-radius:10px;background:rgba(7,6,13,.4)}
+.msg h4{margin:0 0 6px;font-family:var(--display);font-weight:500;font-size:12px;letter-spacing:.22em;color:var(--gold)}
+.lucky{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px}
+.lucky div{font-size:13px;color:var(--mist)}
+.lucky b{display:block;font-family:var(--display);font-size:26px;color:var(--gold-hi);font-weight:500;line-height:1.2}
+.sw{display:inline-block;width:16px;height:16px;border-radius:50%;vertical-align:-3px;margin-right:6px;border:1px solid rgba(255,255,255,.35)}
+.copybox{width:100%;height:120px;margin-top:10px;font-size:12px}
+.credit{font-size:11px;color:#6f6888;margin-top:14px}
+
+.hstats{display:flex;gap:18px;margin-bottom:10px;font-size:13px;color:var(--mist)}
+.hstats b{display:block;font-family:var(--display);font-size:24px;color:var(--gold-hi);font-weight:500}
+.hitem{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid rgba(201,164,92,.14);padding:10px 0;color:var(--text);font:inherit;cursor:pointer}
+.hitem .minis{display:flex;gap:3px}
+.hitem .minis .thumb{width:28px}
+.hitem small{display:block;color:var(--mist);font-size:12px}
+.hitem strong{font-family:var(--thai-d);font-weight:700;font-size:16px;color:#f3e6c4}
+.empty{color:var(--mist);font-size:14px;padding:20px 0}
+
+.modal{position:fixed;inset:0;z-index:30;background:rgba(5,4,10,.88);display:grid;place-items:center;padding:16px;box-sizing:border-box;opacity:0;pointer-events:none;transition:opacity .35s;overflow:auto}
+.modal.open{opacity:1;pointer-events:auto}
+.mbox{display:grid;grid-template-columns:auto minmax(0,380px);gap:28px;align-items:center;max-height:100%}
+.bigcard{position:relative;width:min(300px,70vw);aspect-ratio:.58;max-width:100%;font-size:min(30px,7vw)}
+.bigcard .face{transform:none;backface-visibility:visible}
+.mtext h3{margin:0;font-family:var(--thai-d);font-size:30px;color:#f3e6c4;line-height:1.35}
+.mtext .en{font-family:var(--display);letter-spacing:.14em;color:var(--gold);font-size:13px}
+.mtext dl{margin:12px 0 0;display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:14px}
+.mtext dt{color:var(--gold);white-space:nowrap}
+.mtext dd{margin:0}
+.sbox{display:grid;justify-items:center;gap:12px;max-width:100%}
+.sbox img{max-height:min(72vh,900px);max-width:100%;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.6);border:1px solid var(--line)}
+.fab{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:15}
+@media (max-width:720px){
+  header{grid-template-columns:1fr auto}
+  .moons{grid-column:1/-1;grid-row:2;justify-content:center}
+  .lunar{display:none}
+  .mbox{grid-template-columns:1fr;justify-items:center;text-align:left}
+  .sheet{top:auto;height:80%;width:100%;border-left:0;border-top:1px solid var(--line);border-radius:16px 16px 0 0;transform:translateY(105%)}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition-duration:.01ms!important}
+}
+</style>
+
+<canvas id="sky" aria-hidden="true"></canvas>
+<div class="app">
+  <header>
+    <div class="brand">NOCTURNE<small>ไพ่ทาโรต์ใต้แสงจันทร์</small></div>
+    <div class="moons" id="moons" aria-hidden="true"></div>
+    <div class="hdr-r">
+      <div class="lunar" id="lunar"></div>
+      <span class="streak" id="streak" hidden></span>
+      <button class="ibtn" id="histBtn" type="button">ประวัติ</button>
+      <button class="ibtn" id="snd" aria-pressed="true" type="button">เสียง: เปิด</button>
+    </div>
+  </header>
+
+  <main class="stage mode-intro" id="stage" aria-live="polite">
+    <svg class="astro" viewBox="0 0 400 400" aria-hidden="true" id="astro"></svg>
+  </main>
+
+  <section class="dock" id="dock">
+    <div class="hint" id="hint"></div>
+    <form class="form" id="form">
+      <textarea id="q" maxlength="120" placeholder="คำถามในใจ (ไม่ใส่ก็ได้) เช่น ปีนี้จะได้งานใหม่ไหม"></textarea>
+      <div class="row" role="group" aria-label="เรื่องที่อยากถาม">
+        <span class="lbl">เรื่อง</span>
+        <button type="button" class="chip" data-topic="all" aria-pressed="true">ภาพรวม</button>
+        <button type="button" class="chip" data-topic="love" aria-pressed="false">ความรัก</button>
+        <button type="button" class="chip" data-topic="work" aria-pressed="false">การงาน</button>
+        <button type="button" class="chip" data-topic="money" aria-pressed="false">การเงิน</button>
+      </div>
+      <div class="row" role="group" aria-label="จำนวนไพ่ที่เปิด">
+        <span class="lbl">เปิด</span>
+        <button type="button" class="chip" data-spread="3" aria-pressed="true">3 ใบ · อดีต ปัจจุบัน อนาคต</button>
+        <button type="button" class="chip" data-spread="1" aria-pressed="false">1 ใบ · ไพ่ประจำวัน</button>
+      </div>
+      <div class="row" role="group" aria-label="สำรับไพ่">
+        <span class="lbl">สำรับ</span>
+        <button type="button" class="chip" data-deck="78" aria-pressed="true">ครบ 78 ใบ</button>
+        <button type="button" class="chip" data-deck="22" aria-pressed="false">ชุดใหญ่ 22 ใบ</button>
+      </div>
+      <div class="daily" id="dailyNote" hidden></div>
+      <div class="row"><button class="cta" type="submit" id="go">สับไพ่</button></div>
+    </form>
+    <div class="row" id="actions" hidden>
+      <button class="ghost" type="button" id="flipAll">เปิดไพ่ทั้งหมด</button>
+      <button class="ghost" type="button" id="shareNow" hidden>ทำภาพแชร์</button>
+      <button class="ghost" type="button" id="again">ดูดวงใหม่</button>
+    </div>
+    <div class="note">เพื่อความบันเทิงและเป็นแนวทางใคร่ครวญ ไม่ใช่คำตัดสินชีวิต</div>
+  </section>
+</div>
+
+<button class="cta fab" id="fab" type="button" hidden>อ่านคำทำนาย</button>
+
+<aside class="sheet" id="sheet" aria-label="คำทำนาย">
+  <div class="sheet-h"><h2>คำทำนาย</h2><button class="ibtn" id="closeSheet" type="button">ปิด</button></div>
+  <div class="sheet-b" id="reading"></div>
+  <div class="sheet-f">
+    <button class="cta" type="button" id="share" style="padding:9px 18px">ทำภาพแชร์</button>
+    <button class="ghost" type="button" id="copy">คัดลอกข้อความ</button>
+    <button class="ghost" type="button" id="again2">ดูดวงใหม่</button>
+  </div>
+</aside>
+
+<aside class="sheet" id="hist" aria-label="ประวัติการดูดวง">
+  <div class="sheet-h"><h2>ประวัติ</h2><button class="ibtn" id="closeHist" type="button">ปิด</button></div>
+  <div class="sheet-b" id="histBody"></div>
+  <div class="sheet-f">
+    <button class="ghost" type="button" id="clearHist">ล้างประวัติ</button>
+    <button class="ghost" type="button" id="clearYes" hidden style="border-color:var(--rev);color:var(--rev)">ยืนยันล้างทั้งหมด</button>
+    <button class="ghost" type="button" id="clearNo" hidden>ไม่ล้าง</button>
+  </div>
+</aside>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-label="รายละเอียดไพ่">
+  <div class="mbox">
+    <div class="bigcard" id="bigcard"></div>
+    <div class="mtext" id="mtext"></div>
+  </div>
+</div>
+
+<div class="modal" id="smodal" role="dialog" aria-modal="true" aria-label="ภาพสำหรับแชร์">
+  <div class="sbox">
+    <img id="simg" alt="ภาพคำทำนายสำหรับแชร์">
+    <div class="row">
+      <button class="cta" type="button" id="sShare" hidden>แชร์</button>
+      <a class="ghost" id="sSave" download="nocturne-tarot.png" style="text-decoration:none">บันทึกรูป</a>
+      <button class="ghost" type="button" id="sClose">ปิด</button>
+    </div>
+    <div class="note" style="color:var(--mist)">ถ้ากดบันทึกไม่ได้ ให้กดค้างที่รูปแล้วเลือก "บันทึกรูปภาพ"</div>
+  </div>
+</div>
+
+<script src="cards.js" charset="utf-8"></script>
+<script>
+const ROMAN=["0","I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII","XIII","XIV","XV","XVI","XVII","XVIII","XIX","XX","XXI"];
+const TOPIC={all:"ภาพรวม",love:"ความรัก",work:"การงาน",money:"การเงิน"};
+const POS3=[["PAST","อดีต"],["PRESENT","ปัจจุบัน"],["FUTURE","อนาคต"]];
+const POS1=[["TODAY","ไพ่ประจำวัน"]];
+const ASP=.58;
+const $=s=>document.querySelector(s);
+const imgSrc=c=>`cards/${c.img}.webp`;
+const numLabel=c=>c.img[0]==="m"?ROMAN[c.n]:"";
+function rnd(n){const a=new Uint32Array(1);crypto.getRandomValues(a);return a[0]%n}
+function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=rnd(i+1);[arr[i],arr[j]]=[arr[j],arr[i]]}return arr}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+function esc(s){return String(s).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]))}
+function star(cx,cy,r,n=8,inner=.42){let p="";for(let i=0;i<n*2;i++){const a=Math.PI*i/n-Math.PI/2,rr=i%2?r*inner:r;p+=(i?"L":"M")+(cx+Math.cos(a)*rr).toFixed(1)+" "+(cy+Math.sin(a)*rr).toFixed(1)}return p+"Z"}
+const localDate=(d=new Date())=>d.toLocaleDateString("sv");
+const thDate=t=>new Date(t).toLocaleDateString("th-TH",{day:"numeric",month:"short",year:"2-digit"});
+const thTime=t=>new Date(t).toLocaleTimeString("th-TH",{hour:"2-digit",minute:"2-digit"});
+
+/* ---------- storage (per-viewer, may be unavailable) ---------- */
+const HKEY="nocturne.history.v1";
+function loadHist(){try{return JSON.parse(localStorage.getItem(HKEY)||"[]")}catch(e){return[]}}
+function saveHist(h){try{localStorage.setItem(HKEY,JSON.stringify(h.slice(0,200)))}catch(e){}}
+function todayDaily(){const d=localDate();return loadHist().find(e=>e.spread===1&&e.date===d)}
+function streak(){const days=new Set(loadHist().map(e=>e.date));let n=0,d=new Date();if(!days.has(localDate(d)))d.setDate(d.getDate()-1);while(days.has(localDate(d))){n++;d.setDate(d.getDate()-1)}return n}
+
+const BACK=`<svg viewBox="0 0 58 100" preserveAspectRatio="none" fill="none" stroke="#f3e2b0" stroke-width=".7" aria-hidden="true">
+<rect x="3" y="3" width="52" height="94" rx="2.5"/><rect x="5.5" y="5.5" width="47" height="89" rx="1.5" stroke-opacity=".6"/>
+<path d="M29 12 L46 50 L29 88 L12 50Z" stroke-opacity=".7"/><circle cx="29" cy="50" r="11"/><circle cx="29" cy="50" r="7.5" stroke-opacity=".6"/>
+<path d="M21 50 q8 -7 16 0 q-8 7 -16 0Z"/><circle cx="29" cy="50" r="2.4" fill="#f3e2b0"/>
+<path d="M32 19 a4 4 0 1 1 -3 -5 a3 3 0 1 0 3 5Z M32 81 a4 4 0 1 1 -3 5 a3 3 0 1 0 3 -5Z" fill="#f3e2b0" stroke="none"/>
+<path d="${star(11,12,2.6,4,.3)} ${star(47,12,2.6,4,.3)} ${star(11,88,2.6,4,.3)} ${star(47,88,2.6,4,.3)} ${star(29,31,1.6,4,.3)} ${star(29,69,1.6,4,.3)}" fill="#f3e2b0" stroke="none"/>
+<path d="M11 30 v40 M47 30 v40" stroke-dasharray="1 2"/></svg>`;
+function faceHTML(id,rev){const c=CARDS[id];return `<div class="face"><div class="facein${rev?" rev":""}"><img src="${imgSrc(c)}" alt="${esc(c.en)}" decoding="async">${rev?'<div class="revtag">กลับหัว</div>':""}</div></div>`}
+function thumb(id,rev){return `<div class="thumb${rev?" rev":""}"><img src="${imgSrc(CARDS[id])}" alt="" loading="lazy"></div>`}
+
+/* ---------- sound ---------- */
+let AC=null,soundOn=true;
+function ac(){AC=AC||new (window.AudioContext||window.webkitAudioContext)();return AC}
+function chime(freq=660,dur=1.2,vol=.07){if(!soundOn)return;try{const A=ac(),t=A.currentTime;[1,2.01,3.02].forEach((m,k)=>{const o=A.createOscillator(),g=A.createGain();o.type="sine";o.frequency.value=freq*m;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol/(k+1),t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+dur/(k+1));o.connect(g).connect(A.destination);o.start(t);o.stop(t+dur)})}catch(e){}}
+function swish(){if(!soundOn)return;try{const A=ac(),t=A.currentTime,len=.18,b=A.createBuffer(1,A.sampleRate*len,A.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*(1-i/d.length);const s=A.createBufferSource(),f=A.createBiquadFilter(),g=A.createGain();f.type="bandpass";f.frequency.value=2400;g.gain.value=.05;s.buffer=b;s.connect(f).connect(g).connect(A.destination);s.start(t)}catch(e){}}
+$("#snd").onclick=e=>{soundOn=!soundOn;e.target.setAttribute("aria-pressed",soundOn);e.target.textContent="เสียง: "+(soundOn?"เปิด":"ปิด")};
+
+/* ---------- moon phase (synodic month from the 6 Jan 2000 new moon) ---------- */
+function moonPath(f,r=6){const k=Math.cos(2*Math.PI*f),rx=Math.abs(k)*r;
+ if(Math.abs(f-.5)<.02)return `M0 ${-r}A${r} ${r} 0 1 1 0 ${r}A${r} ${r} 0 1 1 0 ${-r}Z`;
+ if(f<.5)return `M0 ${-r}A${r} ${r} 0 0 1 0 ${r}A${rx} ${r} 0 0 ${k>0?0:1} 0 ${-r}Z`;
+ return `M0 ${-r}A${r} ${r} 0 0 0 0 ${r}A${rx} ${r} 0 0 ${k>0?1:0} 0 ${-r}Z`}
+const LUNAR=(function(){const SYN=29.530588,age=(((Date.now()-Date.UTC(2000,0,6,18,14))/864e5)%SYN+SYN)%SYN,f=age/SYN;
+ const now=Math.round(f*8)%8;let h="";for(let i=0;i<8;i++){h+=`<svg viewBox="-7 -7 14 14" class="${i===now?"now":""}"><circle r="6" fill="#15122b" stroke="#c9a45c" stroke-width=".6"/><path d="${moonPath(i/8+.0001)}" fill="#efdcaa"/></svg>`}
+ $("#moons").innerHTML=h;const half=SYN/2;const d=age<half?Math.min(15,Math.floor(age)+1):Math.min(15,Math.floor(age-half)+1);
+ const txt=`${age<half?"ข้างขึ้น":"ข้างแรม"} ${d} ค่ำ`;$("#lunar").innerHTML=`คืนนี้ราว <b>${txt}</b>`;return {txt,f}})();
+
+/* ---------- astrolabe ---------- */
+(function(){let t="";for(let i=0;i<120;i++){const a=i*3*Math.PI/180,r1=i%10?186:178;t+=`M${200+Math.cos(a)*r1} ${200+Math.sin(a)*r1}L${200+Math.cos(a)*192} ${200+Math.sin(a)*192}`}
+ let p="";for(let i=0;i<12;i++){const a=(i*30+15)*Math.PI/180;p+=`<circle cx="${200+Math.cos(a)*160}" cy="${200+Math.sin(a)*160}" r="2" fill="#c9a45c"/>`}
+ $("#astro").innerHTML=`<g fill="none" stroke="#c9a45c"><g class="spin" stroke-opacity=".32"><circle cx="200" cy="200" r="192"/><circle cx="200" cy="200" r="170" stroke-opacity=".6"/><path d="${t}" stroke-width=".8"/>${p}</g><g class="spin2" stroke-opacity=".22"><circle cx="200" cy="200" r="130"/><path d="${star(200,200,130,6,.577)}"/><circle cx="200" cy="200" r="74"/></g><path d="M200 0 V40 M200 360 V400 M0 200 H40 M360 200 H400" stroke-opacity=".3"/></g>`})();
+
+/* ---------- starfield ---------- */
+(function(){const cv=$("#sky"),x=cv.getContext("2d");let S=[],W,H;
+ function size(){W=cv.width=innerWidth*devicePixelRatio;H=cv.height=innerHeight*devicePixelRatio;S=Array.from({length:170},()=>({x:Math.random()*W,y:Math.random()*H,r:(Math.random()*1.2+.2)*devicePixelRatio,p:Math.random()*6.28,s:.4+Math.random()*1.4}))}
+ function draw(t){const g=x.createRadialGradient(W/2,H*.45,0,W/2,H*.45,Math.max(W,H)*.7);g.addColorStop(0,"#171333");g.addColorStop(.55,"#0b0918");g.addColorStop(1,"#050409");x.fillStyle=g;x.fillRect(0,0,W,H);
+  for(const s of S){x.globalAlpha=.35+.65*Math.abs(Math.sin(s.p+t/1000*s.s*.6));x.fillStyle="#f4ead0";x.beginPath();x.arc(s.x,s.y,s.r,0,6.3);x.fill()}x.globalAlpha=1;if(!reduce)requestAnimationFrame(draw)}
+ size();addEventListener("resize",size);requestAnimationFrame(draw)})();
+
+/* ---------- table ---------- */
+const stage=$("#stage");
+let mode="intro",topic="all",spread=3,deckSize=78,deck=[],picks=[],cards=[],slots=[],labels=[],current=null;
+function buildTable(n){cards.forEach(c=>c.el.remove());cards=[];
+ for(let i=0;i<n;i++){const el=document.createElement("div");el.className="card";el.tabIndex=-1;el.setAttribute("role","button");el.setAttribute("aria-label","ไพ่คว่ำ");
+  el.innerHTML=`<div class="lift"><div class="inner"><div class="back">${BACK}</div></div></div>`;el.addEventListener("click",()=>onCard(i));el.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();onCard(i)}});stage.appendChild(el);cards.push({el,jx:0,jy:0,jr:0})}}
+for(let k=0;k<3;k++){const s=document.createElement("div");s.className="slot hidden-o";stage.appendChild(s);slots.push(s);const l=document.createElement("div");l.className="slot-label hidden-o";stage.appendChild(l);labels.push(l)}
+
+function place(el,x,y,w,r=0,z){const h=w/ASP;el.style.width=w+"px";el.style.height=h+"px";el.style.fontSize=(w*.1)+"px";el.style.transform=`translate(${x-w/2}px,${y-h/2}px) rotate(${r}deg)`;if(z!=null)el.style.zIndex=z}
+function geom(){const W=stage.clientWidth,H=stage.clientHeight;const cy=H*.93,R=Math.min(W*.46,H*.8),cw=Math.max(30,Math.min(R*.19,92));return{W,H,cy,R,cw}}
+function slotPos(k,G){const gap=G.cw*1.3;return{x:G.W/2+(k-(spread-1)/2)*gap,y:G.cy-G.R*.42,w:G.cw*1.05}}
+function revealPos(k,G){const sh=($("#sheet").classList.contains("open")||$("#hist").classList.contains("open"))&&G.W>720?Math.min(440,G.W*.45):0;const W=G.W-sh;
+ const w=Math.min(W/(spread+.6)/1.12,G.H*.7*ASP,spread===1?240:210);const gap=w*1.14;return{x:W/2+(k-(spread-1)/2)*gap,y:G.H*.44,w}}
+function layout(){const G=geom(),N=cards.length;
+ cards.forEach((c,i)=>{const el=c.el;const pk=picks.findIndex(p=>p.i===i);
+  if(mode==="intro"||mode==="shuffling"){const w=Math.max(92,Math.min(G.W*.3,G.H*.62*ASP,170));place(el,G.W/2+c.jx+(i-N/2)*.12,G.H*.48+c.jy-(i*.15),w,c.jr,i);el.classList.remove("gone")}
+  else if(mode==="pick"){if(pk>=0){const s=slotPos(pk,G);place(el,s.x,s.y,s.w,0,200+pk)}else{const a=-84+i*(168/(N-1)),rad=a*Math.PI/180;place(el,G.W/2+G.R*Math.sin(rad),G.cy-G.R*Math.cos(rad)+G.cw/ASP*.5,G.cw,a,i)}}
+  else if(mode==="reveal"){if(pk>=0){const s=revealPos(pk,G);place(el,s.x,s.y,s.w,0,200+pk)}else{el.classList.add("gone");place(el,G.W/2,G.H+200,G.cw,0,0)}}});
+ const P=spread===3?POS3:POS1;
+ slots.forEach((s,k)=>{s.classList.toggle("hidden-o",!(k<spread&&mode==="pick"));if(k<spread){const p=slotPos(k,G);place(s,p.x,p.y,p.w)}});
+ labels.forEach((l,k)=>{const on=k<spread&&(mode==="pick"||mode==="reveal");l.classList.toggle("hidden-o",!on);if(k<spread){const pk=picks[k];let nm="";if(pk&&pk.flipped&&mode==="reveal"){nm=`<em class="${pk.rev?"r":""}">${CARDS[pk.card].th}${pk.rev?" (กลับหัว)":""}</em>`}
+  l.innerHTML=`${P[k][0]}<span>${P[k][1]}</span>${nm}`;const p=mode==="reveal"?revealPos(k,G):slotPos(k,G);const lw=l.offsetWidth||80;l.style.transform=`translate(${p.x-lw/2}px,${p.y+p.w/ASP/2+8}px)`}});
+}
+addEventListener("resize",()=>layout());
+function setHint(a,b=""){$("#hint").innerHTML=a+(b?`<small>${b}</small>`:"")}
+function setMode(m){mode=m;stage.className="stage mode-"+m;cards.forEach(c=>c.el.tabIndex=(m==="pick"&&!c.el.classList.contains("picked"))||(m==="reveal"&&c.el.classList.contains("picked"))?0:-1);layout()}
+
+/* ---------- controls ---------- */
+function chips(attr,cb){document.querySelectorAll(`[data-${attr}]`).forEach(b=>b.onclick=()=>{document.querySelectorAll(`[data-${attr}]`).forEach(x=>x.setAttribute("aria-pressed",x===b));cb(b.dataset[attr])})}
+chips("topic",v=>{topic=v});
+chips("spread",v=>{spread=+v;refreshDaily();layout()});
+chips("deck",v=>{deckSize=+v;if(mode==="intro"){buildTable(deckSize);layout()}});
+function refreshDaily(){const d=spread===1&&todayDaily();const n=$("#dailyNote");
+ if(d){const c=CARDS[d.cards[0][0]];n.hidden=false;n.innerHTML=`วันนี้คุณเปิดไพ่ประจำวันแล้ว: <b>${c.th}</b> — ไพ่ประจำวันเปิดได้วันละครั้ง`;$("#go").textContent="ดูไพ่วันนี้อีกครั้ง"}
+ else{n.hidden=true;$("#go").textContent="สับไพ่"}}
+function refreshStreak(){const n=streak(),el=$("#streak");el.hidden=n<2;el.textContent=`เปิดไพ่ต่อเนื่อง ${n} วัน`}
+
+$("#form").addEventListener("submit",async e=>{e.preventDefault();if(mode!=="intro")return;
+ if(spread===1){const d=todayDaily();if(d){showSaved(d);return}}
+ $("#form").hidden=true;buildTable(deckSize);layout();await sleep(30);setMode("shuffling");setHint("กำลังสับไพ่…","ตั้งจิตถึงคำถามของคุณ");deck=shuffle([...Array(CARDS.length).keys()].filter(i=>deckSize===78||i<22));
+ for(let round=0;round<(reduce?1:4);round++){cards.forEach(c=>{c.jx=(rnd(140)-70);c.jy=(rnd(50)-25);c.jr=rnd(40)-20});swish();layout();await sleep(reduce?50:320);cards.forEach(c=>{c.jx=c.jy=c.jr=0});layout();await sleep(reduce?50:260)}
+ const step=deckSize>30?9:28;cards.forEach((c,i)=>c.el.style.transitionDelay=(reduce?0:i*step)+"ms");setMode("pick");chime(520,.9,.05);await sleep(900+cards.length*step*.5);cards.forEach(c=>c.el.style.transitionDelay="");
+ updatePickHint()});
+function updatePickHint(){const left=spread-picks.length;const P=spread===3?POS3:POS1;setHint(left?`เลือกไพ่ด้วยใจ — ${P[picks.length][1]}`:"ครบแล้ว",left?`เหลืออีก ${left} ใบ · แตะที่ไพ่ในวงโค้ง`:"")}
+
+async function onCard(i){const c=cards[i];
+ if(mode==="pick"&&!c.el.classList.contains("picked")&&picks.length<spread){
+  const rev=rnd(100)<25;picks.push({i,card:deck[i],rev,flipped:false});c.el.classList.add("picked");c.el.tabIndex=-1;
+  c.el.querySelector(".inner").insertAdjacentHTML("beforeend",faceHTML(deck[i],rev));c.el.setAttribute("aria-label","ไพ่ที่เลือก ยังไม่เปิด");
+  swish();layout();updatePickHint();
+  if(picks.length===spread){await sleep(750);setMode("reveal");setHint("แตะไพ่เพื่อเปิดทีละใบ","หรือกดเปิดทั้งหมด");$("#actions").hidden=false;$("#flipAll").hidden=false}
+  return}
+ if(mode==="reveal"){const p=picks.find(p=>p.i===i);if(!p)return;if(!p.flipped)flip(p);else openDetail(p.card,p.rev)}}
+function flip(p){p.flipped=true;const el=cards[p.i].el;el.classList.add("flipped");const c=CARDS[p.card];el.setAttribute("aria-label",`${c.th} ${c.en}${p.rev?" กลับหัว":""} — แตะเพื่อดูความหมาย`);chime(p.rev?440:520+(p.card%22)*12);layout();
+ if(picks.every(q=>q.flipped)){$("#flipAll").hidden=true;$("#shareNow").hidden=false;setHint("แตะไพ่เพื่อดูความหมายเต็ม","คำทำนายรวมอยู่ในแผงคำทำนาย");
+  current={t:Date.now(),date:localDate(),topic,spread,deck:deckSize,q:$("#q").value.trim(),moon:LUNAR.txt,cards:picks.map(p=>[p.card,p.rev?1:0])};
+  const h=loadHist();h.unshift(current);saveHist(h);refreshStreak();
+  setTimeout(()=>{renderReading(current);openSheet("#sheet")},reduce?50:1000)}}
+$("#flipAll").onclick=async()=>{for(const p of picks){if(!p.flipped){flip(p);await sleep(reduce?0:380)}}};
+
+/* ---------- reading ---------- */
+function topicLine(c,t){return t==="all"?c.g:c[t==="love"?"l":t==="work"?"w":"m"]}
+function digitRoot(n){while(n>9)n=String(n).split("").reduce((a,b)=>a+ +b,0);return n||9}
+function analyse(R){const cs=R.cards.map(([id,rv])=>({c:CARDS[id],rev:!!rv}));const last=cs[cs.length-1].c,mid=cs[Math.floor((cs.length-1)/2)].c;
+ const revN=cs.filter(x=>x.rev).length,majN=cs.filter(x=>x.c.img[0]==="m").length;const head=c=>c.k.split(" · ")[0];let msg;
+ if(cs.length===3)msg=`เรื่องที่ผ่านมาเกี่ยวกับ “${head(cs[0].c)}” ส่งผลถึงวันนี้ที่เป็นเรื่องของ “${head(cs[1].c)}” และแนวโน้มข้างหน้าชี้ไปที่ “${head(cs[2].c)}”`;
+ else msg=`พลังของวันนี้คือ “${head(last)}” — ${cs[0].rev?last.r:last.g}`;
+ if(majN>=2)msg+=` · ไพ่ชุดใหญ่ออกหลายใบ เรื่องนี้เป็นจังหวะสำคัญของชีวิต`;
+ if(revN>=2)msg+=` · ไพ่กลับหัวหลายใบบอกว่าพลังยังติดขัด ให้ค่อยเป็นค่อยไป`;
+ const num=digitRoot(R.cards.reduce((s,[id])=>s+CARDS[id].n,0)),pair=R.cards.map(([id])=>CARDS[id].n%10).join("").slice(0,2).padEnd(2,String(num));
+ return{cs,last,mid,msg,num,pair}}
+let readingText="";
+function renderReading(R){const A=analyse(R),P=R.spread===3?POS3:POS1;let h="",t=`🌙 NOCTURNE — ${TOPIC[R.topic]}\n`;
+ h+=`<div class="meta">${thDate(R.t)} ${thTime(R.t)} · เรื่อง${TOPIC[R.topic]}${R.moon?" · "+R.moon:""}</div>`;
+ if(R.q){h+=`<p class="q">“${esc(R.q)}”</p>`;t+=`คำถาม: ${R.q}\n`}
+ A.cs.forEach(({c,rev},k)=>{const id=R.cards[k][0];h+=`<div class="entry">${thumb(id,rev)}<div><div class="pos">${P[k][0]} · ${P[k][1]}</div><h3>${c.th}<small>${numLabel(c)} ${c.en}${rev?" · REVERSED":""}</small></h3><div class="kw">${rev?"กลับหัว":c.k}</div>`+
+  (rev?`<p class="rv">${c.r}</p><p>ถ้าปรับพลังให้ตั้งตรงได้: ${topicLine(c,R.topic)}</p>`:`<p>${topicLine(c,R.topic)}</p>`)+`</div></div>`;
+  t+=`\n${P[k][1]}: ${c.th} (${c.en})${rev?" กลับหัว":""}\n${rev?c.r:topicLine(c,R.topic)}\n`});
+ h+=`<div class="msg"><h4>สารจากไพ่</h4><p>${A.msg}</p><p><b>คำแนะนำ:</b> ${A.last.a}</p><div class="lucky"><div><b>${A.num}</b>เลขมงคล</div><div><b>${A.pair}</b>เลขคู่นำโชค</div><div><b><span class="sw" style="background:${A.mid.c[1]}"></span>${A.mid.c[0]}</b>สีมงคล</div></div></div>`;
+ h+=`<div class="credit">ภาพไพ่: Rider–Waite–Smith (1909) วาดโดย Pamela Colman Smith · สาธารณสมบัติ</div>`;
+ t+=`\nสารจากไพ่: ${A.msg}\nคำแนะนำ: ${A.last.a}\nเลขมงคล ${A.num} · เลขคู่ ${A.pair} · สีมงคล ${A.mid.c[0]}\n(เพื่อความบันเทิง)`;
+ readingText=t;current=R;$("#reading").innerHTML=h;$("#fab").hidden=false}
+function openSheet(id){["#sheet","#hist"].forEach(s=>$(s).classList.toggle("open",s===id));$("#fab").hidden=true;layout()}
+function closeSheets(){$("#sheet").classList.remove("open");$("#hist").classList.remove("open");if(readingText)$("#fab").hidden=false;layout()}
+$("#fab").onclick=()=>openSheet("#sheet");$("#closeSheet").onclick=closeSheets;$("#closeHist").onclick=closeSheets;
+$("#copy").onclick=()=>{const b=$("#copy");navigator.clipboard.writeText(readingText).then(()=>{b.textContent="คัดลอกแล้ว";setTimeout(()=>b.textContent="คัดลอกข้อความ",1600)}).catch(()=>{let ta=$("#copybox");if(!ta){ta=document.createElement("textarea");ta.id="copybox";ta.className="copybox";$("#reading").appendChild(ta)}ta.value=readingText;ta.focus();ta.select();b.textContent="เลือกข้อความแล้ว กดคัดลอกเอง"})};
+
+/* ---------- history ---------- */
+function renderHist(){const h=loadHist();const days=new Set(h.map(e=>e.date)).size;
+ let s=`<div class="hstats"><div><b>${h.length}</b>ครั้งที่ดูดวง</div><div><b>${days}</b>วันที่เปิดไพ่</div><div><b>${streak()}</b>วันต่อเนื่อง</div></div>`;
+ if(!h.length)s+=`<div class="empty">ยังไม่มีประวัติ — เปิดไพ่ครั้งแรกแล้วจะถูกบันทึกไว้ในเครื่องนี้</div>`;
+ h.forEach((e,i)=>{const names=e.cards.map(([id,r])=>CARDS[id].th+(r?"*":"")).join(" · ");
+  s+=`<button class="hitem" type="button" data-h="${i}"><span class="minis">${e.cards.map(([id,r])=>thumb(id,r)).join("")}</span><span><small>${thDate(e.t)} ${thTime(e.t)} · ${e.spread===1?"ไพ่ประจำวัน":"3 ใบ"} · ${TOPIC[e.topic]}</small><strong>${names}</strong>${e.q?`<small>“${esc(e.q)}”</small>`:""}</span></button>`});
+ s+=`<p class="note" style="margin-top:12px">* = กลับหัว · ประวัติเก็บเฉพาะในเบราว์เซอร์เครื่องนี้</p>`;
+ $("#histBody").innerHTML=s;$("#histBody").querySelectorAll("[data-h]").forEach(b=>b.onclick=()=>{renderReading(loadHist()[+b.dataset.h]);openSheet("#sheet")})}
+$("#histBtn").onclick=()=>{renderHist();openSheet("#hist")};
+$("#clearHist").onclick=()=>{$("#clearHist").hidden=true;$("#clearYes").hidden=false;$("#clearNo").hidden=false};
+$("#clearNo").onclick=()=>{$("#clearHist").hidden=false;$("#clearYes").hidden=true;$("#clearNo").hidden=true};
+$("#clearYes").onclick=()=>{saveHist([]);$("#clearNo").onclick();renderHist();refreshStreak();refreshDaily()};
+function showSaved(R){renderReading(R);openSheet("#sheet");setHint("ไพ่ประจำวันของคุณวันนี้","พรุ่งนี้กลับมาเปิดใบใหม่ได้")}
+
+/* ---------- detail modal ---------- */
+function openDetail(id,rev){const c=CARDS[id];$("#bigcard").innerHTML=faceHTML(id,rev);
+ $("#mtext").innerHTML=`<div class="en">${numLabel(c)} ${c.en.toUpperCase()}${rev?" · REVERSED":""}</div><h3>${c.th}</h3><div class="kw">${c.k}</div><dl><dt>ความหมาย</dt><dd>${c.g}</dd><dt class="rv">กลับหัว</dt><dd>${c.r}</dd><dt>ความรัก</dt><dd>${c.l}</dd><dt>การงาน</dt><dd>${c.w}</dd><dt>การเงิน</dt><dd>${c.m}</dd><dt>คำแนะนำ</dt><dd>${c.a}</dd><dt>สีมงคล</dt><dd><span class="sw" style="background:${c.c[1]}"></span>${c.c[0]}</dd></dl><p class="note" style="margin-top:14px">แตะที่ว่างเพื่อปิด</p>`;
+ $("#modal").classList.add("open")}
+$("#modal").onclick=()=>$("#modal").classList.remove("open");
+
+/* ---------- share image (1080×1920 story) ---------- */
+function loadImg(src){return new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=src})}
+function words(s){try{return [...new Intl.Segmenter("th",{granularity:"word"}).segment(s)].map(x=>x.segment)}catch(e){return s.split(/(\s+)/)}}
+function wrap(ctx,s,maxW,maxLines){const out=[];let line="";for(const w of words(s)){const test=line+w;if(ctx.measureText(test).width>maxW&&line){out.push(line.trim());line=w.trimStart()}else line=test}if(line.trim())out.push(line.trim());
+ if(out.length>maxLines){out.length=maxLines;out[maxLines-1]=out[maxLines-1].replace(/.{0,2}$/,"…")}return out}
+function rrect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+async function makeShare(R){
+ try{await Promise.all(['700 40px "Srisakdi"','500 40px "Cinzel"','700 40px "Cinzel"','400 30px "Noto Serif Thai"','600 30px "Noto Serif Thai"'].map(f=>document.fonts.load(f,"กขABC")))}catch(e){}
+ const A=analyse(R),W=1080,H=1920,cv=document.createElement("canvas");cv.width=W;cv.height=H;const x=cv.getContext("2d");
+ const g=x.createRadialGradient(W/2,760,40,W/2,760,1300);g.addColorStop(0,"#2a2160");g.addColorStop(.45,"#110e28");g.addColorStop(1,"#050409");x.fillStyle=g;x.fillRect(0,0,W,H);
+ let seed=R.t%9973;const rr=()=>(seed=(seed*16807)%2147483647)/2147483647;
+ for(let i=0;i<260;i++){x.globalAlpha=.25+rr()*.75;x.fillStyle="#f4ead0";x.beginPath();x.arc(rr()*W,rr()*H,rr()*1.8+.3,0,7);x.fill()}x.globalAlpha=1;
+ x.strokeStyle="rgba(201,164,92,.22)";x.lineWidth=2;[470,520].forEach(r=>{x.beginPath();x.arc(W/2,860,r,0,7);x.stroke()});
+ for(let i=0;i<120;i++){const a=i*3*Math.PI/180,r1=i%10?505:490;x.beginPath();x.moveTo(W/2+Math.cos(a)*r1,860+Math.sin(a)*r1);x.lineTo(W/2+Math.cos(a)*520,860+Math.sin(a)*520);x.stroke()}
+ x.textAlign="center";x.fillStyle="#efdcaa";x.font='700 68px "Cinzel",Georgia,serif';if("letterSpacing" in x)x.letterSpacing="22px";x.fillText("NOCTURNE",W/2+11,150);if("letterSpacing" in x)x.letterSpacing="0px";
+ x.fillStyle="#a49dba";x.font='400 30px "Noto Serif Thai",serif';x.fillText(`${thDate(R.t)} · ${R.moon||LUNAR.txt} · เรื่อง${TOPIC[R.topic]}`,W/2,205);
+ let y=270;if(R.q){x.fillStyle="#e9e3d3";x.font='400 34px "Noto Serif Thai",serif';wrap(x,`“${R.q}”`,860,2).forEach(l=>{x.fillText(l,W/2,y);y+=48})}
+ const n=R.cards.length,cw=n===3?318:430,ch=cw/ASP,gap=28,top=n===3?Math.max(y+50,420):Math.max(y+40,360);const P=R.spread===3?POS3:POS1;
+ const imgs=await Promise.all(R.cards.map(([id])=>loadImg(imgSrc(CARDS[id])).catch(()=>null)));
+ for(let k=0;k<n;k++){const cx=W/2+(k-(n-1)/2)*(cw+gap),lx=cx-cw/2,rev=!!R.cards[k][1],c=CARDS[R.cards[k][0]];
+  x.save();x.shadowColor="rgba(0,0,0,.6)";x.shadowBlur=40;x.shadowOffsetY=14;const fg=x.createLinearGradient(lx,top,lx+cw,top+ch);["#e8d39a","#9fd6d2","#e9b7d8","#c9a45c","#f3e2b0"].forEach((s,i)=>fg.addColorStop(i/4,s));x.fillStyle=fg;rrect(x,lx,top,cw,ch,14);x.fill();x.restore();
+  const p=cw*.045;x.save();rrect(x,lx+p,top+p,cw-2*p,ch-2*p,8);x.clip();x.fillStyle="#e9dcc0";x.fillRect(lx,top,cw,ch);
+  const im=imgs[k];if(im){const sx=im.width*.035,sy=im.height*.035,sw=im.width-2*sx,sh=im.height-2*sy;x.translate(cx,top+ch/2);if(rev)x.rotate(Math.PI);const iw=cw-2*p,ih=ch-2*p,s=Math.max(iw/sw,ih/sh);x.drawImage(im,sx,sy,sw,sh,-sw*s/2,-sh*s/2,sw*s,sh*s)}x.restore();
+  let ty=top+ch+52;x.fillStyle="#c9a45c";x.font='500 24px "Cinzel",serif';if("letterSpacing" in x)x.letterSpacing="6px";x.fillText(P[k][0],cx,ty);if("letterSpacing" in x)x.letterSpacing="0px";
+  x.fillStyle="#a49dba";x.font='400 24px "Noto Serif Thai",serif';x.fillText(P[k][1],cx,ty+=34);
+  x.fillStyle=rev?"#f0b3a8":"#f3e6c4";x.font=`700 ${n===3?38:48}px "Srisakdi","Noto Serif Thai",serif`;wrap(x,c.th+(rev?" (กลับหัว)":""),cw+20,2).forEach(l=>{x.fillText(l,cx,ty+=(n===3?48:60))})}
+ let my=top+ch+(n===3?250:230);const bx=90,bw=W-180;x.font='400 32px "Noto Serif Thai",serif';const ml=wrap(x,A.msg,bw-80,5);x.font='600 30px "Noto Serif Thai",serif';const al=wrap(x,"คำแนะนำ: "+A.last.a,bw-80,2);
+ const bh=90+ml.length*48+al.length*46+150;x.fillStyle="rgba(7,6,13,.55)";rrect(x,bx,my,bw,bh,22);x.fill();x.strokeStyle="rgba(201,164,92,.5)";x.lineWidth=2;x.stroke();
+ x.fillStyle="#c9a45c";x.font='500 24px "Cinzel",serif';if("letterSpacing" in x)x.letterSpacing="6px";x.fillText("MESSAGE",W/2,my+52);if("letterSpacing" in x)x.letterSpacing="0px";
+ let ly=my+100;x.fillStyle="#e9e3d3";x.font='400 32px "Noto Serif Thai",serif';ml.forEach(l=>{x.fillText(l,W/2,ly);ly+=48});x.fillStyle="#efdcaa";x.font='600 30px "Noto Serif Thai",serif';al.forEach(l=>{x.fillText(l,W/2,ly+6);ly+=46});
+ ly+=40;const cols=[W/2-260,W/2,W/2+260];x.fillStyle="#efdcaa";x.font='500 64px "Cinzel",serif';x.fillText(A.num,cols[0],ly+20);x.fillText(A.pair,cols[1],ly+20);
+ x.beginPath();x.arc(cols[2],ly-2,26,0,7);x.fillStyle=A.mid.c[1];x.fill();x.strokeStyle="rgba(255,255,255,.5)";x.stroke();
+ x.fillStyle="#a49dba";x.font='400 26px "Noto Serif Thai",serif';x.fillText("เลขมงคล",cols[0],ly+62);x.fillText("เลขคู่นำโชค",cols[1],ly+62);x.fillText("สี"+A.mid.c[0],cols[2],ly+62);
+ x.fillStyle="#c9a45c";x.font='500 30px "Cinzel",serif';x.fillText("thailinebot.com/tarot",W/2,H-110);
+ x.fillStyle="#6f6888";x.font='400 22px "Noto Serif Thai",serif';x.fillText("เพื่อความบันเทิง · ภาพไพ่ Rider–Waite–Smith 1909 (สาธารณสมบัติ)",W/2,H-66);
+ return cv}
+let shareBlob=null,shareURL=null;
+async function openShare(){if(!current)return;const b=$("#share"),old=b.textContent;b.textContent="กำลังทำภาพ…";$("#shareNow").textContent="กำลังทำภาพ…";
+ try{const cv=await makeShare(current);shareBlob=await new Promise(r=>cv.toBlob(r,"image/png"));if(shareURL)URL.revokeObjectURL(shareURL);shareURL=URL.createObjectURL(shareBlob);
+  $("#simg").src=shareURL;$("#sSave").href=shareURL;$("#sSave").hidden=!/^\/tarot(\/|$)/.test(location.pathname);const f=new File([shareBlob],"nocturne-tarot.png",{type:"image/png"});
+  $("#sShare").hidden=!(navigator.canShare&&navigator.canShare({files:[f]}));$("#smodal").classList.add("open")}
+ catch(e){setHint("ทำภาพไม่สำเร็จ","ลองกดใหม่อีกครั้ง")}
+ b.textContent=old;$("#shareNow").textContent="ทำภาพแชร์"}
+$("#share").onclick=openShare;$("#shareNow").onclick=openShare;
+$("#sShare").onclick=async()=>{try{await navigator.share({files:[new File([shareBlob],"nocturne-tarot.png",{type:"image/png"})],title:"Nocturne Tarot",text:"ไพ่ของฉันวันนี้ 🌙 thailinebot.com/tarot"})}catch(e){}};
+$("#sClose").onclick=()=>$("#smodal").classList.remove("open");
+$("#smodal").addEventListener("click",e=>{if(e.target.id==="smodal")$("#smodal").classList.remove("open")});
+addEventListener("keydown",e=>{if(e.key==="Escape"){$("#modal").classList.remove("open");$("#smodal").classList.remove("open");closeSheets()}});
+
+/* ---------- reset ---------- */
+function again(){picks=[];readingText="";closeSheets();$("#fab").hidden=true;$("#actions").hidden=true;$("#shareNow").hidden=true;
+ buildTable(deckSize);$("#form").hidden=false;setHint("ตั้งจิตให้สงบ นึกถึงเรื่องที่อยากรู้","ไพ่ Rider–Waite ครบสำรับ 78 ใบ");refreshDaily();setMode("intro")}
+$("#again").onclick=again;$("#again2").onclick=again;
+
+/* ---------- install as app (only when served from the real site) ---------- */
+if(/^\/tarot(\/|$)/.test(location.pathname)){
+ [["manifest","manifest.json"],["apple-touch-icon","icons/apple-touch-icon.png"],["icon","icons/favicon-64.png"]].forEach(([rel,href])=>{const l=document.createElement("link");l.rel=rel;l.href=href;document.head.appendChild(l)});
+ if("serviceWorker" in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+}
+
+again();refreshStreak();if(document.fonts)document.fonts.ready.then(()=>layout());
+</script>

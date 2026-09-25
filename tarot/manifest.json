@@ -1,0 +1,22 @@
+{
+  "name": "Nocturne — ไพ่ทาโรต์ใต้แสงจันทร์",
+  "short_name": "Nocturne",
+  "description": "ดูดวงไพ่ทาโรต์ Rider–Waite ครบ 78 ใบ ความรัก การงาน การเงิน ไพ่ประจำวัน พร้อมภาพแชร์",
+  "lang": "th",
+  "start_url": "/tarot/",
+  "scope": "/tarot/",
+  "id": "/tarot/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#07060d",
+  "theme_color": "#07060d",
+  "categories": ["lifestyle", "entertainment"],
+  "prefer_related_applications": false,
+  "icons": [
+    { "src": "/tarot/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/tarot/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/tarot/icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/tarot/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
