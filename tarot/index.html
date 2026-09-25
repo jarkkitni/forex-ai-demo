@@ -19,7 +19,7 @@
 html,body{height:100%}
 body{margin:0;background:var(--ink);color:var(--text);font-family:var(--body);font-size:15px;line-height:1.6;overflow-x:hidden}
 #sky{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
-.app{position:relative;z-index:1;height:100%;display:grid;grid-template-rows:auto 1fr auto;padding-inline:16px;box-sizing:border-box}
+.app{position:relative;z-index:1;min-height:100%;display:grid;grid-template-rows:auto 1fr auto;padding-inline:16px;box-sizing:border-box}
 header{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding-block:14px 4px;gap:12px}
 .brand{font-family:var(--display);letter-spacing:.32em;font-size:15px;color:var(--gold-hi)}
 .brand small{display:block;font-family:var(--body);letter-spacing:.04em;font-size:11px;color:var(--mist)}
@@ -34,7 +34,7 @@ header{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;paddin
 .streak{font-size:12px;color:var(--gold-hi);white-space:nowrap}
 button:focus-visible,.card:focus-visible,textarea:focus-visible,.hitem:focus-visible{outline:2px solid var(--gold-hi);outline-offset:3px}
 
-.stage{position:relative;min-height:300px;overflow:hidden}
+.stage{position:relative;min-height:max(300px,52vh);overflow:hidden}
 .astro{position:absolute;left:50%;top:50%;width:min(96vmin,760px);aspect-ratio:1;transform:translate(-50%,-50%);pointer-events:none;opacity:.9}
 .astro .spin{transform-origin:50% 50%;animation:spin 240s linear infinite}
 .astro .spin2{transform-origin:50% 50%;animation:spin 400s linear infinite reverse}
@@ -182,7 +182,7 @@ textarea::placeholder{color:#6f6888}
         <button type="button" class="chip" data-deck="22" aria-pressed="false">ชุดใหญ่ 22 ใบ</button>
       </div>
       <div class="daily" id="dailyNote" hidden></div>
-      <div class="row"><button class="cta" type="submit" id="go">สับไพ่</button></div>
+      <div class="row"><button class="cta" type="button" id="go">สับไพ่</button></div>
     </form>
     <div class="row" id="actions" hidden>
       <button class="ghost" type="button" id="flipAll">เปิดไพ่ทั้งหมด</button>
@@ -234,6 +234,12 @@ textarea::placeholder{color:#6f6888}
   </div>
 </div>
 
+<script>
+/* ถ้ามี error ให้โชว์บนหน้าจอ แทนที่ปุ่มจะเงียบเฉยๆ */
+window.__errs=[];function __showErr(m){window.__errs.push(m);var h=document.getElementById("hint");if(h)h.innerHTML='<span style="color:#f0b3a8">เกิดข้อผิดพลาด: '+String(m).replace(/</g,"&lt;")+'</span>'}
+addEventListener("error",function(e){__showErr((e.message||"load error")+(e.filename?" @"+e.filename.split("/").pop()+":"+e.lineno:(e.target&&e.target.src?" "+e.target.src:"")))},true);
+addEventListener("unhandledrejection",function(e){__showErr("promise: "+(e.reason&&e.reason.message||e.reason))});
+</script>
 <script src="cards.js" charset="utf-8"></script>
 <script>
 const ROMAN=["0","I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII","XIII","XIV","XV","XVI","XVII","XVIII","XIX","XX","XXI"];
@@ -337,12 +343,14 @@ function refreshDaily(){const d=spread===1&&todayDaily();const n=$("#dailyNote")
  else{n.hidden=true;$("#go").textContent="สับไพ่"}}
 function refreshStreak(){const n=streak(),el=$("#streak");el.hidden=n<2;el.textContent=`เปิดไพ่ต่อเนื่อง ${n} วัน`}
 
-$("#form").addEventListener("submit",async e=>{e.preventDefault();if(mode!=="intro")return;
+$("#form").addEventListener("submit",e=>{e.preventDefault();start()});
+$("#go").addEventListener("click",()=>start());
+async function start(){if(mode!=="intro")return;
  if(spread===1){const d=todayDaily();if(d){showSaved(d);return}}
  $("#form").hidden=true;buildTable(deckSize);layout();await sleep(30);setMode("shuffling");setHint("กำลังสับไพ่…","ตั้งจิตถึงคำถามของคุณ");deck=shuffle([...Array(CARDS.length).keys()].filter(i=>deckSize===78||i<22));
  for(let round=0;round<(reduce?1:4);round++){cards.forEach(c=>{c.jx=(rnd(140)-70);c.jy=(rnd(50)-25);c.jr=rnd(40)-20});swish();layout();await sleep(reduce?50:320);cards.forEach(c=>{c.jx=c.jy=c.jr=0});layout();await sleep(reduce?50:260)}
  const step=deckSize>30?9:28;cards.forEach((c,i)=>c.el.style.transitionDelay=(reduce?0:i*step)+"ms");setMode("pick");chime(520,.9,.05);await sleep(900+cards.length*step*.5);cards.forEach(c=>c.el.style.transitionDelay="");
- updatePickHint()});
+ updatePickHint()}
 function updatePickHint(){const left=spread-picks.length;const P=spread===3?POS3:POS1;setHint(left?`เลือกไพ่ด้วยใจ — ${P[picks.length][1]}`:"ครบแล้ว",left?`เหลืออีก ${left} ใบ · แตะที่ไพ่ในวงโค้ง`:"")}
 
 async function onCard(i){const c=cards[i];
@@ -467,5 +475,5 @@ if(/^\/tarot(\/|$)/.test(location.pathname)){
  if("serviceWorker" in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
 }
 
-again();refreshStreak();if(document.fonts)document.fonts.ready.then(()=>layout());
+again();refreshStreak();if(window.__errs.length)__showErr(window.__errs[0]);if(document.fonts)document.fonts.ready.then(()=>layout());
 </script>
