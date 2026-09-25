@@ -1,7 +1,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Nocturne Tarot</title>
-<meta name="theme-color" content="#07060d">
+<meta name="theme-color" content="#070405">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Nocturne">
@@ -24,7 +24,7 @@
 <style>
 :root{
   color-scheme:dark;
-  --ink:#07060d; --indigo:#15122b; --indigo2:#1f1a3d;
+  --ink:#070405; --indigo:#1e1216; --indigo2:#2a1a1f;
   --gold:#c9a45c; --gold-hi:#efdcaa; --gold-lo:#7d6536;
   --mist:#a49dba; --text:#e9e3d3; --line:rgba(201,164,92,.28); --rev:#f0b3a8;
   --display:"Cinzel","Trajan Pro",Georgia,serif;
@@ -35,7 +35,7 @@
 [hidden]{display:none!important}
 html,body{height:100%}
 body{margin:0;background:var(--ink);color:var(--text);font-family:var(--body);font-size:15px;line-height:1.6;overflow-x:hidden}
-#sky{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+#bgthai,#sky{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
 .app{position:relative;z-index:1;min-height:100%;display:grid;grid-template-rows:auto 1fr auto;padding-inline:16px;box-sizing:border-box}
 header{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding-block:14px 4px;gap:12px}
 .brand{font-family:var(--display);letter-spacing:.32em;font-size:15px;color:var(--gold-hi)}
@@ -53,8 +53,8 @@ button:focus-visible,.card:focus-visible,textarea:focus-visible,.hitem:focus-vis
 
 .stage{position:relative;min-height:max(300px,52vh);overflow:hidden}
 .astro{position:absolute;left:50%;top:50%;width:min(96vmin,760px);aspect-ratio:1;transform:translate(-50%,-50%);pointer-events:none;opacity:.9}
-.astro .spin{transform-origin:50% 50%;animation:spin 240s linear infinite}
-.astro .spin2{transform-origin:50% 50%;animation:spin 400s linear infinite reverse}
+.astro{animation:rot 300s linear infinite}@keyframes rot{to{rotate:360deg}}
+.verse{margin:12px 0 4px;text-align:center}.vlab{font-size:12px;color:var(--gold);letter-spacing:.08em}.vl{font-family:var(--thai-d);font-size:19px;color:#f3e6c4;line-height:1.65;text-wrap:balance}.vrev{font-size:12px;color:var(--rev);margin-top:2px}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 .card{position:absolute;left:0;top:0;transition:transform .8s var(--ease),width .8s var(--ease),height .8s var(--ease),opacity .5s;cursor:pointer;will-change:transform;-webkit-tap-highlight-color:transparent}
@@ -87,10 +87,10 @@ button:focus-visible,.card:focus-visible,textarea:focus-visible,.hitem:focus-vis
 .hint small{display:block;color:var(--mist);font-size:12px}
 .form{display:grid;gap:10px;width:min(600px,100%)}
 .row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
-.chip{border:1px solid var(--line);background:rgba(21,18,43,.7);color:var(--text);border-radius:999px;padding:6px 14px;font:14px var(--body);cursor:pointer}
+.chip{border:1px solid var(--line);background:rgba(30,18,22,.72);color:var(--text);border-radius:999px;padding:6px 14px;font:14px var(--body);cursor:pointer}
 .chip[aria-pressed="true"]{border-color:var(--gold);color:#1a1405;background:linear-gradient(180deg,var(--gold-hi),var(--gold))}
 .lbl{font-size:11px;letter-spacing:.18em;color:var(--mist);font-family:var(--display);align-self:center}
-textarea{width:100%;box-sizing:border-box;resize:none;background:rgba(21,18,43,.75);border:1px solid var(--line);border-radius:10px;color:var(--text);font:15px var(--body);padding:10px 12px;height:48px}
+textarea{width:100%;box-sizing:border-box;resize:none;background:rgba(30,18,22,.75);border:1px solid var(--line);border-radius:10px;color:var(--text);font:15px var(--body);padding:10px 12px;height:48px}
 textarea::placeholder{color:#6f6888}
 .cta{font-family:var(--display);letter-spacing:.2em;font-size:14px;color:#1a1405;background:linear-gradient(180deg,#f4e3b4,#c9a45c);border:0;border-radius:999px;padding:12px 30px;cursor:pointer;box-shadow:0 0 24px rgba(201,164,92,.35)}
 .cta:hover{filter:brightness(1.08)}
@@ -99,7 +99,7 @@ textarea::placeholder{color:#6f6888}
 .note{font-size:11px;color:#6f6888}
 .daily{font-size:13px;color:var(--gold-hi)}
 
-.sheet{position:fixed;top:0;right:0;bottom:0;width:min(440px,100%);z-index:20;background:linear-gradient(180deg,rgba(21,18,43,.97),rgba(9,8,20,.98));border-left:1px solid var(--line);transform:translateX(105%);transition:transform .6s var(--ease);display:grid;grid-template-rows:auto 1fr auto;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.sheet{position:fixed;top:0;right:0;bottom:0;width:min(440px,100%);z-index:20;background:linear-gradient(180deg,rgba(34,20,24,.97),rgba(10,6,8,.98));border-left:1px solid var(--line);transform:translateX(105%);transition:transform .6s var(--ease);display:grid;grid-template-rows:auto 1fr auto;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 .sheet.open{transform:none}
 .sheet-h{display:flex;justify-content:space-between;align-items:center;padding:16px 20px 8px;border-bottom:1px solid var(--line)}
 .sheet-h h2{margin:0;font-family:var(--display);font-weight:500;letter-spacing:.24em;font-size:15px;color:var(--gold-hi)}
@@ -168,6 +168,7 @@ textarea::placeholder{color:#6f6888}
 }
 </style>
 
+<canvas id="bgthai" aria-hidden="true"></canvas>
 <canvas id="sky" aria-hidden="true"></canvas>
 <div class="app">
   <header>
@@ -184,7 +185,7 @@ textarea::placeholder{color:#6f6888}
   </header>
 
   <main class="stage mode-intro" id="stage" aria-live="polite">
-    <svg class="astro" viewBox="0 0 400 400" aria-hidden="true" id="astro"></svg>
+    <canvas class="astro" id="astro" width="900" height="900" aria-hidden="true"></canvas>
   </main>
 
   <section class="dock" id="dock">
@@ -300,6 +301,7 @@ addEventListener("unhandledrejection",function(e){__showErr("promise: "+(e.reaso
 </script>
 <script src="cards.js" charset="utf-8"></script>
 <script src="ink/deck.js" charset="utf-8"></script>
+<script src="ink/thai.js" charset="utf-8"></script>
 <script>
 const ROMAN=["0","I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII","XIII","XIV","XV","XVI","XVII","XVIII","XIX","XX","XXI"];
 const TOPIC={all:"ภาพรวม",love:"ความรัก",work:"การงาน",money:"การเงิน"};
@@ -381,16 +383,27 @@ const LUNAR=(function(){const SYN=29.530588,age=(((Date.now()-Date.UTC(2000,0,6,
  $("#moons").innerHTML=h;const half=SYN/2;const d=age<half?Math.min(15,Math.floor(age)+1):Math.min(15,Math.floor(age-half)+1);
  const txt=`${age<half?"ข้างขึ้น":"ข้างแรม"} ${d} ค่ำ`;$("#lunar").innerHTML=`คืนนี้ราว <b>${txt}</b>`;return {txt,f}})();
 
-/* ---------- astrolabe ---------- */
-(function(){let t="";for(let i=0;i<120;i++){const a=i*3*Math.PI/180,r1=i%10?186:178;t+=`M${200+Math.cos(a)*r1} ${200+Math.sin(a)*r1}L${200+Math.cos(a)*192} ${200+Math.sin(a)*192}`}
- let p="";for(let i=0;i<12;i++){const a=(i*30+15)*Math.PI/180;p+=`<circle cx="${200+Math.cos(a)*160}" cy="${200+Math.sin(a)*160}" r="2" fill="#c9a45c"/>`}
- $("#astro").innerHTML=`<g fill="none" stroke="#c9a45c"><g class="spin" stroke-opacity=".32"><circle cx="200" cy="200" r="192"/><circle cx="200" cy="200" r="170" stroke-opacity=".6"/><path d="${t}" stroke-width=".8"/>${p}</g><g class="spin2" stroke-opacity=".22"><circle cx="200" cy="200" r="130"/><path d="${star(200,200,130,6,.577)}"/><circle cx="200" cy="200" r="74"/></g><path d="M200 0 V40 M200 360 V400 M0 200 H40 M360 200 H400" stroke-opacity=".3"/></g>`})();
+/* ---------- Thai ring behind the table: halo, กนกเปลว ring, ประจำยาม circle (slowly rotating via CSS) ---------- */
+(function(){const c=$("#astro"),g=c.getContext("2d"),T=ThaiArt,R=250;g.translate(450,450);
+ const gl=g.createRadialGradient(0,0,20,0,0,R*1.6);gl.addColorStop(0,"rgba(243,220,154,.12)");gl.addColorStop(1,"rgba(243,220,154,0)");g.fillStyle=gl;g.beginPath();g.arc(0,0,R*1.6,0,7);g.fill();
+ g.globalAlpha=.3;T.flameRing(g,0,0,R*1.12,32,R*.28);g.globalAlpha=1;
+ g.strokeStyle="rgba(215,178,94,.34)";g.lineWidth=1.4;[R,R*1.46,R*1.55].forEach(r=>{g.beginPath();g.arc(0,0,r,0,7);g.stroke()});
+ for(let i=0;i<20;i++){const a=i/20*Math.PI*2;T.prachayam(g,Math.cos(a)*R*1.505,Math.sin(a)*R*1.505,9,.6,false)}})();
 
-/* ---------- starfield ---------- */
+/* ---------- ลายรดน้ำ background (static, repainted on resize) + gold twinkle overlay ---------- */
+function paintBg(){const cv=$("#bgthai"),d=Math.min(devicePixelRatio||1,2),W=innerWidth,H=innerHeight;cv.width=W*d;cv.height=H*d;const g=cv.getContext("2d");g.scale(d,d);const T=ThaiArt,u=Math.min(W,H)/390;
+ T.lacquer(g,W,H,W/2,H*.4,3);
+ const r=T.mulberry(9);for(let i=0;i<W*H/6000;i++){g.globalAlpha=.1+r()*.4;g.fillStyle=r()<.3?"#f3dc9a":"#f4ead0";g.beginPath();g.arc(r()*W,r()*H*.8,r()*1.1+.3,0,7);g.fill()}g.globalAlpha=1;
+ const s=Math.min(W,H)*.2;T.scroll(g,s*.55,s*.55,s*.5,1.5,1,.3,.45,1);T.scroll(g,W-s*.55,s*.55,s*.5,1.5,-1,-.3,.45,2);
+ T.frame(g,W,H,8*u,6*u,.5);
+ const th=Math.min(H*.2,W*.5),hy=H-Math.max(10,H*.02);
+ const hg=g.createLinearGradient(0,hy-th*1.2,0,hy);hg.addColorStop(0,"rgba(90,60,40,0)");hg.addColorStop(1,"rgba(120,80,45,.3)");g.fillStyle=hg;g.fillRect(0,hy-th*1.2,W,th*1.2);
+ g.globalAlpha=.72;T.chedi(g,W*.16,hy,th*.8);T.chedi(g,W*.84,hy,th*.7);T.ubosot(g,W/2,hy,th*1.05);g.globalAlpha=1;
+ g.fillStyle="#050405";g.fillRect(0,hy,W,H-hy)}
 (function(){const cv=$("#sky"),x=cv.getContext("2d");let S=[],W,H;
- function size(){W=cv.width=innerWidth*devicePixelRatio;H=cv.height=innerHeight*devicePixelRatio;S=Array.from({length:170},()=>({x:Math.random()*W,y:Math.random()*H,r:(Math.random()*1.2+.2)*devicePixelRatio,p:Math.random()*6.28,s:.4+Math.random()*1.4}))}
- function draw(t){const g=x.createRadialGradient(W/2,H*.45,0,W/2,H*.45,Math.max(W,H)*.7);g.addColorStop(0,"#171333");g.addColorStop(.55,"#0b0918");g.addColorStop(1,"#050409");x.fillStyle=g;x.fillRect(0,0,W,H);
-  for(const s of S){x.globalAlpha=.35+.65*Math.abs(Math.sin(s.p+t/1000*s.s*.6));x.fillStyle="#f4ead0";x.beginPath();x.arc(s.x,s.y,s.r,0,6.3);x.fill()}x.globalAlpha=1;if(!reduce)requestAnimationFrame(draw)}
+ function size(){const d=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;cv.width=W*d;cv.height=H*d;x.setTransform(d,0,0,d,0,0);
+  S=Array.from({length:60},()=>({x:Math.random()*W,y:Math.random()*H*.75,r:Math.random()*1.3+.4,p:Math.random()*6.28,s:.4+Math.random()*1.2}));try{paintBg()}catch(e){}}
+ function draw(t){x.clearRect(0,0,W,H);for(const s of S){x.globalAlpha=Math.max(0,Math.sin(s.p+t/1000*s.s*.7))*.9;x.fillStyle="#f3dc9a";x.beginPath();x.arc(s.x,s.y,s.r,0,6.3);x.fill()}x.globalAlpha=1;if(!reduce)requestAnimationFrame(draw)}
  size();addEventListener("resize",size);requestAnimationFrame(draw)})();
 
 /* ---------- table ---------- */
@@ -403,7 +416,7 @@ for(let k=0;k<3;k++){const s=document.createElement("div");s.className="slot hid
 
 function place(el,x,y,w,r=0,z){const h=w/ASP;el.style.width=w+"px";el.style.height=h+"px";el.style.fontSize=(w*.1)+"px";el.style.transform=`translate(${x-w/2}px,${y-h/2}px) rotate(${r}deg)`;if(z!=null)el.style.zIndex=z}
 function geom(){const W=stage.clientWidth,H=stage.clientHeight;const cy=H*.93,R=Math.min(W*.46,H*.8),cw=Math.max(30,Math.min(R*.19,92));return{W,H,cy,R,cw}}
-function slotPos(k,G){const gap=G.cw*1.3;return{x:G.W/2+(k-(spread-1)/2)*gap,y:G.cy-G.R*.42,w:G.cw*1.05}}
+function slotPos(k,G){const gap=Math.max(G.cw*1.3,76);return{x:G.W/2+(k-(spread-1)/2)*gap,y:G.cy-G.R*.42,w:G.cw*1.05}}
 function revealPos(k,G){const sh=($("#sheet").classList.contains("open")||$("#hist").classList.contains("open"))&&G.W>720?Math.min(440,G.W*.45):0;const W=G.W-sh;
  const w=Math.min(W/(spread+.6)/1.12,G.H*.7*ASP,spread===1?240:210);const gap=w*1.14;return{x:W/2+(k-(spread-1)/2)*gap,y:G.H*.44,w}}
 function layout(){const G=geom(),N=cards.length;
@@ -474,15 +487,17 @@ function analyse(R){const cs=R.cards.map(([id,rv])=>({c:CARDS[id],rev:!!rv}));co
  return{cs,last,mid,msg,num,pair}}
 let readingText="";
 function dayColors(R){const out=[];if(R.bd!=null&&DAYC[R.bd])out.push([`สีวันเกิด (วัน${DAYC[R.bd][0]})`,DAYC[R.bd]]);const d=new Date(R.t).getDay();out.push([`สีประจำวัน${DAYC[d][0]}`,DAYC[d]]);return out}
+function poemHTML(R){const P=R.spread===3?POS3:POS1;return R.cards.map(([id,rv],k)=>{const c=CARDS[id],v=c.p||[];return `<div class="verse"><div class="vlab">${P[k][1]} · ${c.th}${rv?" (กลับหัว)":""}</div><div class="vl">${v[0]||""}&emsp;${v[1]||""}</div><div class="vl">${v[2]||""}&emsp;${v[3]||""}</div>${rv?`<div class="vrev">ไพ่กลับหัว: ${c.r}</div>`:""}</div>`}).join("")}
+function poemText(R){const P=R.spread===3?POS3:POS1;return R.cards.map(([id,rv],k)=>{const v=CARDS[id].p||[];return `${P[k][1]}: ${v[0]} ${v[1]}\n${v[2]} ${v[3]}`}).join("\n")}
 function renderReading(R){const A=analyse(R),P=R.spread===3?POS3:POS1;let h="",t=`🌙 NOCTURNE — ${TOPIC[R.topic]}\n`;
  h+=`<div class="meta">${thDate(R.t)} ${thTime(R.t)} · เรื่อง${TOPIC[R.topic]}${R.moon?" · "+R.moon:""}</div>`;
  if(R.q){h+=`<p class="q">“${esc(R.q)}”</p>`;t+=`คำถาม: ${R.q}\n`}
  A.cs.forEach(({c,rev},k)=>{const id=R.cards[k][0];h+=`<div class="entry">${thumb(id,rev)}<div><div class="pos">${P[k][0]} · ${P[k][1]}</div><h3>${c.th}<small>${numLabel(c)} ${c.en}${rev?" · REVERSED":""}</small></h3><div class="kw">${rev?"กลับหัว":c.k}</div>`+
   (rev?`<p class="rv">${c.r}</p><p>ถ้าปรับพลังให้ตั้งตรงได้: ${topicLine(c,R.topic)}</p>`:`<p>${topicLine(c,R.topic)}</p>`)+`</div></div>`;
   t+=`\n${P[k][1]}: ${c.th} (${c.en})${rev?" กลับหัว":""}\n${rev?c.r:topicLine(c,R.topic)}\n`});
- h+=`<div class="msg"><h4>สารจากไพ่</h4><p>${A.msg}</p><p><b>คำแนะนำ:</b> ${A.last.a}</p><div class="lucky"><div><b>${A.num}</b>เลขมงคล</div><div><b>${A.pair}</b>เลขคู่นำโชค</div><div><b><span class="sw" style="background:${A.mid.c[1]}"></span>${A.mid.c[0]}</b>สีมงคลจากไพ่</div>${dayColors(R).map(([lab,c])=>`<div><b><span class="sw" style="background:${c[2]}"></span>${c[1]}</b>${lab}</div>`).join("")}</div><p class="note" style="margin-top:8px">สีประจำวันตามคติไทยทั่วไป${R.bd==null?" · เลือกวันเกิดในหน้าแรกเพื่อดูสีวันเกิดของคุณ":""}</p></div>`;
+ h+=`<div class="msg"><h4>สารจากไพ่</h4>${poemHTML(R)}<p><b>คำแนะนำ:</b> ${A.last.a}</p><div class="lucky"><div><b>${A.num}</b>เลขมงคล</div><div><b>${A.pair}</b>เลขคู่นำโชค</div><div><b><span class="sw" style="background:${A.mid.c[1]}"></span>${A.mid.c[0]}</b>สีมงคลจากไพ่</div>${dayColors(R).map(([lab,c])=>`<div><b><span class="sw" style="background:${c[2]}"></span>${c[1]}</b>${lab}</div>`).join("")}</div><p class="note" style="margin-top:8px">สีประจำวันตามคติไทยทั่วไป${R.bd==null?" · เลือกวันเกิดในหน้าแรกเพื่อดูสีวันเกิดของคุณ":""}</p></div>`;
  h+=`<div class="credit">${CREDIT()}</div>`;
- t+=`\nสารจากไพ่: ${A.msg}\nคำแนะนำ: ${A.last.a}\nเลขมงคล ${A.num} · เลขคู่ ${A.pair} · สีมงคล ${A.mid.c[0]}${dayColors(R).map(([l,c])=>" · "+l+" "+c[1]).join("")}\nดูไพ่ชุดนี้: ${linkFor(R)}\n(เพื่อความบันเทิง)`;
+ t+=`\nสารจากไพ่:\n${poemText(R)}\nคำแนะนำ: ${A.last.a}\nเลขมงคล ${A.num} · เลขคู่ ${A.pair} · สีมงคล ${A.mid.c[0]}${dayColors(R).map(([l,c])=>" · "+l+" "+c[1]).join("")}\nดูไพ่ชุดนี้: ${linkFor(R)}\n(เพื่อความบันเทิง)`;
  readingText=t;current=R;$("#reading").innerHTML=h;$("#fab").hidden=false}
 function openSheet(id){["#sheet","#hist"].forEach(s=>$(s).classList.toggle("open",s===id));$("#fab").hidden=true;layout()}
 function closeSheets(){$("#sheet").classList.remove("open");$("#hist").classList.remove("open");if(readingText)$("#fab").hidden=false;layout()}
@@ -516,15 +531,17 @@ function wrap(ctx,s,maxW,maxLines){const out=[];let line="";for(const w of words
  if(out.length>maxLines){out.length=maxLines;out[maxLines-1]=out[maxLines-1].replace(/.{0,2}$/,"…")}return out}
 function rrect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
 const FMT={story:[1080,1920],post:[1080,1350],wide:[1200,675]};let shareFmt="story";
-function sky(x,W,H,cx,cy,R0,seed0){const g=x.createRadialGradient(cx,cy,40,cx,cy,Math.max(W,H)*.75);g.addColorStop(0,"#2a2160");g.addColorStop(.45,"#110e28");g.addColorStop(1,"#050409");x.fillStyle=g;x.fillRect(0,0,W,H);
+function sky(x,W,H,cx,cy,R0,seed0){const g=x.createRadialGradient(cx,cy,40,cx,cy,Math.max(W,H)*.75);g.addColorStop(0,"#2c1519");g.addColorStop(.45,"#140a0d");g.addColorStop(1,"#060405");x.fillStyle=g;x.fillRect(0,0,W,H);
  let seed=seed0%9973+1;const rr=()=>(seed=(seed*16807)%2147483647)/2147483647;for(let i=0;i<W*H/8000;i++){x.globalAlpha=.25+rr()*.75;x.fillStyle="#f4ead0";x.beginPath();x.arc(rr()*W,rr()*H,rr()*1.8+.3,0,7);x.fill()}x.globalAlpha=1;
  x.strokeStyle="rgba(201,164,92,.22)";x.lineWidth=2;[R0,R0+50].forEach(r=>{x.beginPath();x.arc(cx,cy,r,0,7);x.stroke()});
- for(let i=0;i<120;i++){const a=i*3*Math.PI/180,r1=i%10?R0+35:R0+20;x.beginPath();x.moveTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1);x.lineTo(cx+Math.cos(a)*(R0+50),cy+Math.sin(a)*(R0+50));x.stroke()}}
+ for(let i=0;i<120;i++){const a=i*3*Math.PI/180,r1=i%10?R0+35:R0+20;x.beginPath();x.moveTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1);x.lineTo(cx+Math.cos(a)*(R0+50),cy+Math.sin(a)*(R0+50));x.stroke()}
+ if(window.ThaiArt){const m=Math.min(W,H)*.025;ThaiArt.frame(x,W,H,m,Math.min(W,H)*.012,.75)}}
 function cardAt(x,im,cx,top,cw,rev){const ch=cw/ASP,lx=cx-cw/2;x.save();x.shadowColor="rgba(0,0,0,.6)";x.shadowBlur=cw*.13;x.shadowOffsetY=cw*.045;const fg=x.createLinearGradient(lx,top,lx+cw,top+ch);
  (STYLE==="ink"?["#d9bf7e","#f3e2b0","#b98f34","#e8d39a","#c9a45c"]:["#e8d39a","#9fd6d2","#e9b7d8","#c9a45c","#f3e2b0"]).forEach((c,i)=>fg.addColorStop(i/4,c));x.fillStyle=fg;rrect(x,lx,top,cw,ch,cw*.045);x.fill();x.restore();
  const p=cw*(STYLE==="ink"?.02:.045);x.save();rrect(x,lx+p,top+p,cw-2*p,ch-2*p,cw*.025);x.clip();x.fillStyle="#e9dcc0";x.fillRect(lx,top,cw,ch);
  if(im){const cr=STYLE==="ink"?0:.035,sx=im.width*cr,sy=im.height*cr,sw=im.width-2*sx,sh=im.height-2*sy;x.translate(cx,top+ch/2);if(rev)x.rotate(Math.PI);const iw=cw-2*p,ih=ch-2*p,s=Math.max(iw/sw,ih/sh);x.drawImage(im,sx,sy,sw,sh,-sw*s/2,-sh*s/2,sw*s,sh*s)}x.restore();return ch}
 function T(x,str,X,Y,font,col,align="center",ls=0){x.font=font;x.fillStyle=col;x.textAlign=align;if("letterSpacing" in x)x.letterSpacing=ls+"px";x.fillText(str,X+(align==="center"?ls/2:0),Y);if("letterSpacing" in x)x.letterSpacing="0px"}
+function verseLines(R){const P=R.spread===3?POS3:POS1,out=[];R.cards.forEach(([id,rv],k)=>{const v=CARDS[id].p||["","","",""];out.push({lab:1,t:`${P[k][1]}${rv?" · กลับหัว":""}`});out.push({t:`${v[0]}  ${v[1]}`});out.push({t:`${v[2]}  ${v[3]}`})});return out}
 function luckyStr(R,A){return `เลขมงคล ${A.num} · เลขคู่ ${A.pair} · สี${A.mid.c[0]}`+dayColors(R).map(([l,c])=>` · ${l.replace("สีประจำวัน","สีวัน")} ${c[1]}`).join("")}
 const FOOT=()=>"เพื่อความบันเทิง · ไพ่ลายหมึกพู่กัน Nocturne";
 async function makeShare(R,fmt="story"){
@@ -535,24 +552,24 @@ async function makeShare(R,fmt="story"){
  if(fmt==="story"){sky(x,W,H,W/2,860,470,R.t);
   T(x,"NOCTURNE",W/2,150,`700 68px ${CZ}`,"#efdcaa","center",22);T(x,sub,W/2,205,`400 30px ${TH}`,"#a49dba");
   let y=270;if(R.q){x.font=`400 34px ${TH}`;wrap(x,`“${R.q}”`,860,2).forEach(l=>{T(x,l,W/2,y,`400 34px ${TH}`,"#e9e3d3");y+=48})}
-  const cw=n===3?318:430,gap=28,top=n===3?Math.max(y+50,420):Math.max(y+40,360);let ch=0;
+  const cw=n===3?280:430,gap=28,top=n===3?Math.max(y+50,420):Math.max(y+40,360);let ch=0;
   for(let k=0;k<n;k++){const cx=W/2+(k-(n-1)/2)*(cw+gap),rev=!!R.cards[k][1],c=CARDS[R.cards[k][0]];ch=cardAt(x,imgs[k],cx,top,cw,rev);
    let ty=top+ch+52;T(x,P[k][0],cx,ty,`500 24px ${CZ}`,"#c9a45c","center",6);T(x,P[k][1],cx,ty+=34,`400 24px ${TH}`,"#a49dba");
    x.font=`700 ${n===3?38:48}px ${SK}`;wrap(x,c.th+(rev?" (กลับหัว)":""),cw+20,2).forEach(l=>T(x,l,cx,ty+=(n===3?48:60),`700 ${n===3?38:48}px ${SK}`,rev?"#f0b3a8":"#f3e6c4"))}
-  const my=top+ch+(n===3?250:230),bx=90,bw=W-180;x.font=`400 32px ${TH}`;const ml=wrap(x,A.msg,bw-80,5);x.font=`600 30px ${TH}`;const al=wrap(x,"คำแนะนำ: "+A.last.a,bw-80,2);x.font=`400 26px ${TH}`;const ll=wrap(x,luckyStr(R,A),bw-60,2);
-  const bh=90+ml.length*48+al.length*46+ll.length*38+50;x.fillStyle="rgba(7,6,13,.55)";rrect(x,bx,my,bw,bh,22);x.fill();x.strokeStyle="rgba(201,164,92,.5)";x.lineWidth=2;x.stroke();
-  T(x,"MESSAGE",W/2,my+52,`500 24px ${CZ}`,"#c9a45c","center",6);let ly=my+100;ml.forEach(l=>{T(x,l,W/2,ly,`400 32px ${TH}`,"#e9e3d3");ly+=48});al.forEach(l=>{T(x,l,W/2,ly+6,`600 30px ${TH}`,"#efdcaa");ly+=46});
+  const my=top+ch+(n===3?220:210),bx=90,bw=W-180;const ml=verseLines(R);x.font=`600 30px ${TH}`;const al=wrap(x,"คำแนะนำ: "+A.last.a,bw-80,2);x.font=`400 26px ${TH}`;const ll=wrap(x,luckyStr(R,A),bw-60,2);
+  const bh=70+ml.reduce((a,l)=>a+(l.lab?30:42),0)+al.length*44+ll.length*36+50;x.fillStyle="rgba(7,6,13,.55)";rrect(x,bx,my,bw,bh,22);x.fill();x.strokeStyle="rgba(201,164,92,.5)";x.lineWidth=2;x.stroke();
+  T(x,"MESSAGE",W/2,my+52,`500 24px ${CZ}`,"#c9a45c","center",6);let ly=my+96;ml.forEach(l=>{if(l.lab)T(x,l.t,W/2,ly,`400 22px ${TH}`,"#c9a45c");else T(x,l.t,W/2,ly,`700 30px ${SK}`,"#f3e6c4");ly+=l.lab?30:42});ly+=6;al.forEach(l=>{T(x,l,W/2,ly+6,`600 30px ${TH}`,"#efdcaa");ly+=46});
   ly+=20;ll.forEach(l=>{T(x,l,W/2,ly,`400 26px ${TH}`,"#e9e3d3");ly+=38});
   T(x,"thailinebot.com/tarot",W/2,H-110,`500 30px ${CZ}`,"#c9a45c");T(x,FOOT(),W/2,H-66,`400 22px ${TH}`,"#6f6888")}
  else if(fmt==="post"){sky(x,W,H,W/2,560,380,R.t);
   T(x,"NOCTURNE",W/2,100,`700 56px ${CZ}`,"#efdcaa","center",18);T(x,sub,W/2,148,`400 26px ${TH}`,"#a49dba");
   let y=200;if(R.q){x.font=`400 30px ${TH}`;T(x,wrap(x,`“${R.q}”`,900,1)[0],W/2,y,`400 30px ${TH}`,"#e9e3d3");y+=24}
-  const cw=n===3?292:360,gap=26,top=y+(R.q?20:10);let ch=0;
+  const cw=n===3?256:320,gap=26,top=y+(R.q?20:10);let ch=0;
   for(let k=0;k<n;k++){const cx=W/2+(k-(n-1)/2)*(cw+gap),rev=!!R.cards[k][1],c=CARDS[R.cards[k][0]];ch=cardAt(x,imgs[k],cx,top,cw,rev);
    T(x,P[k][1],cx,top+ch+42,`400 22px ${TH}`,"#c9a45c");x.font=`700 ${n===3?34:44}px ${SK}`;T(x,wrap(x,c.th+(rev?" (กลับหัว)":""),cw+24,1)[0],cx,top+ch+(n===3?86:96),`700 ${n===3?34:44}px ${SK}`,rev?"#f0b3a8":"#f3e6c4")}
-  const my=top+ch+(n===3?112:124),bx=70,bw=W-140;x.font=`400 28px ${TH}`;const ml=wrap(x,A.msg,bw-70,3);x.font=`600 26px ${TH}`;const al=wrap(x,"คำแนะนำ: "+A.last.a,bw-70,1);x.font=`400 22px ${TH}`;const ll=wrap(x,luckyStr(R,A),bw-60,1);
-  const bh=34+ml.length*40+al.length*38+ll.length*34+26;x.fillStyle="rgba(7,6,13,.55)";rrect(x,bx,my,bw,bh,20);x.fill();x.strokeStyle="rgba(201,164,92,.5)";x.lineWidth=2;x.stroke();
-  let ly=my+48;ml.forEach(l=>{T(x,l,W/2,ly,`400 28px ${TH}`,"#e9e3d3");ly+=40});al.forEach(l=>{T(x,l,W/2,ly,`600 26px ${TH}`,"#efdcaa");ly+=38});ll.forEach(l=>{T(x,l,W/2,ly,`400 22px ${TH}`,"#a49dba");ly+=34});
+  const my=top+ch+(n===3?112:124),bx=70,bw=W-140;const ml=verseLines(R);x.font=`600 26px ${TH}`;const al=wrap(x,"คำแนะนำ: "+A.last.a,bw-70,1);x.font=`400 22px ${TH}`;const ll=wrap(x,luckyStr(R,A),bw-60,1);
+  const bh=40+ml.reduce((a,l)=>a+(l.lab?28:36),0)+al.length*38+ll.length*34+20;x.fillStyle="rgba(7,6,13,.55)";rrect(x,bx,my,bw,bh,20);x.fill();x.strokeStyle="rgba(201,164,92,.5)";x.lineWidth=2;x.stroke();
+  let ly=my+44;ml.forEach(l=>{if(l.lab)T(x,l.t,W/2,ly,`400 18px ${TH}`,"#c9a45c");else T(x,l.t,W/2,ly,`700 26px ${SK}`,"#f3e6c4");ly+=l.lab?28:36});ly+=4;al.forEach(l=>{T(x,l,W/2,ly,`600 26px ${TH}`,"#efdcaa");ly+=38});ll.forEach(l=>{T(x,l,W/2,ly,`400 22px ${TH}`,"#a49dba");ly+=34});
   T(x,"thailinebot.com/tarot",W/2,H-52,`500 26px ${CZ}`,"#c9a45c");T(x,FOOT(),W/2,H-20,`400 17px ${TH}`,"#6f6888")}
  else{sky(x,W,H,330,340,250,R.t);
   const cw=n===3?176:236,gap=16,top=n===3?100:70;let ch=0;
@@ -561,7 +578,7 @@ async function makeShare(R,fmt="story"){
   const X0=660,CW=490;T(x,"NOCTURNE",X0,92,`700 44px ${CZ}`,"#efdcaa","left",12);T(x,sub,X0,130,`400 19px ${TH}`,"#a49dba","left");
   let y=172;if(R.q){x.font=`400 22px ${TH}`;wrap(x,`“${R.q}”`,CW,2).forEach(l=>{T(x,l,X0,y,`400 22px ${TH}`,"#e9e3d3","left");y+=30});y+=6}
   x.strokeStyle="rgba(201,164,92,.5)";x.lineWidth=1.5;x.beginPath();x.moveTo(X0,y);x.lineTo(X0+CW,y);x.stroke();y+=38;
-  x.font=`400 23px ${TH}`;wrap(x,A.msg,CW,5).forEach(l=>{T(x,l,X0,y,`400 23px ${TH}`,"#e9e3d3","left");y+=33});y+=6;
+  verseLines(R).forEach(l=>{if(l.lab)T(x,l.t,X0,y,`400 15px ${TH}`,"#c9a45c","left");else T(x,l.t,X0,y,`700 21px ${SK}`,"#f3e6c4","left");y+=l.lab?22:28});y+=8;
   x.font=`600 21px ${TH}`;wrap(x,"คำแนะนำ: "+A.last.a,CW,2).forEach(l=>{T(x,l,X0,y,`600 21px ${TH}`,"#efdcaa","left");y+=30});y+=6;
   x.font=`400 18px ${TH}`;wrap(x,luckyStr(R,A),CW,2).forEach(l=>{T(x,l,X0,y,`400 18px ${TH}`,"#a49dba","left");y+=26});
   T(x,"thailinebot.com/tarot",X0,H-44,`500 22px ${CZ}`,"#c9a45c","left");T(x,FOOT(),X0,H-18,`400 14px ${TH}`,"#6f6888","left")}
