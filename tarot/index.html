@@ -48,7 +48,7 @@ button:focus-visible,.card:focus-visible,textarea:focus-visible,.hitem:focus-vis
 .card.gone{opacity:0;pointer-events:none}
 .card .lift{width:100%;height:100%;transition:transform .3s var(--ease);perspective:900px}
 .mode-pick .card:not(.picked):hover .lift,.mode-pick .card:not(.picked):focus-visible .lift{transform:translateY(-14%)}
-.card .inner{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .9s var(--ease)}
+.card .inner{position:relative;width:100%;height:100%;-webkit-transform-style:preserve-3d;transform-style:preserve-3d;transition:transform .9s var(--ease)}
 .card.flipped .inner{transform:rotateY(180deg)}
 .back,.face{position:absolute;inset:0;border-radius:7px;backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:hidden}
 .back{background:linear-gradient(125deg,#2b2a78,#4a2a7a 22%,#1f4f86 45%,#3b8a8a 58%,#6d3f8f 75%,#2b2a78);background-size:320% 320%;animation:foil 9s ease-in-out infinite alternate;box-shadow:0 6px 18px rgba(0,0,0,.55)}
@@ -130,7 +130,8 @@ textarea::placeholder{color:#6f6888}
 .modal.open{opacity:1;pointer-events:auto}
 .mbox{display:grid;grid-template-columns:auto minmax(0,380px);gap:28px;align-items:center;max-height:100%}
 .bigcard{position:relative;width:min(300px,70vw);aspect-ratio:.58;max-width:100%;font-size:min(30px,7vw)}
-.bigcard .face{transform:none;backface-visibility:visible}
+.bigcard .face{transform:none;backface-visibility:visible;-webkit-backface-visibility:visible}
+.back{transform:rotateY(0deg)} /* Safari: keep the back in the 3D context so it hides when flipped */
 .mtext h3{margin:0;font-family:var(--thai-d);font-size:30px;color:#f3e6c4;line-height:1.35}
 .mtext .en{font-family:var(--display);letter-spacing:.14em;color:var(--gold);font-size:13px}
 .mtext dl{margin:12px 0 0;display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:14px}
