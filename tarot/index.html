@@ -93,6 +93,10 @@ textarea::placeholder{color:#6f6888}
 .entry{display:grid;grid-template-columns:64px 1fr;gap:12px;padding-block:12px;border-bottom:1px solid rgba(201,164,92,.14)}
 .thumb{width:64px;aspect-ratio:.58;border-radius:4px;overflow:hidden;border:1px solid var(--gold-lo);background:#e9dcc0}
 .thumb img{width:100%;height:100%;object-fit:cover;transform:scale(1.07)}
+.ink .thumb img,.ink .facein img{transform:none}.ink .thumb.rev img,.ink .facein.rev img{transform:rotate(180deg)}
+.ink .face{padding:2.2%;background:linear-gradient(135deg,#d9bf7e,#f3e2b0 40%,#b98f34 75%,#e8d39a)}
+.ink .facein{border-radius:5px}
+.ink .back{background:#14112a url(cards/ink/back.webp) center/cover;animation:none}.ink .back svg{display:none}
 .thumb.rev img{transform:rotate(180deg) scale(1.07)}
 .entry .pos{font-family:var(--display);font-size:11px;letter-spacing:.22em;color:var(--gold)}
 .entry h3{margin:2px 0 2px;font-family:var(--thai-d);font-size:21px;font-weight:700;color:#f3e6c4;line-height:1.4}
@@ -181,6 +185,11 @@ textarea::placeholder{color:#6f6888}
         <button type="button" class="chip" data-deck="78" aria-pressed="true">ครบ 78 ใบ</button>
         <button type="button" class="chip" data-deck="22" aria-pressed="false">ชุดใหญ่ 22 ใบ</button>
       </div>
+      <div class="row" role="group" aria-label="ลายไพ่">
+        <span class="lbl">ลาย</span>
+        <button type="button" class="chip" data-style="ink" aria-pressed="true">ลายหมึกพู่กัน</button>
+        <button type="button" class="chip" data-style="rws" aria-pressed="false">Rider–Waite 1909</button>
+      </div>
       <div class="daily" id="dailyNote" hidden></div>
       <div class="row"><button class="cta" type="button" id="go">สับไพ่</button></div>
     </form>
@@ -248,7 +257,10 @@ const POS3=[["PAST","อดีต"],["PRESENT","ปัจจุบัน"],["FUT
 const POS1=[["TODAY","ไพ่ประจำวัน"]];
 const ASP=.58;
 const $=s=>document.querySelector(s);
-const imgSrc=c=>`cards/${c.img}.webp`;
+let STYLE=(()=>{try{return localStorage.getItem('nocturne.style')||'ink'}catch(e){return 'ink'}})();
+const imgSrc=c=>STYLE==='ink'?`cards/ink/${c.img}.webp`:`cards/${c.img}.webp`;
+const CREDIT=()=>STYLE==='ink'?'ภาพไพ่ลายหมึกพู่กัน วาดด้วยโค้ดโดย Claude สำหรับ Nocturne':'ภาพไพ่: Rider–Waite–Smith (1909) วาดโดย Pamela Colman Smith · สาธารณสมบัติ';
+function applyStyle(){document.body.classList.toggle('ink',STYLE==='ink');document.querySelectorAll('[data-style]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.style===STYLE))}
 const numLabel=c=>c.img[0]==="m"?ROMAN[c.n]:"";
 function rnd(n){const a=new Uint32Array(1);crypto.getRandomValues(a);return a[0]%n}
 function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=rnd(i+1);[arr[i],arr[j]]=[arr[j],arr[i]]}return arr}
@@ -338,6 +350,7 @@ function chips(attr,cb){document.querySelectorAll(`[data-${attr}]`).forEach(b=>b
 chips("topic",v=>{topic=v});
 chips("spread",v=>{spread=+v;refreshDaily();layout()});
 chips("deck",v=>{deckSize=+v;if(mode==="intro"){buildTable(deckSize);layout()}});
+chips("style",v=>{STYLE=v;try{localStorage.setItem("nocturne.style",v)}catch(e){}applyStyle()});
 function refreshDaily(){const d=spread===1&&todayDaily();const n=$("#dailyNote");
  if(d){const c=CARDS[d.cards[0][0]];n.hidden=false;n.innerHTML=`วันนี้คุณเปิดไพ่ประจำวันแล้ว: <b>${c.th}</b> — ไพ่ประจำวันเปิดได้วันละครั้ง`;$("#go").textContent="ดูไพ่วันนี้อีกครั้ง"}
  else{n.hidden=true;$("#go").textContent="สับไพ่"}}
@@ -387,7 +400,7 @@ function renderReading(R){const A=analyse(R),P=R.spread===3?POS3:POS1;let h="",t
   (rev?`<p class="rv">${c.r}</p><p>ถ้าปรับพลังให้ตั้งตรงได้: ${topicLine(c,R.topic)}</p>`:`<p>${topicLine(c,R.topic)}</p>`)+`</div></div>`;
   t+=`\n${P[k][1]}: ${c.th} (${c.en})${rev?" กลับหัว":""}\n${rev?c.r:topicLine(c,R.topic)}\n`});
  h+=`<div class="msg"><h4>สารจากไพ่</h4><p>${A.msg}</p><p><b>คำแนะนำ:</b> ${A.last.a}</p><div class="lucky"><div><b>${A.num}</b>เลขมงคล</div><div><b>${A.pair}</b>เลขคู่นำโชค</div><div><b><span class="sw" style="background:${A.mid.c[1]}"></span>${A.mid.c[0]}</b>สีมงคล</div></div></div>`;
- h+=`<div class="credit">ภาพไพ่: Rider–Waite–Smith (1909) วาดโดย Pamela Colman Smith · สาธารณสมบัติ</div>`;
+ h+=`<div class="credit">${CREDIT()}</div>`;
  t+=`\nสารจากไพ่: ${A.msg}\nคำแนะนำ: ${A.last.a}\nเลขมงคล ${A.num} · เลขคู่ ${A.pair} · สีมงคล ${A.mid.c[0]}\n(เพื่อความบันเทิง)`;
  readingText=t;current=R;$("#reading").innerHTML=h;$("#fab").hidden=false}
 function openSheet(id){["#sheet","#hist"].forEach(s=>$(s).classList.toggle("open",s===id));$("#fab").hidden=true;layout()}
@@ -436,8 +449,8 @@ async function makeShare(R){
  const imgs=await Promise.all(R.cards.map(([id])=>loadImg(imgSrc(CARDS[id])).catch(()=>null)));
  for(let k=0;k<n;k++){const cx=W/2+(k-(n-1)/2)*(cw+gap),lx=cx-cw/2,rev=!!R.cards[k][1],c=CARDS[R.cards[k][0]];
   x.save();x.shadowColor="rgba(0,0,0,.6)";x.shadowBlur=40;x.shadowOffsetY=14;const fg=x.createLinearGradient(lx,top,lx+cw,top+ch);["#e8d39a","#9fd6d2","#e9b7d8","#c9a45c","#f3e2b0"].forEach((s,i)=>fg.addColorStop(i/4,s));x.fillStyle=fg;rrect(x,lx,top,cw,ch,14);x.fill();x.restore();
-  const p=cw*.045;x.save();rrect(x,lx+p,top+p,cw-2*p,ch-2*p,8);x.clip();x.fillStyle="#e9dcc0";x.fillRect(lx,top,cw,ch);
-  const im=imgs[k];if(im){const sx=im.width*.035,sy=im.height*.035,sw=im.width-2*sx,sh=im.height-2*sy;x.translate(cx,top+ch/2);if(rev)x.rotate(Math.PI);const iw=cw-2*p,ih=ch-2*p,s=Math.max(iw/sw,ih/sh);x.drawImage(im,sx,sy,sw,sh,-sw*s/2,-sh*s/2,sw*s,sh*s)}x.restore();
+  const p=cw*(STYLE==='ink'?.02:.045);x.save();rrect(x,lx+p,top+p,cw-2*p,ch-2*p,8);x.clip();x.fillStyle="#e9dcc0";x.fillRect(lx,top,cw,ch);
+  const im=imgs[k];if(im){const cr=STYLE==='ink'?0:.035,sx=im.width*cr,sy=im.height*cr,sw=im.width-2*sx,sh=im.height-2*sy;x.translate(cx,top+ch/2);if(rev)x.rotate(Math.PI);const iw=cw-2*p,ih=ch-2*p,s=Math.max(iw/sw,ih/sh);x.drawImage(im,sx,sy,sw,sh,-sw*s/2,-sh*s/2,sw*s,sh*s)}x.restore();
   let ty=top+ch+52;x.fillStyle="#c9a45c";x.font='500 24px "Cinzel",serif';if("letterSpacing" in x)x.letterSpacing="6px";x.fillText(P[k][0],cx,ty);if("letterSpacing" in x)x.letterSpacing="0px";
   x.fillStyle="#a49dba";x.font='400 24px "Noto Serif Thai",serif';x.fillText(P[k][1],cx,ty+=34);
   x.fillStyle=rev?"#f0b3a8":"#f3e6c4";x.font=`700 ${n===3?38:48}px "Srisakdi","Noto Serif Thai",serif`;wrap(x,c.th+(rev?" (กลับหัว)":""),cw+20,2).forEach(l=>{x.fillText(l,cx,ty+=(n===3?48:60))})}
@@ -449,7 +462,7 @@ async function makeShare(R){
  x.beginPath();x.arc(cols[2],ly-2,26,0,7);x.fillStyle=A.mid.c[1];x.fill();x.strokeStyle="rgba(255,255,255,.5)";x.stroke();
  x.fillStyle="#a49dba";x.font='400 26px "Noto Serif Thai",serif';x.fillText("เลขมงคล",cols[0],ly+62);x.fillText("เลขคู่นำโชค",cols[1],ly+62);x.fillText("สี"+A.mid.c[0],cols[2],ly+62);
  x.fillStyle="#c9a45c";x.font='500 30px "Cinzel",serif';x.fillText("thailinebot.com/tarot",W/2,H-110);
- x.fillStyle="#6f6888";x.font='400 22px "Noto Serif Thai",serif';x.fillText("เพื่อความบันเทิง · ภาพไพ่ Rider–Waite–Smith 1909 (สาธารณสมบัติ)",W/2,H-66);
+ x.fillStyle="#6f6888";x.font='400 22px "Noto Serif Thai",serif';x.fillText(STYLE==="ink"?"เพื่อความบันเทิง · ไพ่ลายหมึกพู่กัน Nocturne":"เพื่อความบันเทิง · ภาพไพ่ Rider–Waite–Smith 1909 (สาธารณสมบัติ)",W/2,H-66);
  return cv}
 let shareBlob=null,shareURL=null;
 async function openShare(){if(!current)return;const b=$("#share"),old=b.textContent;b.textContent="กำลังทำภาพ…";$("#shareNow").textContent="กำลังทำภาพ…";
@@ -466,7 +479,7 @@ addEventListener("keydown",e=>{if(e.key==="Escape"){$("#modal").classList.remove
 
 /* ---------- reset ---------- */
 function again(){picks=[];readingText="";closeSheets();$("#fab").hidden=true;$("#actions").hidden=true;$("#shareNow").hidden=true;
- buildTable(deckSize);$("#form").hidden=false;setHint("ตั้งจิตให้สงบ นึกถึงเรื่องที่อยากรู้","ไพ่ Rider–Waite ครบสำรับ 78 ใบ");refreshDaily();setMode("intro")}
+ buildTable(deckSize);$("#form").hidden=false;setHint("ตั้งจิตให้สงบ นึกถึงเรื่องที่อยากรู้","ไพ่ทาโรต์ครบสำรับ 78 ใบ · เลือกลายหมึกพู่กันหรือ Rider–Waite ได้");refreshDaily();setMode("intro")}
 $("#again").onclick=again;$("#again2").onclick=again;
 
 /* ---------- install as app (only when served from the real site) ---------- */
@@ -475,5 +488,5 @@ if(/^\/tarot(\/|$)/.test(location.pathname)){
  if("serviceWorker" in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
 }
 
-again();refreshStreak();if(window.__errs.length)__showErr(window.__errs[0]);if(document.fonts)document.fonts.ready.then(()=>layout());
+applyStyle();again();refreshStreak();if(window.__errs.length)__showErr(window.__errs[0]);if(document.fonts)document.fonts.ready.then(()=>layout());
 </script>

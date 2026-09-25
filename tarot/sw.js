@@ -1,13 +1,13 @@
 /* Nocturne service worker — เปิดได้แม้ไม่มีเน็ต
    ตัวแอป: เน็ตก่อน (ได้เวอร์ชันใหม่ทันที) · ภาพไพ่/ไอคอน/ฟอนต์: แคชก่อน
    ภาพไพ่ 78 ใบ (~4.8 MB) ทยอยโหลดเก็บหลังติดตั้ง ไม่บล็อกการเปิดแอป */
-const CACHE = 'nocturne-v1';
+const CACHE = 'nocturne-v2';
 const SHELL = ['./', './index.html', './cards.js', './manifest.json',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png', './icons/favicon-64.png'];
 const KEYS = [];
 for (let i = 0; i < 22; i++) KEYS.push('m' + String(i).padStart(2, '0'));
 for (const s of ['w', 'c', 's', 'p']) for (let i = 1; i <= 14; i++) KEYS.push(s + String(i).padStart(2, '0'));
-const CARD_URLS = KEYS.map(k => './cards/' + k + '.webp');
+const CARD_URLS = ['./cards/ink/back.webp', ...KEYS.map(k => './cards/ink/' + k + '.webp')];   /* default deck; Rider-Waite cached on first use */
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()).catch(() => self.skipWaiting()));
