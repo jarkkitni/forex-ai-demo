@@ -208,11 +208,6 @@ textarea::placeholder{color:#6f6888}
         <button type="button" class="chip" data-deck="78" aria-pressed="true">ครบ 78 ใบ</button>
         <button type="button" class="chip" data-deck="22" aria-pressed="false">ชุดใหญ่ 22 ใบ</button>
       </div>
-      <div class="row" role="group" aria-label="ลายไพ่">
-        <span class="lbl">ลาย</span>
-        <button type="button" class="chip" data-style="ink" aria-pressed="true">ลายหมึกพู่กัน</button>
-        <button type="button" class="chip" data-style="rws" aria-pressed="false">Rider–Waite 1909</button>
-      </div>
       <div class="row" role="group" aria-label="วันเกิด (ไม่เลือกก็ได้)">
         <span class="lbl">วันเกิด</span>
         <button type="button" class="chip" data-bd="0" aria-pressed="false">อา.</button>
@@ -312,10 +307,10 @@ const POS3=[["PAST","อดีต"],["PRESENT","ปัจจุบัน"],["FUT
 const POS1=[["TODAY","ไพ่ประจำวัน"]];
 const ASP=.58;
 const $=s=>document.querySelector(s);
-let STYLE=(()=>{try{return localStorage.getItem('nocturne.style')||'ink'}catch(e){return 'ink'}})();
-const imgSrc=c=>STYLE==='ink'?`cards/ink/${c.img}.webp`:`cards/${c.img}.webp`;
-const CREDIT=()=>STYLE==='ink'?'ภาพไพ่ลายหมึกพู่กัน วาดด้วยโค้ดโดย Claude สำหรับ Nocturne':'ภาพไพ่: Rider–Waite–Smith (1909) วาดโดย Pamela Colman Smith · สาธารณสมบัติ';
-function applyStyle(){document.body.classList.toggle('ink',STYLE==='ink');document.querySelectorAll('[data-style]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.style===STYLE))}
+const STYLE='ink';   /* one deck only: Nocturne's own brush-ink cards */
+const imgSrc=c=>`cards/ink/${c.img}.webp`;
+const CREDIT=()=>'ภาพไพ่ลายหมึกพู่กัน ออกแบบและวาดขึ้นใหม่ทั้งสำรับสำหรับ Nocturne';
+function applyStyle(){document.body.classList.add('ink')}
 const numLabel=c=>c.img[0]==="m"?ROMAN[c.n]:"";
 /* สีประจำวันตามคติไทยทั่วไป (วันเกิด) — no invented "lucky shirt" tables */
 const DAYC=[["อาทิตย์","แดง","#c8322b"],["จันทร์","เหลือง","#e2bd3c"],["อังคาร","ชมพู","#e58fb0"],["พุธ","เขียว","#4f9a57"],["พฤหัสบดี","ส้ม","#e8872d"],["ศุกร์","ฟ้า","#6fb3e0"],["เสาร์","ม่วง","#7a4fa8"]];
@@ -430,7 +425,7 @@ function chips(attr,cb){document.querySelectorAll(`[data-${attr}]`).forEach(b=>b
 chips("topic",v=>{topic=v});
 chips("spread",v=>{spread=+v;refreshDaily();layout()});
 chips("deck",v=>{deckSize=+v;if(mode==="intro"){buildTable(deckSize);layout()}});
-chips("style",v=>{STYLE=v;try{localStorage.setItem("nocturne.style",v)}catch(e){}applyStyle()});
+
 function bdLabel(){document.querySelectorAll("[data-bd]").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.bd===BDAY))}
 document.querySelectorAll("[data-bd]").forEach(b=>b.onclick=()=>{BDAY=(+b.dataset.bd===BDAY)?null:+b.dataset.bd;try{BDAY===null?localStorage.removeItem("nocturne.bday"):localStorage.setItem("nocturne.bday",BDAY)}catch(e){}bdLabel()});
 function refreshDaily(){const d=spread===1&&todayDaily();const n=$("#dailyNote");
@@ -531,7 +526,7 @@ function cardAt(x,im,cx,top,cw,rev){const ch=cw/ASP,lx=cx-cw/2;x.save();x.shadow
  if(im){const cr=STYLE==="ink"?0:.035,sx=im.width*cr,sy=im.height*cr,sw=im.width-2*sx,sh=im.height-2*sy;x.translate(cx,top+ch/2);if(rev)x.rotate(Math.PI);const iw=cw-2*p,ih=ch-2*p,s=Math.max(iw/sw,ih/sh);x.drawImage(im,sx,sy,sw,sh,-sw*s/2,-sh*s/2,sw*s,sh*s)}x.restore();return ch}
 function T(x,str,X,Y,font,col,align="center",ls=0){x.font=font;x.fillStyle=col;x.textAlign=align;if("letterSpacing" in x)x.letterSpacing=ls+"px";x.fillText(str,X+(align==="center"?ls/2:0),Y);if("letterSpacing" in x)x.letterSpacing="0px"}
 function luckyStr(R,A){return `เลขมงคล ${A.num} · เลขคู่ ${A.pair} · สี${A.mid.c[0]}`+dayColors(R).map(([l,c])=>` · ${l.replace("สีประจำวัน","สีวัน")} ${c[1]}`).join("")}
-const FOOT=()=>STYLE==="ink"?"เพื่อความบันเทิง · ไพ่ลายหมึกพู่กัน Nocturne":"เพื่อความบันเทิง · ภาพไพ่ Rider–Waite–Smith 1909 (สาธารณสมบัติ)";
+const FOOT=()=>"เพื่อความบันเทิง · ไพ่ลายหมึกพู่กัน Nocturne";
 async function makeShare(R,fmt="story"){
  try{await Promise.all(['700 40px "Srisakdi"','500 40px "Cinzel"','700 40px "Cinzel"','400 30px "Noto Serif Thai"','600 30px "Noto Serif Thai"'].map(f=>document.fonts.load(f,"กขABC")))}catch(e){}
  const A=analyse(R),[W,H]=FMT[fmt],cv=document.createElement("canvas");cv.width=W;cv.height=H;const x=cv.getContext("2d");
@@ -595,7 +590,7 @@ async function showShared(R){sharedView=true;$("#form").hidden=true;spread=R.spr
  current=R;layout();await sleep(30);setMode("reveal");setHint(`ไพ่ที่เพื่อนแชร์มา · เรื่อง${TOPIC[R.topic]}`,"แตะไพ่เพื่อเปิด แล้วดูพู่กันวาดไพ่");$("#actions").hidden=false;$("#flipAll").hidden=false;$("#again").textContent="เปิดไพ่ของคุณ";
  await sleep(1400);for(const p of picks){if(!p.flipped){flip(p);await sleep(900)}}}
 function again(){if(sharedView){sharedView=false;$("#again").textContent="ดูดวงใหม่";try{history.replaceState(null,"",location.pathname)}catch(e){}}picks=[];readingText="";closeSheets();$("#fab").hidden=true;$("#actions").hidden=true;$("#shareNow").hidden=true;
- buildTable(deckSize);$("#form").hidden=false;setHint("ตั้งจิตให้สงบ นึกถึงเรื่องที่อยากรู้","ไพ่ทาโรต์ครบสำรับ 78 ใบ · เลือกลายหมึกพู่กันหรือ Rider–Waite ได้");refreshDaily();setMode("intro")}
+ buildTable(deckSize);$("#form").hidden=false;setHint("ตั้งจิตให้สงบ นึกถึงเรื่องที่อยากรู้","ไพ่ทาโรต์ลายหมึกพู่กันครบสำรับ 78 ใบ");refreshDaily();setMode("intro")}
 $("#again").onclick=again;$("#again2").onclick=again;
 
 /* ---------- install as app (only when served from the real site) ---------- */
