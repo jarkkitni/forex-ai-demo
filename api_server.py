@@ -1335,6 +1335,66 @@ def shop_admin_seed_from_file(slug):
     return jsonify({"success": True, "categories": _shop_admin_promo_categories(cfg)})
 
 
+_INBOX_REPLY_WINDOW = 24 * 3600   # Meta standard messaging window — ตอบได้ภายใน 24 ชม. หลังลูกค้าทักล่าสุด
+_INBOX_REPLY_MAX = 900
+
+
+@app.route("/api/shop-admin/<slug>/inbox", methods=["GET"])
+def shop_admin_inbox(slug):
+    """บทสนทนาล่าสุดของร้าน (ในแรม) สำหรับหน้า Inbox — ล็อกด้วย PIN เดียวกับหน้าจัดการราคา"""
+    try:
+        cfg = meta_bot.load_cfg(slug)
+    except Exception:
+        return jsonify({"success": False, "error": "shop not found"}), 404
+    if not _shop_admin_pin_ok(cfg):
+        return jsonify({"success": False, "error": "unauthorized"}), 403
+    return jsonify({"success": True, "biz_name": cfg.get("biz_name", slug),
+                    "bot_enabled": cfg.get("bot_enabled", True),
+                    "reply_window_sec": _INBOX_REPLY_WINDOW, "now": _time.time(),
+                    "threads": meta_bot.inbox_threads(slug)})
+
+
+@app.route("/api/shop-admin/<slug>/inbox/reply", methods=["POST"])
+def shop_admin_inbox_reply(slug):
+    """แอดมินตอบลูกค้าจากหน้า Inbox → ส่งผ่าน Send API ด้วย page token ของร้านนั้นเท่านั้น
+    ตอบได้เฉพาะลูกค้าที่อยู่ใน Inbox ของร้านนี้ และภายใน 24 ชม. หลังข้อความล่าสุดของลูกค้า (ตามนโยบาย Meta)"""
+    try:
+        cfg = meta_bot.load_cfg(slug)
+    except Exception:
+        return jsonify({"success": False, "error": "shop not found"}), 404
+    if not _shop_admin_pin_ok(cfg):
+        return jsonify({"success": False, "error": "unauthorized"}), 403
+    d = request.get_json(force=True, silent=True) or {}
+    psid = str(d.get("psid", "")).strip()
+    text = str(d.get("text", "")).strip()
+    if not psid or not text:
+        return jsonify({"success": False, "error": "psid and text are required"}), 400
+    if len(text) > _INBOX_REPLY_MAX:
+        return jsonify({"success": False, "error": f"message too long (max {_INBOX_REPLY_MAX})"}), 400
+    last_in = meta_bot.inbox_last_inbound(slug, psid)
+    if not last_in:
+        return jsonify({"success": False, "error": "this customer is not in this shop's inbox"}), 404
+    if _time.time() - last_in > _INBOX_REPLY_WINDOW:
+        return jsonify({"success": False, "error": "outside the 24-hour messaging window"}), 409
+    token = meta_bot.page_token_for_slug(slug, META_PAGE_TOKEN, META_SLUG)
+    if not token:
+        return jsonify({"success": False, "error": "this shop has no page token"}), 409
+    status, resp = meta_bot.send_message(token, psid, text)
+    if status != 200:
+        return jsonify({"success": False, "error": f"Meta Send API error ({status})",
+                        "detail": str(resp)[:200]}), 502
+    meta_bot.inbox_log(slug, psid, "agent", text)
+    return jsonify({"success": True})
+
+
+@app.route("/shop-admin/<slug>/inbox")
+def shop_inbox_page(slug):
+    _track_visit()
+    p = os.path.join(os.path.dirname(__file__), "shop-inbox.html")
+    with open(p, "r", encoding="utf-8") as f:
+        return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
 @app.route("/shop-admin/<slug>")
 def shop_admin_page(slug):
     _track_visit()

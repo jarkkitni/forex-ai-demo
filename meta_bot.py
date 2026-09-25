@@ -24,6 +24,58 @@ _SELF_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "https://forex-ai-demo.onrend
 
 # ---- ความจำการสนทนาสั้นๆ ต่อผู้ส่ง (in-memory, รีเซ็ตเมื่อ restart) ----
 _history: dict = {}      # sender_id -> [(role, text), ...]  เก็บ 8 เทิร์นล่าสุด
+
+# ---- Inbox log ต่อร้าน (25 ก.ย. 2026) ----
+# Meta ตีกลับ App Review ของ pages_messaging: วิดีโอไม่เห็นข้อความที่ลูกค้าตอบกลับไปโผล่ใน UI ของแอปเรา
+# เลยเพิ่มหน้า Inbox (/shop-admin/<slug>/inbox) ให้ร้านเห็นบทสนทนาและตอบเองได้ — เก็บในแรมเท่านั้น
+# (ล่าสุด _INBOX_MAX_EVENTS รายการต่อร้าน, หายเมื่อ restart) ไม่เขียนลง DB = ไม่เพิ่มภาระการเก็บข้อมูลส่วนบุคคล
+# โปรเซสเดียว (Procfile: python api_server.py) แรมจึงเห็นร่วมกันระหว่าง webhook กับหน้า Inbox
+import collections as _collections
+import threading as _threading
+_INBOX_MAX_EVENTS = 400
+_INBOX_TEXT_MAX = 2000
+_inbox: dict = {}          # slug -> deque[{psid, dir, text, ts, platform}]
+_inbox_lock = _threading.Lock()
+
+
+def inbox_log(slug: str, psid: str, direction: str, text: str, platform: str = "messenger") -> None:
+    """จดข้อความหนึ่งรายการลง Inbox ของร้าน — direction: "in" (ลูกค้า) / "bot" (บอทตอบ) / "agent" (แอดมินตอบจากหน้า Inbox)"""
+    if not slug or not psid or not text:
+        return
+    ev = {"psid": str(psid), "dir": direction, "text": str(text)[:_INBOX_TEXT_MAX],
+          "ts": time.time(), "platform": platform or "messenger"}
+    with _inbox_lock:
+        q = _inbox.get(slug)
+        if q is None:
+            q = _collections.deque(maxlen=_INBOX_MAX_EVENTS)
+            _inbox[slug] = q
+        q.append(ev)
+
+
+def inbox_threads(slug: str, limit: int = 50) -> list:
+    """คืนบทสนทนาของร้าน จัดกลุ่มตามลูกค้า (PSID) เรียงล่าสุดก่อน"""
+    with _inbox_lock:
+        events = list(_inbox.get(slug) or [])
+    threads = {}
+    for ev in events:
+        t = threads.get(ev["psid"])
+        if t is None:
+            t = {"psid": ev["psid"], "platform": ev["platform"], "messages": [],
+                 "last_ts": 0.0, "last_in_ts": 0.0}
+            threads[ev["psid"]] = t
+        t["messages"].append({"dir": ev["dir"], "text": ev["text"], "ts": ev["ts"]})
+        t["last_ts"] = max(t["last_ts"], ev["ts"])
+        if ev["dir"] == "in":
+            t["last_in_ts"] = max(t["last_in_ts"], ev["ts"])
+    out = sorted(threads.values(), key=lambda t: t["last_ts"], reverse=True)
+    return out[:max(1, int(limit))]
+
+
+def inbox_last_inbound(slug: str, psid: str) -> float:
+    """เวลาที่ลูกค้าคนนี้ทักเข้ามาล่าสุด (epoch) — 0 ถ้าไม่เคยอยู่ใน Inbox ของร้านนี้"""
+    with _inbox_lock:
+        events = list(_inbox.get(slug) or [])
+    return max((ev["ts"] for ev in events if ev["psid"] == str(psid) and ev["dir"] == "in"), default=0.0)
 _hits: dict = {}         # sender_id -> [timestamps]  กัน spam
 _MAX_TURNS = 8
 
@@ -359,6 +411,16 @@ def resolve_page(page_id: str, fallback_token: str, fallback_slug: str) -> tuple
     if row:
         return row.get("page_token") or fallback_token, row.get("slug") or fallback_slug
     return fallback_token, fallback_slug
+
+
+def page_token_for_slug(slug: str, fallback_token: str, fallback_slug: str) -> str:
+    """หา page token ของร้านจาก slug (ใช้ตอนแอดมินตอบจากหน้า Inbox) — ร้านใน shop_pages ใช้ token ของตัวเอง
+    ร้านหลักที่ยังอยู่บน env (Lullabell) ใช้ fallback_token · หาไม่เจอ = "" (ห้ามยืม token ร้านอื่นเด็ดขาด)"""
+    _load_page_map()
+    for row in _page_map.values():
+        if row.get("slug") == slug and row.get("page_token"):
+            return row["page_token"]
+    return fallback_token if slug == fallback_slug else ""
 
 
 # ---- ล็อก token ไม่ให้เพจแปลกหน้ามาใช้ (22 ก.ค. 2026) ----
@@ -1225,9 +1287,15 @@ def handle(data: dict, client, page_token: str, slug: str = "lullabell",
             print(f"[meta_bot] config error slug={slug}: {e}", flush=True)
             continue
         events = entry.get("messaging", []) or entry.get("standby", [])
+        platform = "instagram" if is_ig else "messenger"
         # สวิตช์เปิด/ปิดบอทของร้าน (28 ก.ค. 2026) — ปิดอยู่ = เงียบสนิททั้ง entry นี้ ให้แอดมินตอบเอง
         # ผ่าน Business Suite/แอปเดิม ไม่ต้องรอปลดล็อกจากเรา ตั้งจากหน้า shop-admin ของร้านเอง
         if not cfg.get("bot_enabled", True):
+            for ev in events:   # บอทปิดแต่ยังจดลง Inbox ให้แอดมินเห็นและตอบจากหน้า Inbox ได้ (25 ก.ย. 2026)
+                _m = ev.get("message", {}) or {}
+                _dk = _m.get("mid", "")
+                if _m.get("text") and not _m.get("is_echo") and not _already_processed(_dk):
+                    inbox_log(slug, ev.get("sender", {}).get("id", ""), "in", _m["text"].strip(), platform)
             result["skipped"] = result.get("skipped", 0) + len(events)
             continue
         for ev in events:
@@ -1266,6 +1334,7 @@ def handle(data: dict, client, page_token: str, slug: str = "lullabell",
                 if not user_text:
                     result["skipped"] += 1
                     continue
+            inbox_log(slug, sender, "in", user_text, platform)
             if not _rate_ok(sender):
                 result["skipped"] += 1
                 continue
@@ -1282,6 +1351,7 @@ def handle(data: dict, client, page_token: str, slug: str = "lullabell",
                     reply = _render_promo_list(cfg, only_category=_detect_promo_category(user_text, cfg))
                     _remember_turn(sender, user_text, reply)
                     _send_with_quick_replies(page_token, sender, reply, quick_replies=default_qr)
+                    inbox_log(slug, sender, "bot", reply, platform)
                     result["replied"] += 1
                     continue
                 reply, promo_choices = generate_reply(client, cfg, sender, user_text,
@@ -1289,6 +1359,7 @@ def handle(data: dict, client, page_token: str, slug: str = "lullabell",
                 qr = _build_promo_quick_replies(promo_choices) if promo_choices else default_qr
                 _send_with_quick_replies(page_token, sender, reply, quick_replies=qr,
                                           fallback_names=promo_choices)
+                inbox_log(slug, sender, "bot", reply, platform)
                 result["replied"] += 1
                 # ลูกค้าถามที่อยู่/แผนที่ (กดปุ่ม IB_LOCATION หรือพิมพ์เอง) → แนบรูปการ์ดแผนที่ตามหลังข้อความ
                 if effective_payload == "IB_LOCATION" or _is_location_query(user_text):
@@ -1306,6 +1377,7 @@ def handle(data: dict, client, page_token: str, slug: str = "lullabell",
                 fb = (_offline_fallback_answer(cfg, user_text)
                       or cfg.get("advisor", {}).get("retry_msg", f"รบกวนรอสักครู่นะคะ {_ai_name(cfg)}กำลังดูให้อยู่ค่ะ 🤍"))
                 _send_with_quick_replies(page_token, sender, fb, quick_replies=default_qr)
+                inbox_log(slug, sender, "bot", fb, platform)
                 # AI ล่มสนิทแต่ลูกค้าถามที่อยู่ → แนบรูปการ์ดแผนที่ให้เหมือนตอน AI ตอบได้ปกติ (เพิ่ม 21 ก.ค. ตามคำขอ
                 # sIRImeta) กันลูกค้าที่ถามที่อยู่พลาดรูปแผนที่สวยๆ ไปแค่เพราะ AI ดันล่มพอดีตอนนั้น
                 if effective_payload == "IB_LOCATION" or _is_location_query(user_text):

@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shop Inbox</title>
+<style>
+  :root{--bg:#0d1117;--card:#161b22;--line:#232a34;--text:#e9edf2;--muted:#9aa4b2;--accent:#3ddc97;--danger:#ff6b6b;--in:#232a34;--bot:#1f3b5c;--agent:#1f5c43}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Sarabun',sans-serif;background:var(--bg);color:var(--text);line-height:1.5}
+  .wrap{max-width:1100px;margin:0 auto;padding:24px 16px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  h1{font-size:22px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:18px}
+  a{color:var(--accent)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px}
+  .login{max-width:380px;margin:60px auto;padding:24px}
+  input[type=password],textarea{width:100%;background:#0d1117;border:1px solid var(--line);border-radius:8px;color:var(--text);padding:10px 12px;font-size:16px;font-family:inherit}
+  textarea{resize:vertical;min-height:44px}
+  button{background:var(--accent);color:#062015;font-weight:700;border:none;border-radius:8px;padding:10px 18px;font-size:15px;cursor:pointer}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .msg{margin-top:10px;font-size:14px}
+  .err{color:var(--danger)} .ok{color:var(--accent)}
+  .layout{display:grid;grid-template-columns:320px 1fr;gap:14px;min-height:560px}
+  .list{overflow:auto;max-height:72vh}
+  .list-head,.thread-head{padding:12px 14px;border-bottom:1px solid var(--line);font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .item{padding:12px 14px;border-bottom:1px solid var(--line);cursor:pointer}
+  .item:hover{background:#1b222c}
+  .item.active{background:#1d2a24;border-left:3px solid var(--accent);padding-left:11px}
+  .item .who{font-weight:700;font-size:14px;display:flex;justify-content:space-between;gap:8px}
+  .item .prev{color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+  .time{color:var(--muted);font-size:12px;font-weight:400;white-space:nowrap}
+  .thread{display:flex;flex-direction:column;max-height:72vh}
+  .msgs{flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+  .bubble{max-width:78%;padding:9px 12px;border-radius:12px;white-space:pre-wrap;word-break:break-word;font-size:14px}
+  .bubble .meta{display:block;font-size:11px;color:var(--muted);margin-bottom:3px}
+  .b-in{align-self:flex-start;background:var(--in)}
+  .b-bot{align-self:flex-end;background:var(--bot)}
+  .b-agent{align-self:flex-end;background:var(--agent)}
+  .composer{border-top:1px solid var(--line);padding:12px;display:flex;gap:8px;align-items:flex-end}
+  .composer textarea{flex:1}
+  .empty{color:var(--muted);padding:24px;text-align:center;font-size:14px}
+  .pill{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(61,220,151,.14);color:var(--accent)}
+  .pill.off{background:rgba(255,107,107,.14);color:var(--danger)}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;color:var(--muted);font-size:12px;margin:0 0 12px}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+  .live{font-size:12px;color:var(--muted);font-weight:400}
+  @media (max-width:760px){.layout{grid-template-columns:1fr}.list{max-height:34vh}.thread{max-height:none}.bubble{max-width:90%}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const SLUG = location.pathname.split('/').filter(Boolean)[1];
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pinKey = 'shopadmin_pin_' + SLUG;   // same PIN storage as the price dashboard
+const LABEL = {in: 'Customer', bot: 'Auto-reply bot', agent: 'Shop admin (you)'};
+let state = {threads: [], selected: null, windowSec: 86400, now: Date.now() / 1000, bizName: SLUG, botOn: true};
+let timer = null;
+
+function getPin() { try { return localStorage.getItem(pinKey) || ''; } catch (e) { return ''; } }
+function setPin(v) { try { v ? localStorage.setItem(pinKey, v) : localStorage.removeItem(pinKey); } catch (e) {} }
+function who(psid) { return 'Customer …' + String(psid).slice(-4); }
+function fmt(ts) {
+  const d = new Date(ts * 1000);
+  return d.toLocaleString('en-GB', {day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit'});
+}
+
+async function api(path, opts) {
+  opts = opts || {};
+  const headers = Object.assign({'Content-Type': 'application/json', 'X-Shop-Admin-Pin': getPin()}, opts.headers || {});
+  const r = await fetch('/api/shop-admin/' + encodeURIComponent(SLUG) + path, Object.assign({}, opts, {headers}));
+  let j = {};
+  try { j = await r.json(); } catch (e) {}
+  j._status = r.status;
+  return j;
+}
+
+function renderLogin(err) {
+  if (timer) { clearInterval(timer); timer = null; }
+  $('#app').innerHTML = `
+    <div class="card login">
+      <h1 style="margin-bottom:6px">Shop Inbox</h1>
+      <div class="sub">Messenger conversations for <b>${esc(SLUG)}</b>. Enter the shop PIN to continue.</div>
+      <label for="pin" class="sub" style="display:block;margin-bottom:6px">Shop PIN</label>
+      <input type="password" id="pin" inputmode="numeric" autocomplete="off">
+      <div style="margin-top:14px"><button id="go">Log in</button></div>
+      ${err ? `<div class="msg err">${esc(err)}</div>` : ''}
+    </div>`;
+  const go = async () => {
+    const pin = $('#pin').value.trim();
+    if (!pin) return;
+    const r = await fetch('/api/shop-admin/' + encodeURIComponent(SLUG) + '/login', {
+      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({pin})
+    }).then(x => x.json()).catch(() => ({}));
+    if (r.success) { setPin(pin); boot(); } else { renderLogin(r.error ? 'Wrong PIN' : 'Could not log in'); }
+  };
+  $('#go').onclick = go;
+  $('#pin').addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+  $('#pin').focus();
+}
+
+function renderShell() {
+  $('#app').innerHTML = `
+    <div class="wrap">
+      <header>
+        <h1>Inbox — <span id="biz"></span></h1>
+        <div style="display:flex;gap:14px;align-items:center;font-size:14px">
+          <span id="botPill" class="pill"></span>
+          <a href="/shop-admin/${encodeURIComponent(SLUG)}">Price dashboard</a>
+          <a href="#" id="logout">Log out</a>
+        </div>
+      </header>
+      <div class="sub">Messages people send to the shop's Facebook Page arrive here through the Messenger Platform webhook, together with the bot's automatic reply.
+        You can answer a customer yourself within 24 hours of their last message. <span class="live" id="live"></span></div>
+      <div class="legend">
+        <span><i class="dot" style="background:var(--in)"></i>Customer (Messenger)</span>
+        <span><i class="dot" style="background:var(--bot)"></i>Auto-reply bot</span>
+        <span><i class="dot" style="background:var(--agent)"></i>Shop admin reply sent from this page</span>
+      </div>
+      <div class="layout">
+        <div class="card list" id="list"></div>
+        <div class="card thread" id="thread"></div>
+      </div>
+    </div>`;
+  $('#logout').onclick = e => { e.preventDefault(); setPin(''); renderLogin(); };
+}
+
+function renderList() {
+  $('#biz').textContent = state.bizName;
+  const pill = $('#botPill');
+  pill.textContent = state.botOn ? 'Auto-reply ON' : 'Auto-reply OFF';
+  pill.className = 'pill' + (state.botOn ? '' : ' off');
+  const t = state.threads;
+  $('#list').innerHTML = `<div class="list-head">Conversations <span class="time">${t.length}</span></div>` + (t.length ? t.map(th => {
+    const last = th.messages[th.messages.length - 1] || {};
+    return `<div class="item${th.psid === state.selected ? ' active' : ''}" data-psid="${esc(th.psid)}">
+      <div class="who"><span>${esc(who(th.psid))}</span><span class="time">${esc(fmt(th.last_ts))}</span></div>
+      <div class="prev">${esc((LABEL[last.dir] || '') + ': ' + (last.text || ''))}</div></div>`;
+  }).join('') : `<div class="empty">No conversations yet.<br>Send a message to the Facebook Page and it will appear here within a few seconds.</div>`);
+  document.querySelectorAll('.item').forEach(el => el.onclick = () => { state.selected = el.dataset.psid; renderList(); renderThread(true); });
+}
+
+function renderThread(scroll) {
+  const th = state.threads.find(x => x.psid === state.selected);
+  const box = $('#thread');
+  if (!th) { box.innerHTML = `<div class="empty">Select a conversation on the left.</div>`; return; }
+  const draft = $('#reply') ? $('#reply').value : '';
+  const open = (state.now - th.last_in_ts) < state.windowSec;
+  box.innerHTML = `
+    <div class="thread-head"><span>${esc(who(th.psid))} <span class="time">· Messenger PSID …${esc(th.psid.slice(-6))}</span></span>
+      <span class="time">${open ? 'Reply window open' : 'Reply window closed (over 24 h)'}</span></div>
+    <div class="msgs" id="msgs">${th.messages.map(m => `
+      <div class="bubble b-${esc(m.dir)}"><span class="meta">${esc(LABEL[m.dir] || m.dir)} · ${esc(fmt(m.ts))}</span>${esc(m.text)}</div>`).join('')}</div>
+    <div class="composer">
+      <textarea id="reply" rows="2" maxlength="900" placeholder="${open ? 'Type a reply to this customer…' : 'The 24-hour window has closed'}" ${open ? '' : 'disabled'}></textarea>
+      <button id="send" ${open ? '' : 'disabled'}>Send</button>
+    </div>
+    <div class="msg" id="sendMsg" style="padding:0 12px 10px"></div>`;
+  $('#reply').value = draft;
+  const msgs = $('#msgs');
+  if (scroll) msgs.scrollTop = msgs.scrollHeight;
+  $('#send').onclick = sendReply;
+  $('#reply').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) sendReply(); });
+}
+
+async function sendReply() {
+  const text = $('#reply').value.trim();
+  if (!text || !state.selected) return;
+  $('#send').disabled = true;
+  $('#sendMsg').textContent = 'Sending…';
+  const r = await api('/inbox/reply', {method: 'POST', body: JSON.stringify({psid: state.selected, text})});
+  if (r.success) {
+    $('#reply').value = '';
+    await refresh(true);
+    $('#sendMsg').className = 'msg ok';
+    $('#sendMsg').textContent = 'Sent to Messenger ✓';
+  } else {
+    $('#send').disabled = false;
+    $('#sendMsg').className = 'msg err';
+    $('#sendMsg').textContent = 'Not sent: ' + (r.error || 'unknown error');
+  }
+}
+
+async function refresh(scroll) {
+  const r = await api('/inbox');
+  if (r._status === 403) { setPin(''); renderLogin('Please log in again'); return; }
+  if (!r.success) { $('#live').textContent = '· could not refresh'; return; }
+  const before = JSON.stringify(state.threads.map(t => [t.psid, t.messages.length]));
+  state.threads = r.threads || [];
+  state.windowSec = r.reply_window_sec || 86400;
+  state.now = r.now || Date.now() / 1000;
+  state.bizName = r.biz_name || SLUG;
+  state.botOn = r.bot_enabled !== false;
+  if (!state.selected && state.threads.length) state.selected = state.threads[0].psid;
+  const changed = before !== JSON.stringify(state.threads.map(t => [t.psid, t.messages.length]));
+  $('#live').textContent = '· live, refreshed ' + new Date().toLocaleTimeString('en-GB');
+  if (changed || scroll) {
+    const typing = document.activeElement && document.activeElement.id === 'reply';
+    renderList();
+    if (!typing || scroll) renderThread(true);
+  } else {
+    renderList();
+  }
+}
+
+async function boot() {
+  if (!getPin()) { renderLogin(); return; }
+  renderShell();
+  await refresh(true);
+  if (timer) clearInterval(timer);
+  timer = setInterval(() => refresh(false), 3000);
+}
+boot();
+</script>
+</body>
+</html>
