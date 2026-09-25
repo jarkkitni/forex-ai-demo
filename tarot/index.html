@@ -1,4 +1,5 @@
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Nocturne Tarot</title>
 <meta name="theme-color" content="#07060d">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -507,7 +508,8 @@ if(/^\/tarot(\/|$)/.test(location.pathname)){
  let deferred=null;const ib=$("#installBtn");
  addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferred=e;if(!standalone)ib.hidden=false});
  addEventListener("appinstalled",()=>{ib.hidden=true;deferred=null});
- if(ios&&!standalone)ib.hidden=false;
+ const touch=ios||/android/i.test(navigator.userAgent)||matchMedia("(pointer:coarse)").matches;
+ if(touch&&!standalone)ib.hidden=false;   /* show on every phone; the native prompt is used when the browser offers one */
  ib.onclick=async()=>{if(deferred){deferred.prompt();try{await deferred.userChoice}catch(e){}deferred=null;ib.hidden=true;return}
   $("#iText").innerHTML=ios?'1. กดปุ่ม <b>แชร์</b> (สี่เหลี่ยมมีลูกศรชี้ขึ้น) ที่แถบล่างของ Safari<br>2. เลื่อนลงแล้วเลือก <b>"เพิ่มไปยังหน้าจอโฮม"</b><br>3. กด <b>เพิ่ม</b> มุมขวาบน':'เปิดเมนู <b>⋮</b> ของเบราว์เซอร์ แล้วเลือก <b>"เพิ่มลงในหน้าจอหลัก"</b> หรือ <b>"ติดตั้งแอป"</b>';
   $("#imodal").classList.add("open")};
