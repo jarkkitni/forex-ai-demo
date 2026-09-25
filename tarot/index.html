@@ -1,6 +1,10 @@
 <meta charset="utf-8">
 <title>Nocturne Tarot</title>
 <meta name="theme-color" content="#07060d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Nocturne">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Noto+Serif+Thai:wght@400;600&family=Srisakdi:wght@700&display=swap">
@@ -155,6 +159,7 @@ textarea::placeholder{color:#6f6888}
     <div class="hdr-r">
       <div class="lunar" id="lunar"></div>
       <span class="streak" id="streak" hidden></span>
+      <button class="ibtn" id="installBtn" type="button" hidden>ติดตั้งบนมือถือ</button>
       <button class="ibtn" id="histBtn" type="button">ประวัติ</button>
       <button class="ibtn" id="snd" aria-pressed="true" type="button">เสียง: เปิด</button>
     </div>
@@ -228,6 +233,15 @@ textarea::placeholder{color:#6f6888}
   <div class="mbox">
     <div class="bigcard" id="bigcard"></div>
     <div class="mtext" id="mtext"></div>
+  </div>
+</div>
+
+<div class="modal" id="imodal" role="dialog" aria-modal="true" aria-label="วิธีเพิ่มไอคอนบนหน้าจอ">
+  <div class="msg" style="max-width:420px;background:var(--indigo)">
+    <h4>เพิ่ม Nocturne ไว้บนหน้าจอ</h4>
+    <p id="iText"></p>
+    <p class="note" style="color:var(--mist)">เปิดจากไอคอนแล้วจะเต็มจอเหมือนแอป และดูไพ่ได้แม้ไม่มีเน็ต</p>
+    <div class="row" style="justify-content:flex-start"><button class="ghost" type="button" id="iClose">เข้าใจแล้ว</button></div>
   </div>
 </div>
 
@@ -486,6 +500,17 @@ $("#again").onclick=again;$("#again2").onclick=again;
 if(/^\/tarot(\/|$)/.test(location.pathname)){
  [["manifest","manifest.json"],["apple-touch-icon","icons/apple-touch-icon.png"],["icon","icons/favicon-64.png"]].forEach(([rel,href])=>{const l=document.createElement("link");l.rel=rel;l.href=href;document.head.appendChild(l)});
  if("serviceWorker" in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+ /* "add to home screen": Android/Chrome gets the native prompt, iPhone gets the Share-menu steps */
+ const standalone=matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+ const ios=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+ let deferred=null;const ib=$("#installBtn");
+ addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferred=e;if(!standalone)ib.hidden=false});
+ addEventListener("appinstalled",()=>{ib.hidden=true;deferred=null});
+ if(ios&&!standalone)ib.hidden=false;
+ ib.onclick=async()=>{if(deferred){deferred.prompt();try{await deferred.userChoice}catch(e){}deferred=null;ib.hidden=true;return}
+  $("#iText").innerHTML=ios?'1. กดปุ่ม <b>แชร์</b> (สี่เหลี่ยมมีลูกศรชี้ขึ้น) ที่แถบล่างของ Safari<br>2. เลื่อนลงแล้วเลือก <b>"เพิ่มไปยังหน้าจอโฮม"</b><br>3. กด <b>เพิ่ม</b> มุมขวาบน':'เปิดเมนู <b>⋮</b> ของเบราว์เซอร์ แล้วเลือก <b>"เพิ่มลงในหน้าจอหลัก"</b> หรือ <b>"ติดตั้งแอป"</b>';
+  $("#imodal").classList.add("open")};
+ $("#iClose").onclick=()=>$("#imodal").classList.remove("open");
 }
 
 applyStyle();again();refreshStreak();if(window.__errs.length)__showErr(window.__errs[0]);if(document.fonts)document.fonts.ready.then(()=>layout());
