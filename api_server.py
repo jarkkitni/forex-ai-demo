@@ -630,6 +630,27 @@ def tarot(sub):
     return resp
 
 
+@app.route("/fourcrowns")
+def fourcrowns_redirect():
+    return redirect("/fourcrowns/", code=301)
+
+
+@app.route("/fourcrowns/", defaults={"sub": "index.html"})
+@app.route("/fourcrowns/<path:sub>")
+def fourcrowns(sub):
+    """FOUR CROWNS · ศึกสี่มงกุฎ — เกมหมากรุกไทย 4 คน ลายพู่กัน (three.js ทำงานฝั่งเบราว์เซอร์ล้วน)
+    ⚠️ ไฟล์ใน fourcrowns/ เป็นผล build — ต้นฉบับอยู่ AiWork01/Four-Crowns (repo Jakkar77/four-crowns)
+       แก้ที่ต้นฉบับ → `npm run build:tlb` → copy dist-tlb/ มาทับโฟลเดอร์นี้ ห้ามแก้ไฟล์ที่นี่ด้วยมือ"""
+    from flask import send_from_directory
+    d = os.path.join(os.path.dirname(__file__), "fourcrowns")
+    resp = send_from_directory(d, sub)
+    if sub.endswith(".html"):
+        resp.headers["Cache-Control"] = "no-cache, must-revalidate"      # ต้องได้ตัวใหม่ทันทีหลัง deploy
+    elif sub.startswith("assets/"):
+        resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"   # ชื่อไฟล์มี hash เปลี่ยนทุก build
+    return resp
+
+
 @app.route("/routewise")
 def routewise_app():
     """RouteWise — แอปจัดสายวิ่งเซลล์ (ทำงานฝั่งเบราว์เซอร์ล้วน ข้อมูลลูกค้าไม่ออกจากเครื่องผู้ใช้)
