@@ -6,9 +6,21 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Nocturne">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="เปิดไพ่ทาโรต์ลายหมึกพู่กันครบ 78 ใบ ดูความรัก การงาน การเงิน ไพ่ประจำวัน พร้อมเลขและสีมงคล ฟรี">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Nocturne">
+<meta property="og:title" content="Nocturne — ไพ่ทาโรต์ลายหมึกพู่กัน">
+<meta property="og:description" content="เปิดไพ่ครบ 78 ใบ ดูความรัก การงาน การเงิน ไพ่ประจำวัน พร้อมเลขและสีมงคล ฟรี">
+<meta property="og:url" content="https://thailinebot.com/tarot/">
+<meta property="og:image" content="https://thailinebot.com/tarot/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="th_TH">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://thailinebot.com/tarot/og.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Noto+Serif+Thai:wght@400;600&family=Srisakdi:wght@700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Noto+Serif+Thai:wght@400;600&family=Srisakdi:wght@700&family=Charmonman:wght@700&family=Kanit:wght@500&display=swap">
 <style>
 :root{
   color-scheme:dark;
@@ -139,7 +151,10 @@ textarea::placeholder{color:#6f6888}
 .mtext dt{color:var(--gold);white-space:nowrap}
 .mtext dd{margin:0}
 .sbox{display:grid;justify-items:center;gap:12px;max-width:100%}
-.sbox img{max-height:min(72vh,900px);max-width:100%;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.6);border:1px solid var(--line)}
+.facein canvas{width:100%;height:100%;display:block}.facein.rev canvas{transform:rotate(180deg)}
+.sbox .row a.ghost{text-decoration:none}
+.sns .ghost{padding:7px 14px;font-size:13px}
+.sbox img{max-height:min(56vh,760px);max-width:100%;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.6);border:1px solid var(--line)}
 .fab{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:15}
 @media (max-width:720px){
   header{grid-template-columns:1fr auto}
@@ -163,6 +178,7 @@ textarea::placeholder{color:#6f6888}
       <span class="streak" id="streak" hidden></span>
       <button class="ibtn" id="installBtn" type="button" hidden>ติดตั้งบนมือถือ</button>
       <button class="ibtn" id="histBtn" type="button">ประวัติ</button>
+      <button class="ibtn" id="mus" aria-pressed="true" type="button">ดนตรี: เปิด</button>
       <button class="ibtn" id="snd" aria-pressed="true" type="button">เสียง: เปิด</button>
     </div>
   </header>
@@ -196,6 +212,16 @@ textarea::placeholder{color:#6f6888}
         <span class="lbl">ลาย</span>
         <button type="button" class="chip" data-style="ink" aria-pressed="true">ลายหมึกพู่กัน</button>
         <button type="button" class="chip" data-style="rws" aria-pressed="false">Rider–Waite 1909</button>
+      </div>
+      <div class="row" role="group" aria-label="วันเกิด (ไม่เลือกก็ได้)">
+        <span class="lbl">วันเกิด</span>
+        <button type="button" class="chip" data-bd="0" aria-pressed="false">อา.</button>
+        <button type="button" class="chip" data-bd="1" aria-pressed="false">จ.</button>
+        <button type="button" class="chip" data-bd="2" aria-pressed="false">อ.</button>
+        <button type="button" class="chip" data-bd="3" aria-pressed="false">พ.</button>
+        <button type="button" class="chip" data-bd="4" aria-pressed="false">พฤ.</button>
+        <button type="button" class="chip" data-bd="5" aria-pressed="false">ศ.</button>
+        <button type="button" class="chip" data-bd="6" aria-pressed="false">ส.</button>
       </div>
       <div class="daily" id="dailyNote" hidden></div>
       <div class="row"><button class="cta" type="button" id="go">สับไพ่</button></div>
@@ -247,15 +273,27 @@ textarea::placeholder{color:#6f6888}
   </div>
 </div>
 
-<div class="modal" id="smodal" role="dialog" aria-modal="true" aria-label="ภาพสำหรับแชร์">
+<div class="modal" id="smodal" role="dialog" aria-modal="true" aria-label="แชร์คำทำนาย">
   <div class="sbox">
+    <div class="row" role="group" aria-label="ขนาดรูป">
+      <button type="button" class="chip" data-fmt="story" aria-pressed="true">Story 9:16</button>
+      <button type="button" class="chip" data-fmt="post" aria-pressed="false">โพสต์ 4:5</button>
+      <button type="button" class="chip" data-fmt="wide" aria-pressed="false">แนวนอน X/FB</button>
+    </div>
     <img id="simg" alt="ภาพคำทำนายสำหรับแชร์">
     <div class="row">
-      <button class="cta" type="button" id="sShare" hidden>แชร์</button>
-      <a class="ghost" id="sSave" download="nocturne-tarot.png" style="text-decoration:none">บันทึกรูป</a>
+      <button class="cta" type="button" id="sShare" hidden>แชร์รูป</button>
+      <a class="ghost" id="sSave" download="nocturne-tarot.png">บันทึกรูป</a>
       <button class="ghost" type="button" id="sClose">ปิด</button>
     </div>
-    <div class="note" style="color:var(--mist)">ถ้ากดบันทึกไม่ได้ ให้กดค้างที่รูปแล้วเลือก "บันทึกรูปภาพ"</div>
+    <div class="row sns" role="group" aria-label="แชร์ลิงก์">
+      <span class="lbl">แชร์ลิงก์</span>
+      <a class="ghost" id="lnFB" target="_blank" rel="noopener">Facebook</a>
+      <a class="ghost" id="lnX" target="_blank" rel="noopener">X</a>
+      <a class="ghost" id="lnLINE" target="_blank" rel="noopener">LINE</a>
+      <button class="ghost" type="button" id="lnCopy">คัดลอกลิงก์</button>
+    </div>
+    <div class="note" style="color:var(--mist);max-width:520px;text-align:center">IG ไม่มีปุ่มแชร์จากเว็บ · บนมือถือกด "แชร์รูป" แล้วเลือก Instagram หรือบันทึกรูปไปโพสต์เอง · ลิงก์พาเพื่อนมาเห็นไพ่ชุดเดียวกับคุณ</div>
   </div>
 </div>
 
@@ -266,6 +304,7 @@ addEventListener("error",function(e){__showErr((e.message||"load error")+(e.file
 addEventListener("unhandledrejection",function(e){__showErr("promise: "+(e.reason&&e.reason.message||e.reason))});
 </script>
 <script src="cards.js" charset="utf-8"></script>
+<script src="ink/deck.js" charset="utf-8"></script>
 <script>
 const ROMAN=["0","I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII","XIII","XIV","XV","XVI","XVII","XVIII","XIX","XX","XXI"];
 const TOPIC={all:"ภาพรวม",love:"ความรัก",work:"การงาน",money:"การเงิน"};
@@ -278,6 +317,16 @@ const imgSrc=c=>STYLE==='ink'?`cards/ink/${c.img}.webp`:`cards/${c.img}.webp`;
 const CREDIT=()=>STYLE==='ink'?'ภาพไพ่ลายหมึกพู่กัน วาดด้วยโค้ดโดย Claude สำหรับ Nocturne':'ภาพไพ่: Rider–Waite–Smith (1909) วาดโดย Pamela Colman Smith · สาธารณสมบัติ';
 function applyStyle(){document.body.classList.toggle('ink',STYLE==='ink');document.querySelectorAll('[data-style]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.style===STYLE))}
 const numLabel=c=>c.img[0]==="m"?ROMAN[c.n]:"";
+/* สีประจำวันตามคติไทยทั่วไป (วันเกิด) — no invented "lucky shirt" tables */
+const DAYC=[["อาทิตย์","แดง","#c8322b"],["จันทร์","เหลือง","#e2bd3c"],["อังคาร","ชมพู","#e58fb0"],["พุธ","เขียว","#4f9a57"],["พฤหัสบดี","ส้ม","#e8872d"],["ศุกร์","ฟ้า","#6fb3e0"],["เสาร์","ม่วง","#7a4fa8"]];
+let BDAY=(()=>{try{const v=localStorage.getItem("nocturne.bday");return v===null?null:+v}catch(e){return null}})();
+const SITE="https://thailinebot.com/tarot/",TOPICS=["all","love","work","money"];
+function encodeR(R){return TOPICS.indexOf(R.topic)+""+R.spread+R.cards.map(([id,rv])=>(id*2+(rv?1:0)).toString(36).padStart(2,"0")).join("")+"."+Math.floor(R.t/6e4).toString(36)}
+function decodeR(str){const m=/^([0-3])([13])((?:[0-9a-z]{2}){1,3})\.([0-9a-z]{1,9})$/.exec(str||"");if(!m)return null;
+ const cs=m[3].match(/../g).map(q=>parseInt(q,36)).map(v=>[v>>1,v&1]);if(cs.length!==+m[2]||cs.some(([id])=>!(id<CARDS.length)))return null;
+ const t=parseInt(m[4],36)*6e4;return{t,date:localDate(new Date(t)),topic:TOPICS[+m[1]],spread:+m[2],deck:78,q:"",moon:"",bd:null,cards:cs}}
+const linkFor=R=>SITE+"?r="+encodeR(R);
+function shareText(R){const names=R.cards.map(([id,r])=>CARDS[id].th+(r?" (กลับหัว)":"")).join(" · ");return `${R.spread===1?"ไพ่ประจำวันของฉัน":"ไพ่ของฉัน"}: ${names} 🌙 ลองเปิดไพ่ของคุณที่ Nocturne`}
 function rnd(n){const a=new Uint32Array(1);crypto.getRandomValues(a);return a[0]%n}
 function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=rnd(i+1);[arr[i],arr[j]]=[arr[j],arr[i]]}return arr}
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -311,6 +360,21 @@ function ac(){AC=AC||new (window.AudioContext||window.webkitAudioContext)();retu
 function chime(freq=660,dur=1.2,vol=.07){if(!soundOn)return;try{const A=ac(),t=A.currentTime;[1,2.01,3.02].forEach((m,k)=>{const o=A.createOscillator(),g=A.createGain();o.type="sine";o.frequency.value=freq*m;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol/(k+1),t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+dur/(k+1));o.connect(g).connect(A.destination);o.start(t);o.stop(t+dur)})}catch(e){}}
 function swish(){if(!soundOn)return;try{const A=ac(),t=A.currentTime,len=.18,b=A.createBuffer(1,A.sampleRate*len,A.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*(1-i/d.length);const s=A.createBufferSource(),f=A.createBiquadFilter(),g=A.createGain();f.type="bandpass";f.frequency.value=2400;g.gain.value=.05;s.buffer=b;s.connect(f).connect(g).connect(A.destination);s.start(t)}catch(e){}}
 $("#snd").onclick=e=>{soundOn=!soundOn;e.target.setAttribute("aria-pressed",soundOn);e.target.textContent="เสียง: "+(soundOn?"เปิด":"ปิด")};
+/* ---------- ambient khim (synthesised: pentatonic random walk + low drone) ---------- */
+let musicOn=(()=>{try{return localStorage.getItem("nocturne.music")!=="off"}catch(e){return true}})(),musicStarted=false;
+const Music=(()=>{let bus=null,timer=null,next=0,drone=[],step=0,deg=5;
+ const SC=[0,2,4,7,9],BASE=196;const hz=d=>BASE*Math.pow(2,(12*Math.floor(d/5)+SC[((d%5)+5)%5])/12);
+ function setup(){const A=ac();if(bus)return A;bus=A.createGain();bus.gain.value=0;const dl=A.createDelay(1);dl.delayTime.value=.36;const fb=A.createGain();fb.gain.value=.3;const lp=A.createBiquadFilter();lp.type="lowpass";lp.frequency.value=2200;const wet=A.createGain();wet.gain.value=.45;
+  bus.connect(A.destination);bus.connect(dl);dl.connect(lp);lp.connect(fb);fb.connect(dl);lp.connect(wet);wet.connect(A.destination);return A}
+ function khim(A,t,f,v){[[1,"triangle",v],[2.005,"sine",v*.35],[3.01,"sine",v*.12]].forEach(([m,type,g0])=>{const o=A.createOscillator(),g=A.createGain();o.type=type;o.frequency.value=f*m;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(g0,t+.006);g.gain.exponentialRampToValueAtTime(.0001,t+1.6/m);o.connect(g).connect(bus);o.start(t);o.stop(t+1.7)})}
+ function tick(){const A=ac();while(next<A.currentTime+1.2){if(Math.random()>.28){deg=Math.max(0,Math.min(11,deg+[-2,-1,-1,1,1,2,0][Math.floor(Math.random()*7)]));khim(A,next,hz(deg),.05+Math.random()*.03);if(step%8===0)khim(A,next,hz(deg)/2,.03)}next+=step%4===3?.62:.42;step++}}
+ function start(){if(!musicOn)return;try{const A=setup();if(A.resume)A.resume();if(timer)return;musicStarted=true;next=A.currentTime+.1;bus.gain.cancelScheduledValues(A.currentTime);bus.gain.setTargetAtTime(.9,A.currentTime,.8);
+  drone=[73.42,110].map((f,i)=>{const o=A.createOscillator(),g=A.createGain();o.type="sine";o.frequency.value=f;g.gain.value=i?.018:.028;o.connect(g).connect(bus);o.start();return o});timer=setInterval(tick,250);tick()}catch(e){}}
+ function stop(){if(!bus||!timer)return;const A=ac();bus.gain.setTargetAtTime(0,A.currentTime,.4);clearInterval(timer);timer=null;const d=drone;drone=[];setTimeout(()=>d.forEach(o=>{try{o.stop()}catch(e){}}),1500)}
+ return{start,stop,get playing(){return !!timer}}})();
+function musLabel(){const b=$("#mus");b.setAttribute("aria-pressed",musicOn);b.textContent="ดนตรี: "+(musicOn?"เปิด":"ปิด")}
+$("#mus").onclick=()=>{musicOn=!musicOn;try{localStorage.setItem("nocturne.music",musicOn?"on":"off")}catch(e){}musLabel();musicOn?Music.start():Music.stop()};
+document.addEventListener("visibilitychange",()=>{if(document.hidden)Music.stop();else if(musicOn&&musicStarted)Music.start()});
 
 /* ---------- moon phase (synodic month from the 6 Jan 2000 new moon) ---------- */
 function moonPath(f,r=6){const k=Math.cos(2*Math.PI*f),rx=Math.abs(k)*r;
@@ -367,6 +431,8 @@ chips("topic",v=>{topic=v});
 chips("spread",v=>{spread=+v;refreshDaily();layout()});
 chips("deck",v=>{deckSize=+v;if(mode==="intro"){buildTable(deckSize);layout()}});
 chips("style",v=>{STYLE=v;try{localStorage.setItem("nocturne.style",v)}catch(e){}applyStyle()});
+function bdLabel(){document.querySelectorAll("[data-bd]").forEach(b=>b.setAttribute("aria-pressed",+b.dataset.bd===BDAY))}
+document.querySelectorAll("[data-bd]").forEach(b=>b.onclick=()=>{BDAY=(+b.dataset.bd===BDAY)?null:+b.dataset.bd;try{BDAY===null?localStorage.removeItem("nocturne.bday"):localStorage.setItem("nocturne.bday",BDAY)}catch(e){}bdLabel()});
 function refreshDaily(){const d=spread===1&&todayDaily();const n=$("#dailyNote");
  if(d){const c=CARDS[d.cards[0][0]];n.hidden=false;n.innerHTML=`วันนี้คุณเปิดไพ่ประจำวันแล้ว: <b>${c.th}</b> — ไพ่ประจำวันเปิดได้วันละครั้ง`;$("#go").textContent="ดูไพ่วันนี้อีกครั้ง"}
  else{n.hidden=true;$("#go").textContent="สับไพ่"}}
@@ -374,7 +440,7 @@ function refreshStreak(){const n=streak(),el=$("#streak");el.hidden=n<2;el.textC
 
 $("#form").addEventListener("submit",e=>{e.preventDefault();start()});
 $("#go").addEventListener("click",()=>start());
-async function start(){if(mode!=="intro")return;
+async function start(){if(mode!=="intro")return;Music.start();
  if(spread===1){const d=todayDaily();if(d){showSaved(d);return}}
  $("#form").hidden=true;buildTable(deckSize);layout();await sleep(30);setMode("shuffling");setHint("กำลังสับไพ่…","ตั้งจิตถึงคำถามของคุณ");deck=shuffle([...Array(CARDS.length).keys()].filter(i=>deckSize===78||i<22));
  for(let round=0;round<(reduce?1:4);round++){cards.forEach(c=>{c.jx=(rnd(140)-70);c.jy=(rnd(50)-25);c.jr=rnd(40)-20});swish();layout();await sleep(reduce?50:320);cards.forEach(c=>{c.jx=c.jy=c.jr=0});layout();await sleep(reduce?50:260)}
@@ -390,11 +456,14 @@ async function onCard(i){const c=cards[i];
   if(picks.length===spread){await sleep(750);setMode("reveal");setHint("แตะไพ่เพื่อเปิดทีละใบ","หรือกดเปิดทั้งหมด");$("#actions").hidden=false;$("#flipAll").hidden=false}
   return}
  if(mode==="reveal"){const p=picks.find(p=>p.i===i);if(!p)return;if(!p.flipped)flip(p);else openDetail(p.card,p.rev)}}
-function flip(p){p.flipped=true;const el=cards[p.i].el;el.classList.add("flipped");const c=CARDS[p.card];el.setAttribute("aria-label",`${c.th} ${c.en}${p.rev?" กลับหัว":""} — แตะเพื่อดูความหมาย`);chime(p.rev?440:520+(p.card%22)*12);layout();
+function inkPaint(p,el){if(STYLE!=="ink"||reduce||!window.InkDeck)return 0;const img=el.querySelector(".facein img");if(!img)return 0;
+ const cv=document.createElement("canvas");cv.width=InkDeck.W;cv.height=InkDeck.H;cv.setAttribute("aria-hidden","true");img.replaceWith(cv);
+ InkDeck.ready.then(()=>sleep(250)).then(()=>{[0,700,1400].forEach(d=>setTimeout(swish,d));return InkDeck.play(cv,p.card,2400)}).catch(()=>{cv.replaceWith(img)});return 2700}
+function flip(p){p.flipped=true;const el=cards[p.i].el;el.classList.add("flipped");const paint=inkPaint(p,el);const c=CARDS[p.card];el.setAttribute("aria-label",`${c.th} ${c.en}${p.rev?" กลับหัว":""} — แตะเพื่อดูความหมาย`);chime(p.rev?440:520+(p.card%22)*12);layout();
  if(picks.every(q=>q.flipped)){$("#flipAll").hidden=true;$("#shareNow").hidden=false;setHint("แตะไพ่เพื่อดูความหมายเต็ม","คำทำนายรวมอยู่ในแผงคำทำนาย");
-  current={t:Date.now(),date:localDate(),topic,spread,deck:deckSize,q:$("#q").value.trim(),moon:LUNAR.txt,cards:picks.map(p=>[p.card,p.rev?1:0])};
-  const h=loadHist();h.unshift(current);saveHist(h);refreshStreak();
-  setTimeout(()=>{renderReading(current);openSheet("#sheet")},reduce?50:1000)}}
+  if(!sharedView){current={t:Date.now(),date:localDate(),topic,spread,deck:deckSize,q:$("#q").value.trim(),moon:LUNAR.txt,bd:BDAY,cards:picks.map(p=>[p.card,p.rev?1:0])};
+   const h=loadHist();h.unshift(current);saveHist(h);refreshStreak()}
+  const R=current;setTimeout(()=>{renderReading(R);openSheet("#sheet")},reduce?50:Math.max(1000,paint+300))}}
 $("#flipAll").onclick=async()=>{for(const p of picks){if(!p.flipped){flip(p);await sleep(reduce?0:380)}}};
 
 /* ---------- reading ---------- */
@@ -409,15 +478,16 @@ function analyse(R){const cs=R.cards.map(([id,rv])=>({c:CARDS[id],rev:!!rv}));co
  const num=digitRoot(R.cards.reduce((s,[id])=>s+CARDS[id].n,0)),pair=R.cards.map(([id])=>CARDS[id].n%10).join("").slice(0,2).padEnd(2,String(num));
  return{cs,last,mid,msg,num,pair}}
 let readingText="";
+function dayColors(R){const out=[];if(R.bd!=null&&DAYC[R.bd])out.push([`สีวันเกิด (วัน${DAYC[R.bd][0]})`,DAYC[R.bd]]);const d=new Date(R.t).getDay();out.push([`สีประจำวัน${DAYC[d][0]}`,DAYC[d]]);return out}
 function renderReading(R){const A=analyse(R),P=R.spread===3?POS3:POS1;let h="",t=`🌙 NOCTURNE — ${TOPIC[R.topic]}\n`;
  h+=`<div class="meta">${thDate(R.t)} ${thTime(R.t)} · เรื่อง${TOPIC[R.topic]}${R.moon?" · "+R.moon:""}</div>`;
  if(R.q){h+=`<p class="q">“${esc(R.q)}”</p>`;t+=`คำถาม: ${R.q}\n`}
  A.cs.forEach(({c,rev},k)=>{const id=R.cards[k][0];h+=`<div class="entry">${thumb(id,rev)}<div><div class="pos">${P[k][0]} · ${P[k][1]}</div><h3>${c.th}<small>${numLabel(c)} ${c.en}${rev?" · REVERSED":""}</small></h3><div class="kw">${rev?"กลับหัว":c.k}</div>`+
   (rev?`<p class="rv">${c.r}</p><p>ถ้าปรับพลังให้ตั้งตรงได้: ${topicLine(c,R.topic)}</p>`:`<p>${topicLine(c,R.topic)}</p>`)+`</div></div>`;
   t+=`\n${P[k][1]}: ${c.th} (${c.en})${rev?" กลับหัว":""}\n${rev?c.r:topicLine(c,R.topic)}\n`});
- h+=`<div class="msg"><h4>สารจากไพ่</h4><p>${A.msg}</p><p><b>คำแนะนำ:</b> ${A.last.a}</p><div class="lucky"><div><b>${A.num}</b>เลขมงคล</div><div><b>${A.pair}</b>เลขคู่นำโชค</div><div><b><span class="sw" style="background:${A.mid.c[1]}"></span>${A.mid.c[0]}</b>สีมงคล</div></div></div>`;
+ h+=`<div class="msg"><h4>สารจากไพ่</h4><p>${A.msg}</p><p><b>คำแนะนำ:</b> ${A.last.a}</p><div class="lucky"><div><b>${A.num}</b>เลขมงคล</div><div><b>${A.pair}</b>เลขคู่นำโชค</div><div><b><span class="sw" style="background:${A.mid.c[1]}"></span>${A.mid.c[0]}</b>สีมงคลจากไพ่</div>${dayColors(R).map(([lab,c])=>`<div><b><span class="sw" style="background:${c[2]}"></span>${c[1]}</b>${lab}</div>`).join("")}</div><p class="note" style="margin-top:8px">สีประจำวันตามคติไทยทั่วไป${R.bd==null?" · เลือกวันเกิดในหน้าแรกเพื่อดูสีวันเกิดของคุณ":""}</p></div>`;
  h+=`<div class="credit">${CREDIT()}</div>`;
- t+=`\nสารจากไพ่: ${A.msg}\nคำแนะนำ: ${A.last.a}\nเลขมงคล ${A.num} · เลขคู่ ${A.pair} · สีมงคล ${A.mid.c[0]}\n(เพื่อความบันเทิง)`;
+ t+=`\nสารจากไพ่: ${A.msg}\nคำแนะนำ: ${A.last.a}\nเลขมงคล ${A.num} · เลขคู่ ${A.pair} · สีมงคล ${A.mid.c[0]}${dayColors(R).map(([l,c])=>" · "+l+" "+c[1]).join("")}\nดูไพ่ชุดนี้: ${linkFor(R)}\n(เพื่อความบันเทิง)`;
  readingText=t;current=R;$("#reading").innerHTML=h;$("#fab").hidden=false}
 function openSheet(id){["#sheet","#hist"].forEach(s=>$(s).classList.toggle("open",s===id));$("#fab").hidden=true;layout()}
 function closeSheets(){$("#sheet").classList.remove("open");$("#hist").classList.remove("open");if(readingText)$("#fab").hidden=false;layout()}
@@ -450,51 +520,81 @@ function words(s){try{return [...new Intl.Segmenter("th",{granularity:"word"}).s
 function wrap(ctx,s,maxW,maxLines){const out=[];let line="";for(const w of words(s)){const test=line+w;if(ctx.measureText(test).width>maxW&&line){out.push(line.trim());line=w.trimStart()}else line=test}if(line.trim())out.push(line.trim());
  if(out.length>maxLines){out.length=maxLines;out[maxLines-1]=out[maxLines-1].replace(/.{0,2}$/,"…")}return out}
 function rrect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
-async function makeShare(R){
+const FMT={story:[1080,1920],post:[1080,1350],wide:[1200,675]};let shareFmt="story";
+function sky(x,W,H,cx,cy,R0,seed0){const g=x.createRadialGradient(cx,cy,40,cx,cy,Math.max(W,H)*.75);g.addColorStop(0,"#2a2160");g.addColorStop(.45,"#110e28");g.addColorStop(1,"#050409");x.fillStyle=g;x.fillRect(0,0,W,H);
+ let seed=seed0%9973+1;const rr=()=>(seed=(seed*16807)%2147483647)/2147483647;for(let i=0;i<W*H/8000;i++){x.globalAlpha=.25+rr()*.75;x.fillStyle="#f4ead0";x.beginPath();x.arc(rr()*W,rr()*H,rr()*1.8+.3,0,7);x.fill()}x.globalAlpha=1;
+ x.strokeStyle="rgba(201,164,92,.22)";x.lineWidth=2;[R0,R0+50].forEach(r=>{x.beginPath();x.arc(cx,cy,r,0,7);x.stroke()});
+ for(let i=0;i<120;i++){const a=i*3*Math.PI/180,r1=i%10?R0+35:R0+20;x.beginPath();x.moveTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1);x.lineTo(cx+Math.cos(a)*(R0+50),cy+Math.sin(a)*(R0+50));x.stroke()}}
+function cardAt(x,im,cx,top,cw,rev){const ch=cw/ASP,lx=cx-cw/2;x.save();x.shadowColor="rgba(0,0,0,.6)";x.shadowBlur=cw*.13;x.shadowOffsetY=cw*.045;const fg=x.createLinearGradient(lx,top,lx+cw,top+ch);
+ (STYLE==="ink"?["#d9bf7e","#f3e2b0","#b98f34","#e8d39a","#c9a45c"]:["#e8d39a","#9fd6d2","#e9b7d8","#c9a45c","#f3e2b0"]).forEach((c,i)=>fg.addColorStop(i/4,c));x.fillStyle=fg;rrect(x,lx,top,cw,ch,cw*.045);x.fill();x.restore();
+ const p=cw*(STYLE==="ink"?.02:.045);x.save();rrect(x,lx+p,top+p,cw-2*p,ch-2*p,cw*.025);x.clip();x.fillStyle="#e9dcc0";x.fillRect(lx,top,cw,ch);
+ if(im){const cr=STYLE==="ink"?0:.035,sx=im.width*cr,sy=im.height*cr,sw=im.width-2*sx,sh=im.height-2*sy;x.translate(cx,top+ch/2);if(rev)x.rotate(Math.PI);const iw=cw-2*p,ih=ch-2*p,s=Math.max(iw/sw,ih/sh);x.drawImage(im,sx,sy,sw,sh,-sw*s/2,-sh*s/2,sw*s,sh*s)}x.restore();return ch}
+function T(x,str,X,Y,font,col,align="center",ls=0){x.font=font;x.fillStyle=col;x.textAlign=align;if("letterSpacing" in x)x.letterSpacing=ls+"px";x.fillText(str,X+(align==="center"?ls/2:0),Y);if("letterSpacing" in x)x.letterSpacing="0px"}
+function luckyStr(R,A){return `เลขมงคล ${A.num} · เลขคู่ ${A.pair} · สี${A.mid.c[0]}`+dayColors(R).map(([l,c])=>` · ${l.replace("สีประจำวัน","สีวัน")} ${c[1]}`).join("")}
+const FOOT=()=>STYLE==="ink"?"เพื่อความบันเทิง · ไพ่ลายหมึกพู่กัน Nocturne":"เพื่อความบันเทิง · ภาพไพ่ Rider–Waite–Smith 1909 (สาธารณสมบัติ)";
+async function makeShare(R,fmt="story"){
  try{await Promise.all(['700 40px "Srisakdi"','500 40px "Cinzel"','700 40px "Cinzel"','400 30px "Noto Serif Thai"','600 30px "Noto Serif Thai"'].map(f=>document.fonts.load(f,"กขABC")))}catch(e){}
- const A=analyse(R),W=1080,H=1920,cv=document.createElement("canvas");cv.width=W;cv.height=H;const x=cv.getContext("2d");
- const g=x.createRadialGradient(W/2,760,40,W/2,760,1300);g.addColorStop(0,"#2a2160");g.addColorStop(.45,"#110e28");g.addColorStop(1,"#050409");x.fillStyle=g;x.fillRect(0,0,W,H);
- let seed=R.t%9973;const rr=()=>(seed=(seed*16807)%2147483647)/2147483647;
- for(let i=0;i<260;i++){x.globalAlpha=.25+rr()*.75;x.fillStyle="#f4ead0";x.beginPath();x.arc(rr()*W,rr()*H,rr()*1.8+.3,0,7);x.fill()}x.globalAlpha=1;
- x.strokeStyle="rgba(201,164,92,.22)";x.lineWidth=2;[470,520].forEach(r=>{x.beginPath();x.arc(W/2,860,r,0,7);x.stroke()});
- for(let i=0;i<120;i++){const a=i*3*Math.PI/180,r1=i%10?505:490;x.beginPath();x.moveTo(W/2+Math.cos(a)*r1,860+Math.sin(a)*r1);x.lineTo(W/2+Math.cos(a)*520,860+Math.sin(a)*520);x.stroke()}
- x.textAlign="center";x.fillStyle="#efdcaa";x.font='700 68px "Cinzel",Georgia,serif';if("letterSpacing" in x)x.letterSpacing="22px";x.fillText("NOCTURNE",W/2+11,150);if("letterSpacing" in x)x.letterSpacing="0px";
- x.fillStyle="#a49dba";x.font='400 30px "Noto Serif Thai",serif';x.fillText(`${thDate(R.t)} · ${R.moon||LUNAR.txt} · เรื่อง${TOPIC[R.topic]}`,W/2,205);
- let y=270;if(R.q){x.fillStyle="#e9e3d3";x.font='400 34px "Noto Serif Thai",serif';wrap(x,`“${R.q}”`,860,2).forEach(l=>{x.fillText(l,W/2,y);y+=48})}
- const n=R.cards.length,cw=n===3?318:430,ch=cw/ASP,gap=28,top=n===3?Math.max(y+50,420):Math.max(y+40,360);const P=R.spread===3?POS3:POS1;
- const imgs=await Promise.all(R.cards.map(([id])=>loadImg(imgSrc(CARDS[id])).catch(()=>null)));
- for(let k=0;k<n;k++){const cx=W/2+(k-(n-1)/2)*(cw+gap),lx=cx-cw/2,rev=!!R.cards[k][1],c=CARDS[R.cards[k][0]];
-  x.save();x.shadowColor="rgba(0,0,0,.6)";x.shadowBlur=40;x.shadowOffsetY=14;const fg=x.createLinearGradient(lx,top,lx+cw,top+ch);["#e8d39a","#9fd6d2","#e9b7d8","#c9a45c","#f3e2b0"].forEach((s,i)=>fg.addColorStop(i/4,s));x.fillStyle=fg;rrect(x,lx,top,cw,ch,14);x.fill();x.restore();
-  const p=cw*(STYLE==='ink'?.02:.045);x.save();rrect(x,lx+p,top+p,cw-2*p,ch-2*p,8);x.clip();x.fillStyle="#e9dcc0";x.fillRect(lx,top,cw,ch);
-  const im=imgs[k];if(im){const cr=STYLE==='ink'?0:.035,sx=im.width*cr,sy=im.height*cr,sw=im.width-2*sx,sh=im.height-2*sy;x.translate(cx,top+ch/2);if(rev)x.rotate(Math.PI);const iw=cw-2*p,ih=ch-2*p,s=Math.max(iw/sw,ih/sh);x.drawImage(im,sx,sy,sw,sh,-sw*s/2,-sh*s/2,sw*s,sh*s)}x.restore();
-  let ty=top+ch+52;x.fillStyle="#c9a45c";x.font='500 24px "Cinzel",serif';if("letterSpacing" in x)x.letterSpacing="6px";x.fillText(P[k][0],cx,ty);if("letterSpacing" in x)x.letterSpacing="0px";
-  x.fillStyle="#a49dba";x.font='400 24px "Noto Serif Thai",serif';x.fillText(P[k][1],cx,ty+=34);
-  x.fillStyle=rev?"#f0b3a8":"#f3e6c4";x.font=`700 ${n===3?38:48}px "Srisakdi","Noto Serif Thai",serif`;wrap(x,c.th+(rev?" (กลับหัว)":""),cw+20,2).forEach(l=>{x.fillText(l,cx,ty+=(n===3?48:60))})}
- let my=top+ch+(n===3?250:230);const bx=90,bw=W-180;x.font='400 32px "Noto Serif Thai",serif';const ml=wrap(x,A.msg,bw-80,5);x.font='600 30px "Noto Serif Thai",serif';const al=wrap(x,"คำแนะนำ: "+A.last.a,bw-80,2);
- const bh=90+ml.length*48+al.length*46+150;x.fillStyle="rgba(7,6,13,.55)";rrect(x,bx,my,bw,bh,22);x.fill();x.strokeStyle="rgba(201,164,92,.5)";x.lineWidth=2;x.stroke();
- x.fillStyle="#c9a45c";x.font='500 24px "Cinzel",serif';if("letterSpacing" in x)x.letterSpacing="6px";x.fillText("MESSAGE",W/2,my+52);if("letterSpacing" in x)x.letterSpacing="0px";
- let ly=my+100;x.fillStyle="#e9e3d3";x.font='400 32px "Noto Serif Thai",serif';ml.forEach(l=>{x.fillText(l,W/2,ly);ly+=48});x.fillStyle="#efdcaa";x.font='600 30px "Noto Serif Thai",serif';al.forEach(l=>{x.fillText(l,W/2,ly+6);ly+=46});
- ly+=40;const cols=[W/2-260,W/2,W/2+260];x.fillStyle="#efdcaa";x.font='500 64px "Cinzel",serif';x.fillText(A.num,cols[0],ly+20);x.fillText(A.pair,cols[1],ly+20);
- x.beginPath();x.arc(cols[2],ly-2,26,0,7);x.fillStyle=A.mid.c[1];x.fill();x.strokeStyle="rgba(255,255,255,.5)";x.stroke();
- x.fillStyle="#a49dba";x.font='400 26px "Noto Serif Thai",serif';x.fillText("เลขมงคล",cols[0],ly+62);x.fillText("เลขคู่นำโชค",cols[1],ly+62);x.fillText("สี"+A.mid.c[0],cols[2],ly+62);
- x.fillStyle="#c9a45c";x.font='500 30px "Cinzel",serif';x.fillText("thailinebot.com/tarot",W/2,H-110);
- x.fillStyle="#6f6888";x.font='400 22px "Noto Serif Thai",serif';x.fillText(STYLE==="ink"?"เพื่อความบันเทิง · ไพ่ลายหมึกพู่กัน Nocturne":"เพื่อความบันเทิง · ภาพไพ่ Rider–Waite–Smith 1909 (สาธารณสมบัติ)",W/2,H-66);
+ const A=analyse(R),[W,H]=FMT[fmt],cv=document.createElement("canvas");cv.width=W;cv.height=H;const x=cv.getContext("2d");
+ const imgs=await Promise.all(R.cards.map(([id])=>loadImg(imgSrc(CARDS[id])).catch(()=>null)));const n=R.cards.length,P=R.spread===3?POS3:POS1;
+ const sub=`${thDate(R.t)}${R.moon?" · "+R.moon:""} · เรื่อง${TOPIC[R.topic]}`,TH='"Noto Serif Thai",serif',SK='"Srisakdi","Noto Serif Thai",serif',CZ='"Cinzel",Georgia,serif';
+ if(fmt==="story"){sky(x,W,H,W/2,860,470,R.t);
+  T(x,"NOCTURNE",W/2,150,`700 68px ${CZ}`,"#efdcaa","center",22);T(x,sub,W/2,205,`400 30px ${TH}`,"#a49dba");
+  let y=270;if(R.q){x.font=`400 34px ${TH}`;wrap(x,`“${R.q}”`,860,2).forEach(l=>{T(x,l,W/2,y,`400 34px ${TH}`,"#e9e3d3");y+=48})}
+  const cw=n===3?318:430,gap=28,top=n===3?Math.max(y+50,420):Math.max(y+40,360);let ch=0;
+  for(let k=0;k<n;k++){const cx=W/2+(k-(n-1)/2)*(cw+gap),rev=!!R.cards[k][1],c=CARDS[R.cards[k][0]];ch=cardAt(x,imgs[k],cx,top,cw,rev);
+   let ty=top+ch+52;T(x,P[k][0],cx,ty,`500 24px ${CZ}`,"#c9a45c","center",6);T(x,P[k][1],cx,ty+=34,`400 24px ${TH}`,"#a49dba");
+   x.font=`700 ${n===3?38:48}px ${SK}`;wrap(x,c.th+(rev?" (กลับหัว)":""),cw+20,2).forEach(l=>T(x,l,cx,ty+=(n===3?48:60),`700 ${n===3?38:48}px ${SK}`,rev?"#f0b3a8":"#f3e6c4"))}
+  const my=top+ch+(n===3?250:230),bx=90,bw=W-180;x.font=`400 32px ${TH}`;const ml=wrap(x,A.msg,bw-80,5);x.font=`600 30px ${TH}`;const al=wrap(x,"คำแนะนำ: "+A.last.a,bw-80,2);x.font=`400 26px ${TH}`;const ll=wrap(x,luckyStr(R,A),bw-60,2);
+  const bh=90+ml.length*48+al.length*46+ll.length*38+50;x.fillStyle="rgba(7,6,13,.55)";rrect(x,bx,my,bw,bh,22);x.fill();x.strokeStyle="rgba(201,164,92,.5)";x.lineWidth=2;x.stroke();
+  T(x,"MESSAGE",W/2,my+52,`500 24px ${CZ}`,"#c9a45c","center",6);let ly=my+100;ml.forEach(l=>{T(x,l,W/2,ly,`400 32px ${TH}`,"#e9e3d3");ly+=48});al.forEach(l=>{T(x,l,W/2,ly+6,`600 30px ${TH}`,"#efdcaa");ly+=46});
+  ly+=20;ll.forEach(l=>{T(x,l,W/2,ly,`400 26px ${TH}`,"#e9e3d3");ly+=38});
+  T(x,"thailinebot.com/tarot",W/2,H-110,`500 30px ${CZ}`,"#c9a45c");T(x,FOOT(),W/2,H-66,`400 22px ${TH}`,"#6f6888")}
+ else if(fmt==="post"){sky(x,W,H,W/2,560,380,R.t);
+  T(x,"NOCTURNE",W/2,100,`700 56px ${CZ}`,"#efdcaa","center",18);T(x,sub,W/2,148,`400 26px ${TH}`,"#a49dba");
+  let y=200;if(R.q){x.font=`400 30px ${TH}`;T(x,wrap(x,`“${R.q}”`,900,1)[0],W/2,y,`400 30px ${TH}`,"#e9e3d3");y+=24}
+  const cw=n===3?292:360,gap=26,top=y+(R.q?20:10);let ch=0;
+  for(let k=0;k<n;k++){const cx=W/2+(k-(n-1)/2)*(cw+gap),rev=!!R.cards[k][1],c=CARDS[R.cards[k][0]];ch=cardAt(x,imgs[k],cx,top,cw,rev);
+   T(x,P[k][1],cx,top+ch+42,`400 22px ${TH}`,"#c9a45c");x.font=`700 ${n===3?34:44}px ${SK}`;T(x,wrap(x,c.th+(rev?" (กลับหัว)":""),cw+24,1)[0],cx,top+ch+(n===3?86:96),`700 ${n===3?34:44}px ${SK}`,rev?"#f0b3a8":"#f3e6c4")}
+  const my=top+ch+(n===3?112:124),bx=70,bw=W-140;x.font=`400 28px ${TH}`;const ml=wrap(x,A.msg,bw-70,3);x.font=`600 26px ${TH}`;const al=wrap(x,"คำแนะนำ: "+A.last.a,bw-70,1);x.font=`400 22px ${TH}`;const ll=wrap(x,luckyStr(R,A),bw-60,1);
+  const bh=34+ml.length*40+al.length*38+ll.length*34+26;x.fillStyle="rgba(7,6,13,.55)";rrect(x,bx,my,bw,bh,20);x.fill();x.strokeStyle="rgba(201,164,92,.5)";x.lineWidth=2;x.stroke();
+  let ly=my+48;ml.forEach(l=>{T(x,l,W/2,ly,`400 28px ${TH}`,"#e9e3d3");ly+=40});al.forEach(l=>{T(x,l,W/2,ly,`600 26px ${TH}`,"#efdcaa");ly+=38});ll.forEach(l=>{T(x,l,W/2,ly,`400 22px ${TH}`,"#a49dba");ly+=34});
+  T(x,"thailinebot.com/tarot",W/2,H-52,`500 26px ${CZ}`,"#c9a45c");T(x,FOOT(),W/2,H-20,`400 17px ${TH}`,"#6f6888")}
+ else{sky(x,W,H,330,340,250,R.t);
+  const cw=n===3?176:236,gap=16,top=n===3?100:70;let ch=0;
+  for(let k=0;k<n;k++){const cx=330+(k-(n-1)/2)*(cw+gap),rev=!!R.cards[k][1],c=CARDS[R.cards[k][0]];ch=cardAt(x,imgs[k],cx,top,cw,rev);
+   T(x,P[k][1],cx,top+ch+30,`400 17px ${TH}`,"#c9a45c");x.font=`700 ${n===3?24:32}px ${SK}`;T(x,wrap(x,c.th+(rev?" (กลับหัว)":""),cw+14,1)[0],cx,top+ch+(n===3?62:70),`700 ${n===3?24:32}px ${SK}`,rev?"#f0b3a8":"#f3e6c4")}
+  const X0=660,CW=490;T(x,"NOCTURNE",X0,92,`700 44px ${CZ}`,"#efdcaa","left",12);T(x,sub,X0,130,`400 19px ${TH}`,"#a49dba","left");
+  let y=172;if(R.q){x.font=`400 22px ${TH}`;wrap(x,`“${R.q}”`,CW,2).forEach(l=>{T(x,l,X0,y,`400 22px ${TH}`,"#e9e3d3","left");y+=30});y+=6}
+  x.strokeStyle="rgba(201,164,92,.5)";x.lineWidth=1.5;x.beginPath();x.moveTo(X0,y);x.lineTo(X0+CW,y);x.stroke();y+=38;
+  x.font=`400 23px ${TH}`;wrap(x,A.msg,CW,5).forEach(l=>{T(x,l,X0,y,`400 23px ${TH}`,"#e9e3d3","left");y+=33});y+=6;
+  x.font=`600 21px ${TH}`;wrap(x,"คำแนะนำ: "+A.last.a,CW,2).forEach(l=>{T(x,l,X0,y,`600 21px ${TH}`,"#efdcaa","left");y+=30});y+=6;
+  x.font=`400 18px ${TH}`;wrap(x,luckyStr(R,A),CW,2).forEach(l=>{T(x,l,X0,y,`400 18px ${TH}`,"#a49dba","left");y+=26});
+  T(x,"thailinebot.com/tarot",X0,H-44,`500 22px ${CZ}`,"#c9a45c","left");T(x,FOOT(),X0,H-18,`400 14px ${TH}`,"#6f6888","left")}
  return cv}
 let shareBlob=null,shareURL=null;
+async function renderShare(){const cv=await makeShare(current,shareFmt);shareBlob=await new Promise(r=>cv.toBlob(r,"image/png"));if(shareURL)URL.revokeObjectURL(shareURL);shareURL=URL.createObjectURL(shareBlob);
+ $("#simg").src=shareURL;$("#sSave").href=shareURL;$("#sSave").download=`nocturne-${shareFmt}.png`;$("#sSave").hidden=!/^\/tarot(\/|$)/.test(location.pathname);
+ const f=new File([shareBlob],"nocturne-tarot.png",{type:"image/png"});$("#sShare").hidden=!(navigator.canShare&&navigator.canShare({files:[f]}))}
+function setLinks(R){const link=linkFor(R),txt=shareText(R),E=encodeURIComponent;
+ $("#lnFB").href=`https://www.facebook.com/sharer/sharer.php?u=${E(link)}`;$("#lnX").href=`https://twitter.com/intent/tweet?text=${E(txt)}&url=${E(link)}`;$("#lnLINE").href=`https://social-plugins.line.me/lineit/share?url=${E(link)}&text=${E(txt)}`}
 async function openShare(){if(!current)return;const b=$("#share"),old=b.textContent;b.textContent="กำลังทำภาพ…";$("#shareNow").textContent="กำลังทำภาพ…";
- try{const cv=await makeShare(current);shareBlob=await new Promise(r=>cv.toBlob(r,"image/png"));if(shareURL)URL.revokeObjectURL(shareURL);shareURL=URL.createObjectURL(shareBlob);
-  $("#simg").src=shareURL;$("#sSave").href=shareURL;$("#sSave").hidden=!/^\/tarot(\/|$)/.test(location.pathname);const f=new File([shareBlob],"nocturne-tarot.png",{type:"image/png"});
-  $("#sShare").hidden=!(navigator.canShare&&navigator.canShare({files:[f]}));$("#smodal").classList.add("open")}
- catch(e){setHint("ทำภาพไม่สำเร็จ","ลองกดใหม่อีกครั้ง")}
+ try{await renderShare();setLinks(current);$("#smodal").classList.add("open")}catch(e){setHint("ทำภาพไม่สำเร็จ","ลองกดใหม่อีกครั้ง")}
  b.textContent=old;$("#shareNow").textContent="ทำภาพแชร์"}
+chips("fmt",v=>{shareFmt=v;$("#simg").style.opacity=.4;renderShare().then(()=>{$("#simg").style.opacity=1})});
 $("#share").onclick=openShare;$("#shareNow").onclick=openShare;
-$("#sShare").onclick=async()=>{try{await navigator.share({files:[new File([shareBlob],"nocturne-tarot.png",{type:"image/png"})],title:"Nocturne Tarot",text:"ไพ่ของฉันวันนี้ 🌙 thailinebot.com/tarot"})}catch(e){}};
+$("#sShare").onclick=async()=>{try{await navigator.share({files:[new File([shareBlob],"nocturne-tarot.png",{type:"image/png"})],title:"Nocturne Tarot",text:shareText(current)+" "+linkFor(current)})}catch(e){}};
+$("#lnCopy").onclick=()=>{const b=$("#lnCopy"),link=linkFor(current);navigator.clipboard.writeText(link).then(()=>{b.textContent="คัดลอกแล้ว";setTimeout(()=>b.textContent="คัดลอกลิงก์",1600)}).catch(()=>{b.textContent=link})};
 $("#sClose").onclick=()=>$("#smodal").classList.remove("open");
 $("#smodal").addEventListener("click",e=>{if(e.target.id==="smodal")$("#smodal").classList.remove("open")});
 addEventListener("keydown",e=>{if(e.key==="Escape"){$("#modal").classList.remove("open");$("#smodal").classList.remove("open");closeSheets()}});
 
 /* ---------- reset ---------- */
-function again(){picks=[];readingText="";closeSheets();$("#fab").hidden=true;$("#actions").hidden=true;$("#shareNow").hidden=true;
+let sharedView=false;
+async function showShared(R){sharedView=true;$("#form").hidden=true;spread=R.spread;topic=R.topic;buildTable(R.spread);deck=R.cards.map(c=>c[0]);picks=[];
+ R.cards.forEach(([id,rv],k)=>{picks.push({i:k,card:id,rev:!!rv,flipped:false});const el=cards[k].el;el.classList.add("picked");el.querySelector(".inner").insertAdjacentHTML("beforeend",faceHTML(id,!!rv))});
+ current=R;layout();await sleep(30);setMode("reveal");setHint(`ไพ่ที่เพื่อนแชร์มา · เรื่อง${TOPIC[R.topic]}`,"แตะไพ่เพื่อเปิด แล้วดูพู่กันวาดไพ่");$("#actions").hidden=false;$("#flipAll").hidden=false;$("#again").textContent="เปิดไพ่ของคุณ";
+ await sleep(1400);for(const p of picks){if(!p.flipped){flip(p);await sleep(900)}}}
+function again(){if(sharedView){sharedView=false;$("#again").textContent="ดูดวงใหม่";try{history.replaceState(null,"",location.pathname)}catch(e){}}picks=[];readingText="";closeSheets();$("#fab").hidden=true;$("#actions").hidden=true;$("#shareNow").hidden=true;
  buildTable(deckSize);$("#form").hidden=false;setHint("ตั้งจิตให้สงบ นึกถึงเรื่องที่อยากรู้","ไพ่ทาโรต์ครบสำรับ 78 ใบ · เลือกลายหมึกพู่กันหรือ Rider–Waite ได้");refreshDaily();setMode("intro")}
 $("#again").onclick=again;$("#again2").onclick=again;
 
@@ -516,5 +616,5 @@ if(/^\/tarot(\/|$)/.test(location.pathname)){
  $("#iClose").onclick=()=>$("#imodal").classList.remove("open");
 }
 
-applyStyle();again();refreshStreak();if(window.__errs.length)__showErr(window.__errs[0]);if(document.fonts)document.fonts.ready.then(()=>layout());
+applyStyle();musLabel();bdLabel();again();refreshStreak();{const sh=decodeR(new URLSearchParams(location.search).get("r"));if(sh)showShared(sh)}if(window.__errs.length)__showErr(window.__errs[0]);if(document.fonts)document.fonts.ready.then(()=>layout());
 </script>
