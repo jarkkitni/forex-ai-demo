@@ -8,6 +8,26 @@ from datetime import datetime, timezone
 
 JOBBOARD_URL = "https://jobboard-api.fastwork.co/api/jobs"
 
+# ====== โมเดลของ Hunter (9 ต.ค. 2026) ======
+# กลับมาใช้ Claude เป็นตัวหลัก เพราะโควตาฟรี Gemini/Groq ล่มซ้ำจน Hunter ตาย (บันทึกไว้ 4 รอบใน ai_guard)
+# Haiku 5.5 = $0.10/$0.50 ต่อล้าน token → Hunter ทั้งเดือนไม่ถึง $1-2 แลกกับระบบที่ไม่ตายเพราะโควตาฟรี
+# ลำดับ: Claude (HUNTER_MODEL) → Groq → Gemini (ai_guard tier="smart" fallback ให้เอง) → offline (นกน้อยทำลัง)
+# ไม่มี ANTHROPIC_API_KEY = กลับไปใช้ tier="free" แบบเดิมอัตโนมัติ (ไม่พัง)
+# ตั้ง env HUNTER_MODEL เพื่อเปลี่ยนรุ่นได้โดยไม่ต้องแก้โค้ด
+HUNTER_MODEL = os.environ.get("HUNTER_MODEL", "claude-haiku-5-5").strip()
+
+
+def _ai(client, prompt: str, max_tokens: int, smart: bool, notify_fn=None,
+        uid: str = "", slug: str = "job_hunter") -> str:
+    """เรียก AI ให้ Hunter ทุกตัว (FastWork + RSS) ผ่านทางเดียวกัน"""
+    import ai_guard
+    if client is not None:
+        return ai_guard.call(client, prompt, max_tokens=max_tokens, smart=smart,
+                             tier="smart", model=HUNTER_MODEL,
+                             notify_fn=notify_fn, line_user_id=uid, slug=slug)
+    return ai_guard.call(client, prompt, max_tokens=max_tokens, smart=smart,
+                         tier="free", notify_fn=notify_fn, line_user_id=uid, slug=slug)
+
 # ====== สกิลที่เรารับงาน ======
 # เกรด A — ตรงเป้า (แจ้งเตือนเต็มรูปแบบ + ร่างข้อเสนอ)
 SKILL_KEYWORDS = [
@@ -250,8 +270,7 @@ def _triage(client, job: dict, matched: list, notify_fn=None, uid: str = "") -> 
 ตอบคำเดียว: YES ถ้าพอทำได้ / NO ถ้าคนละสายเลย (เช่น กราฟิก ยิงแอด เขียนบทความ แปลภาษา
 หรืองานสายเทรด/ลงทุน/คริปโต ซึ่งเราไม่รับแล้ว)"""
     try:
-        ans = ai_guard.call(client, prompt, max_tokens=5, smart=False, tier="free",
-                            notify_fn=notify_fn, line_user_id=uid, slug="job_hunter")
+        ans = _ai(client, prompt, max_tokens=5, smart=False, notify_fn=notify_fn, uid=uid)
         return "YES" in ans.upper()
     except Exception as e:
         print(f"[Hunter] triage ล้มเหลว ปล่อยผ่าน: {e}", flush=True)
@@ -286,8 +305,7 @@ keyword ที่ตรงสกิล: {", ".join(matched)}
   "proposal": "<ร่างข้อเสนองานภาษาไทย สุภาพ ตรงประเด็น ~120 คำ ลงท้ายชวนคุย>"
 }}"""
 
-    raw = ai_guard.call(client, prompt, max_tokens=1000, smart=True, tier="free",
-                        notify_fn=notify_fn, line_user_id=uid, slug="job_hunter")
+    raw = _ai(client, prompt, max_tokens=1000, smart=True, notify_fn=notify_fn, uid=uid)
     return _extract_json(raw)
 
 

@@ -400,11 +400,21 @@ def hunter_check():
     if not LINE_TOKEN or not LINE_USER_ID:
         return jsonify({"success": False, "error": "missing LINE env keys"}), 500
     try:
-        # client ใช้เฉพาะตอน tier="smart" — Hunter เป็น tier="free" จึงไม่ต้องมี key จริง
+        # 9 ต.ค. 2026: มี ANTHROPIC_API_KEY = Hunter ใช้ Claude Haiku 5.5 (fastwork_hunter.HUNTER_MODEL)
+        # ไม่มี key = กลับไปใช้ tier="free" (Gemini→Groq) แบบเดิมอัตโนมัติ
         client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
         result = fastwork_hunter.run_hunter(client, _push_line, LINE_USER_ID)
         _save_hunter_status(result)   # เก็บสถานะล่าสุดลง Supabase (โชว์บน Monitor)
-        return jsonify({"success": True, **result})
+
+        # 9 ต.ค. 2026: สแกน RSS (Reddit / ฟอรัม n8n — งาน USD) ในรอบเดียวกันเลย
+        # เดิม /api/hunter/rss ไม่มี cron ตัวไหนยิง = RSS Hunter ไม่เคยวิ่งจริง
+        # ห่อ try แยก — RSS ล้มต้องไม่ทำให้ผล FastWork ที่สแกนเสร็จแล้วกลายเป็น 500
+        try:
+            rss = rss_hunter.run(client, _push_line, LINE_USER_ID)
+        except Exception as e:
+            traceback.print_exc()
+            rss = {"success": False, "error": str(e)[:200]}
+        return jsonify({"success": True, **result, "rss": rss})
     except Exception as e:
         traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
@@ -489,10 +499,10 @@ def hunter_rss():
         return jsonify(_HUNTERS_OFF_MSG), _HUNTERS_OFF_CODE   # 503 ให้ cron เห็นว่าล้ม (22 ก.ค. 2026)
     if not rss_hunter.is_configured():
         return jsonify({"success": False, "error": "ยังไม่ได้ตั้ง RSS_FEEDS"}), 503
-    if not ANTHROPIC_API_KEY or not LINE_TOKEN or not LINE_USER_ID:
-        return jsonify({"success": False, "error": "missing env keys"}), 500
+    if not LINE_TOKEN or not LINE_USER_ID:
+        return jsonify({"success": False, "error": "missing LINE env keys"}), 500
     try:
-        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
         return jsonify(rss_hunter.run(client, _push_line, LINE_USER_ID))
     except Exception as e:
         traceback.print_exc()

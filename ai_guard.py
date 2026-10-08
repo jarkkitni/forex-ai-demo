@@ -429,7 +429,8 @@ def _alert(slug: str, err: str, notify_fn, line_user_id: str, degraded: bool = F
 
 
 def call(client, prompt: str, max_tokens: int = 1000, smart: bool = True,
-         notify_fn=None, line_user_id: str = "", tier: str = "smart", slug: str = "") -> str:
+         notify_fn=None, line_user_id: str = "", tier: str = "smart", slug: str = "",
+         model: str = "") -> str:
     """
     เรียก AI แบบมีเกราะ — คืน text ดิบ
     tier="smart" (ค่าเริ่มต้น) → ใช้ Claude (smart=True→Sonnet, False→Haiku) เป็นหลัก
@@ -444,6 +445,9 @@ def call(client, prompt: str, max_tokens: int = 1000, smart: bool = True,
     slug: ชื่อโปรเจกต์/ร้าน (เช่น "lullabell", "job_hunter", "forex") — แยกสถานะ+cooldown แจ้งเตือนต่อร้าน
           กันร้าน A ล่มจนแจ้งเตือนไปแล้ว บังไม่ให้ร้าน B ได้รับแจ้งเตือนอีก 6 ชม. ทั้งที่คนละปัญหาคนละเวลา
           ไม่ใส่ = ใช้ bucket "default" ร่วมกัน (ของเก่าที่ยังไม่ได้ migrate)
+    model: (เพิ่ม 9 ต.ค. 2026) บังคับชื่อโมเดล Claude ตรงๆ สำหรับ tier="smart" — ใช้กับ Job Hunter
+           ที่ต้องการ Haiku 5.5 โดยไม่ไปแตะ MODEL_SMART/MODEL_CHEAP ที่บอทลูกค้าใช้ร่วมกัน
+           ไม่ใส่ = พฤติกรรมเดิมทุกอย่าง
     """
     b = _bucket(slug)
     b["calls"] += 1
@@ -479,7 +483,7 @@ def call(client, prompt: str, max_tokens: int = 1000, smart: bool = True,
 
     try:
         msg = client.messages.create(
-            model=MODEL_SMART if smart else MODEL_CHEAP,
+            model=model or (MODEL_SMART if smart else MODEL_CHEAP),
             max_tokens=max_tokens,
             messages=[{"role": "user", "content": prompt}],
         )

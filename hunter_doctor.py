@@ -10,15 +10,19 @@ import urllib.request
 
 JOBBOARD = "https://jobboard-api.fastwork.co/api/jobs"
 
-# platform.claude.com/docs/en/about-claude/model-deprecations (2026-08-25)
+# platform.claude.com/docs/en/about-claude/model-deprecations (เช็คใหม่ 2026-10-09)
+# ค่า = วันปลดระวางจริง (ถ้าประกาศแล้ว) หรือ "ไม่ก่อนวันที่" สำหรับรุ่นที่ยัง active
 CLAUDE_RETIREMENT = {
-    "claude-sonnet-4-5": "2026-09-29",
-    "claude-sonnet-4-5-20250929": "2026-09-29",
-    "claude-haiku-4-5-20251001": "2026-10-15",
+    "claude-sonnet-4-5": "2026-11-30",            # deprecated 30 ก.ย. 2026 → ปลดจริง 30 พ.ย.
+    "claude-sonnet-4-5-20250929": "2026-11-30",
+    "claude-haiku-4-5-20251001": "2026-10-15",    # active แต่ "ไม่ก่อน" 15 ต.ค. — ย้ายออกเถอะ
     "claude-haiku-4-5": "2026-10-15",
     "claude-sonnet-4-6": "2027-02-17",
     "claude-sonnet-5": "2027-06-30",
     "claude-opus-5": "2027-07-24",
+    "claude-haiku-5-5": "2027-10-07",             # Job Hunter ใช้ตัวนี้ (HUNTER_MODEL) ตั้งแต่ 9 ต.ค. 2026
+    "claude-sonnet-5-5": "2027-09-28",
+    "claude-opus-5-5": "2027-09-22",
 }
 
 OK, WARN, BAD = "  ok  ", " WARN ", " FAIL "
@@ -73,7 +77,9 @@ def main(base: str) -> int:
         print(BAD + " HUNTERS_ENABLED is OFF -> /api/hunter/check returns 503 every time")
         print("        -> Render > forex-ai-demo > Environment > HUNTERS_ENABLED = 1 > Save")
 
-    print("\n=== AI the hunter actually uses (tier=free: Gemini -> Groq) ===")
+    print("\n=== AI the hunter uses (Claude HUNTER_MODEL -> Groq -> Gemini; no key = Gemini -> Groq) ===")
+    print("        (Claude key is not exposed by /api/ai-health - confirm in LINE that alerts")
+    print("         carry a real summary, not the offline 'AI ล่มทุกเจ้า' banner)")
     code, ai = get(base + "/api/ai-health")
     if not isinstance(ai, dict):
         problems += 1
