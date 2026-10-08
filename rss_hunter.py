@@ -327,7 +327,9 @@ def run(anthropic_client, push_line_fn, line_user_id: str,
             a = _analyze(anthropic_client, it, matched, push_line_fn, line_user_id)
         except Exception as e:
             print(f"[RSS] analyze ล้ม → ส่งแบบ offline: {e}", flush=True)
-            ok = push_line_fn(line_user_id, _msg_offline(it, matched, grade)) if grade == "A" else None
+            ok = (push_line_fn(line_user_id, _msg_offline(it, matched, grade),
+                               buttons={"url": it["link"]})
+                  if grade == "A" else None)
             entry.update({"score": None, "summary": "(offline — AI ล่ม)", "alerted": bool(ok)})
             if ok:
                 sent += 1
@@ -344,7 +346,8 @@ def run(anthropic_client, push_line_fn, line_user_id: str,
                       "is_real_job": a.get("is_real_job", False)})
 
         if a.get("is_real_job") and score >= min_score:
-            ok = push_line_fn(line_user_id, _msg(it, a, matched, grade))
+            ok = push_line_fn(line_user_id, _msg(it, a, matched, grade),
+                              buttons={"copy": a.get("proposal", ""), "url": it["link"]})
         else:
             ok = None                      # ตัดสินแล้วว่าไม่แจ้ง
 

@@ -494,7 +494,8 @@ def run_hunter(anthropic_client, push_line_fn, line_user_id: str,
             print(f"[Hunter] analyze ล้ม → ส่งแบบ offline แทน: {e}", flush=True)
             score = _score_offline(job, matched, grade)
             ok = push_line_fn(line_user_id,
-                              _build_line_message_offline(job, matched, grade, score))
+                              _build_line_message_offline(job, matched, grade, score),
+                              buttons={"url": _job_url(jid or "")})
             entry.update({"score": score, "summary": "(offline — AI ล่ม)",
                           "ai": False, "alerted": ok})
             if ok:
@@ -512,10 +513,13 @@ def run_hunter(anthropic_client, push_line_fn, line_user_id: str,
 
         # เกรด A คะแนน ≥70 → ข้อความเต็ม + ข้อเสนอ
         # เกรด A/B คะแนน 55-69 → ข้อความสั้น
+        # 9 ต.ค. 2026: แนบปุ่ม 📋 คัดลอกข้อเสนอ + 🔗 เปิดหน้างาน (api_server._line_messages)
+        btn = {"copy": analysis.get("proposal", ""), "url": _job_url(jid or "")}
         if score >= 70 and grade == "A":
-            ok = push_line_fn(line_user_id, _build_line_message(job, analysis, matched))
+            ok = push_line_fn(line_user_id, _build_line_message(job, analysis, matched), buttons=btn)
         elif score >= min_score:
-            ok = push_line_fn(line_user_id, _build_line_message_short(job, analysis, matched))
+            ok = push_line_fn(line_user_id, _build_line_message_short(job, analysis, matched),
+                              buttons=btn)
         else:
             ok = None   # คะแนนไม่ถึงเกณฑ์ = ตัดสินแล้วว่าไม่แจ้ง ≠ "แจ้งไม่ออก"
 

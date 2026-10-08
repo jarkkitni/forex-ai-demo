@@ -215,7 +215,36 @@ def _track_visit():
 
 # ---------- LINE Helpers ----------
 
-def _push_line(user_id: str, text: str) -> bool:
+def _line_messages(text: str, buttons: dict = None) -> list:
+    """ข้อความ LINE + (ถ้ามี) การ์ดปุ่มต่อท้าย — 9 ต.ค. 2026 สำหรับ Job Hunter
+
+    buttons = {"copy": "<ข้อเสนอ>", "url": "<ลิงก์งาน>"} — ใส่อันไหนก็ได้
+      copy → ปุ่ม 📋 action "clipboard" = แตะทีเดียวคัดลอกข้อเสนอ (LINE 14.0+, สูงสุด 1,000 ตัว)
+      url  → ปุ่ม 🔗 เปิดหน้างาน
+    ทำเป็น Flex ไม่ใช่ quick reply เพราะ quick reply โชว์แค่ข้อความล่าสุด — แจ้ง 2 งานติดกัน
+    ปุ่มของงานแรกจะหายไป · ส่งใน push เดียวกับข้อความหลัก (LINE นับโควตาต่อครั้งที่ส่ง ไม่ใช่ต่อกล่อง)"""
+    msgs = [{"type": "text", "text": text[:5000]}]
+    if not buttons:
+        return msgs
+    btns = []
+    copy = (buttons.get("copy") or "").strip()
+    url = (buttons.get("url") or "").strip()
+    if copy:
+        btns.append({"type": "button", "style": "primary", "height": "sm", "color": "#06C755",
+                     "action": {"type": "clipboard", "label": "📋 คัดลอกข้อเสนอ",
+                                "clipboardText": copy[:1000]}})
+    if url.startswith("http"):
+        btns.append({"type": "button", "style": "secondary", "height": "sm",
+                     "action": {"type": "uri", "label": "🔗 เปิดหน้างาน", "uri": url[:1000]}})
+    if btns:
+        msgs.append({"type": "flex", "altText": "ปุ่มคัดลอกข้อเสนอ / เปิดหน้างาน",
+                     "contents": {"type": "bubble", "size": "kilo",
+                                  "body": {"type": "box", "layout": "vertical",
+                                           "spacing": "sm", "contents": btns}}})
+    return msgs
+
+
+def _push_line(user_id: str, text: str, buttons: dict = None) -> bool:
     """Push message ไปยัง user_id
 
     🔴 บทเรียน 30 ส.ค. 2026 — เดิมบรรทัดสุดท้ายคือ `return r.status_code == 200` เฉยๆ
@@ -224,7 +253,7 @@ def _push_line(user_id: str, text: str) -> bool:
     ตอนนี้ log status + body ทุกครั้งที่ไม่ผ่าน → แยกออกทันทีว่า
     โควตาเดือนหมด (429) / token เสียหรือถูก revoke (401) / ข้อความผิดรูป (400)
     """
-    if _push_via(LINE_TOKEN, user_id, text, "หลัก"):
+    if _push_via(LINE_TOKEN, user_id, text, "หลัก", buttons):
         return True
 
     # ช่องหลักส่งไม่ออก (ส่วนใหญ่คือโควตาเดือนเต็ม = 429) → สลับไปช่องสำรอง
@@ -233,14 +262,14 @@ def _push_line(user_id: str, text: str) -> bool:
     if not user_id or user_id != LINE_USER_ID:
         return False
     for name, tok, uid in _alert_channels()[1:]:
-        if _push_via(tok, uid, text, name):
+        if _push_via(tok, uid, text, name, buttons):
             print(f"[LINE] ส่งผ่านช่อง{name}แทน (ช่องหลักส่งไม่ออก)", flush=True)
             return True
     print("[LINE] ส่งไม่ออกทุกช่องที่ตั้งค่าไว้", flush=True)
     return False
 
 
-def _push_via(token: str, user_id: str, text: str, name: str = "") -> bool:
+def _push_via(token: str, user_id: str, text: str, name: str = "", buttons: dict = None) -> bool:
     """ยิง push ผ่าน token ที่ระบุ — ตัวจริงที่คุยกับ LINE
 
     🔴 บทเรียน 30 ส.ค. 2026 — เดิมบรรทัดสุดท้ายคือ `return r.status_code == 200` เฉยๆ
@@ -258,9 +287,18 @@ def _push_via(token: str, user_id: str, text: str, name: str = "") -> bool:
                 "Authorization": f"Bearer {token}",
                 "Content-Type":  "application/json",
             },
-            json={"to": user_id, "messages": [{"type": "text", "text": text}]},
+            json={"to": user_id, "messages": _line_messages(text, buttons)},
             timeout=10,
         )
+        if r.status_code == 400 and buttons:
+            # การ์ดปุ่มผิดรูป (เช่น LINE เปลี่ยนสเปก) ห้ามทำให้แจ้งงานไม่ออก → ส่งข้อความล้วนแทน
+            print(f"[LINE:{name}] การ์ดปุ่มถูกปฏิเสธ ส่งข้อความล้วนแทน: {r.text[:200]}", flush=True)
+            r = requests.post(
+                "https://api.line.me/v2/bot/message/push",
+                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+                json={"to": user_id, "messages": _line_messages(text)},
+                timeout=10,
+            )
     except Exception as e:
         # เดิมไม่ดักไว้ → exception ทะลุขึ้นไปทำให้ทั้งรอบของ Hunter ล้ม (คืน 500)
         print(f"[LINE:{name}] push ล้ม (network): {e}", flush=True)
