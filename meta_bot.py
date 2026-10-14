@@ -24,6 +24,7 @@ _SELF_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "https://forex-ai-demo.onrend
 
 # ---- ความจำการสนทนาสั้นๆ ต่อผู้ส่ง (in-memory, รีเซ็ตเมื่อ restart) ----
 _history: dict = {}      # sender_id -> [(role, text), ...]  เก็บ 8 เทิร์นล่าสุด
+_last_turn_at: dict = {}  # sender_id -> epoch ของเทิร์นล่าสุด (ใช้ตัดสินว่า "มีโปรไหม" เป็นคำถามต่อเนื่องหรือไม่)
 
 # ---- Inbox log ต่อร้าน (25 ก.ย. 2026) ----
 # Meta ตีกลับ App Review ของ pages_messaging: วิดีโอไม่เห็นข้อความที่ลูกค้าตอบกลับไปโผล่ใน UI ของแอปเรา
@@ -698,6 +699,55 @@ def _render_promo_list(cfg: dict, only_category: str = "") -> str:
     return text or "ตอนนี้ยังไม่มีโปรโมชั่นพิเศษค่ะ สอบถามราคาปกติได้เลยนะคะ 🤍"
 
 
+# คำที่ไม่บอกว่าลูกค้าสนใจบริการไหน (คำถาม/คำลงท้าย/คำทักทาย) — ตัดทิ้งแล้วดูว่ายังเหลือ "ชื่อบริการ" ไหม
+# เรียงคำยาวก่อนคำสั้นเสมอ (regex alternation จับตัวแรกที่เจอ) · ตั้งใจให้ "เหลือ = ส่ง AI" เป็นทางปลอดภัย
+_PROMO_FILLER_RE = re.compile(
+    r"โปรโมชั่น|โปรโมชัน|promotions?|promo|โปร|สวัสดี|หวัดดี|hello|hi|"
+    r"หรือเปล่า|รึเปล่า|เปล่า|เท่าไหร่|เท่าไร|ทั้งหมด|ช่วงนี้|ตอนนี้|เดือนนี้|อะไร|บ้าง|"
+    r"ไหม|มั้ย|มั๊ย|ป่ะ|ปะ|มี|คะ|ค่ะ|ค้า|ค่า|คับ|ครับ|จ้า|จ้ะ|นะ|หน่อย|ขอ|ทราบ|ดู|ราคา|"
+    r"อยู่|ไม่|ยัง|ล่ะ|แล้ว|สนใจ|อยาก|หรอ|เหรอ|ด้วย|ได้", re.I)
+_PROMO_CTX_TTL = 30 * 60   # คุยเรื่องบริการเจาะจงภายใน 30 นาที แล้วถาม "มีโปรไหม" = ถามโปรของบริการนั้น
+
+
+def _promo_core(text: str, cfg: dict) -> str:
+    """ตัดคำโปร/คำถาม/คำลงท้าย/ชื่อหมวดออก เหลืออะไรคือ "บริการเจาะจง" ที่ลูกค้าพูดถึง (เช่น "ยืดผม") — ว่าง = ถามรวม"""
+    t = text or ""
+    for cat in cfg.get("categories", []):
+        name = cat.get("name", "")
+        if not name:
+            continue
+        kws = [name]
+        if name.startswith("ทำ") and len(name) > 2:
+            kws.append(name[2:])
+        if "สปา" in name:
+            kws.append("สปา")
+        for kw in sorted(kws, key=len, reverse=True):
+            t = t.replace(kw, " ")
+    t = _PROMO_FILLER_RE.sub(" ", t)
+    t = re.sub(r"[\W\d_]+", "", t)      # ตัดช่องว่าง/เครื่องหมาย/ตัวเลข/สระลอย
+    return t if len(t) > 1 else ""
+
+
+def _use_promo_template(cfg: dict, sender_key: str, user_text: str, payload: str = "") -> bool:
+    """ตอบโปรแบบ template (ไม่ผ่าน AI) ไหม — 14 ต.ค. 2569 คุณอาย Lullabell เจอ 2 เคส:
+    (1) "ยืดผมมีโปรไหมคะ" → ได้ลิสต์ทั้งหมวดทำผมที่ไม่มียืดผม (คำว่า "ผม" ไปจับหมวด) = ตอบคนละเรื่อง
+    (2) คุยเรื่องดัดผมอยู่ แล้วถาม "มีโปรไหม" → ได้สรุปโปรรวม แทนที่จะตอบโปรดัดผม = ไม่ต่อเนื่อง
+    กติกา: ปุ่ม IB_PRICE = template เสมอ · มีชื่อบริการเจาะจง = AI · ถามรวมแต่เพิ่งคุยบริการเจาะจง (≤30 นาที) = AI
+    · ถามรวมล้วน/ถามรายหมวด = template (ราคาการันตี ไม่เสีย token) — AI มีกติกาโปร+วันหมดเขตใน system prompt อยู่แล้ว"""
+    if payload == "IB_PRICE":
+        return True
+    if not (_is_promo_query(user_text) and _is_thai(user_text)):
+        return False
+    if _promo_core(user_text, cfg):
+        return False
+    hist = _history.get(sender_key, [])
+    if hist and time.time() - _last_turn_at.get(sender_key, 0) < _PROMO_CTX_TTL:
+        prev_user = next((t for r, t in reversed(hist) if r == "user"), "")
+        if prev_user and not _is_promo_query(prev_user) and _promo_core(prev_user, cfg):
+            return False
+    return True
+
+
 def _promo_reply(cfg: dict, user_text: str) -> str:
     """คำตอบตอนลูกค้าถามราคา/โปรแบบรวมๆ (ปุ่ม IB_PRICE หรือพิมพ์ "มีโปรอะไรบ้าง") — deterministic ไม่ผ่าน AI
     14 ต.ค. 2569 (คุณอาย Lullabell ขอ): ลิสต์เต็มทุกหมวดยาวเกิน ลูกค้าอ่านไม่ไหว → ถ้าร้านตั้ง `promo_summary`
@@ -922,6 +972,7 @@ def _remember_turn(sender_id: str, user_text: str, reply: str) -> None:
     hist = _history.get(sender_id, [])
     hist = hist + [("user", user_text), ("bot", reply)]
     _history[sender_id] = hist[-_MAX_TURNS * 2:]
+    _last_turn_at[sender_id] = time.time()
 
 
 def generate_reply(client, cfg: dict, sender_id: str, user_text: str,
@@ -1196,7 +1247,7 @@ def handle_line(data: dict, client, channel_token: str, slug: str = "lullabell",
             continue
         # ถามโปรโมชั่นตรงๆ (เช่น "มีโปรอะไรบ้างคะ", "ขอทราบโปรโมชั่น") — ตอบจาก template ตรงจาก config
         # เลย ไม่ผ่าน AI เช่นเดียวกับ handle() (FB/IG) การันตีคำตอบ 100% ไม่มีวันเงียบ/ตอบห้วน (21 ก.ค. 2026)
-        if _is_promo_query(user_text) and _is_thai(user_text):
+        if _use_promo_template(cfg, history_key, user_text):
             reply = _promo_reply(cfg, user_text)
             _remember_turn(history_key, user_text, reply)
             send_line_reply(channel_token, reply_token, reply)
@@ -1360,7 +1411,7 @@ def handle(data: dict, client, page_token: str, slug: str = "lullabell",
                 # ตอบห้วนแค่ไหนก็ตาม (21 ก.ค. 2026 ตามคำขอ sIRImeta หลังเจอเคส AI ตอบห้วนไม่ครบ) และไม่เสีย
                 # token แม้แต่บาทเดียว (คำถามราคาที่พิมพ์เองแบบเจาะจง เช่น "ทำสีราคาเท่าไหร่" ไม่มีคำว่า "โปร"
                 # เลย ไม่โดนจับ ยังให้ AI ตอบตามเดิม เพราะต้องใช้ความเข้าใจบริบท)
-                if (effective_payload == "IB_PRICE" or _is_promo_query(user_text)) and _is_thai(user_text):
+                if _is_thai(user_text) and _use_promo_template(cfg, sender, user_text, effective_payload):
                     reply = _promo_reply(cfg, user_text)
                     _remember_turn(sender, user_text, reply)
                     _send_with_quick_replies(page_token, sender, reply, quick_replies=default_qr)
