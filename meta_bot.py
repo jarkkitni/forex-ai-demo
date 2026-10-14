@@ -698,6 +698,19 @@ def _render_promo_list(cfg: dict, only_category: str = "") -> str:
     return text or "ตอนนี้ยังไม่มีโปรโมชั่นพิเศษค่ะ สอบถามราคาปกติได้เลยนะคะ 🤍"
 
 
+def _promo_reply(cfg: dict, user_text: str) -> str:
+    """คำตอบตอนลูกค้าถามราคา/โปรแบบรวมๆ (ปุ่ม IB_PRICE หรือพิมพ์ "มีโปรอะไรบ้าง") — deterministic ไม่ผ่าน AI
+    14 ต.ค. 2569 (คุณอาย Lullabell ขอ): ลิสต์เต็มทุกหมวดยาวเกิน ลูกค้าอ่านไม่ไหว → ถ้าร้านตั้ง `promo_summary`
+    (ข้อความสรุปสั้นที่ร้านเขียนเอง) ให้ส่งตัวนั้นแทน · ถามเจาะหมวด (เช่น "โปรทำผม") ยังได้ลิสต์เฉพาะหมวดเหมือนเดิม
+    · ถามเจาะบริการ → AI ตอบรายละเอียดจากเมนูตามเดิม · โปรหมดอายุ (promo_end) → ไม่ส่งสรุปเก่า ใช้ข้อความโปรจบแทน
+    ไม่ตั้ง promo_summary = พฤติกรรมเดิมทุกอย่าง (ร้านอื่นไม่กระทบ)"""
+    cat = _detect_promo_category(user_text, cfg)
+    summary = str(cfg.get("promo_summary") or "").strip()
+    if summary and not cat and not _promo_expired(cfg):
+        return summary
+    return _render_promo_list(cfg, only_category=cat)
+
+
 def _render_location_text(cfg: dict) -> str:
     """ข้อความที่อยู่ร้าน + จุดสังเกต + ลิงก์แผนที่ แบบ template ตรงจาก config ล้วนๆ ไม่ผ่าน AI เลย
     ใช้ตอน AI ล่มสนิทเวลาลูกค้าถามที่อยู่ กันบอทเงียบ/ตอบแค่ "รอสักครู่" ทั้งที่ตอบได้จริงจากข้อมูลที่มีอยู่แล้ว"""
@@ -1184,7 +1197,7 @@ def handle_line(data: dict, client, channel_token: str, slug: str = "lullabell",
         # ถามโปรโมชั่นตรงๆ (เช่น "มีโปรอะไรบ้างคะ", "ขอทราบโปรโมชั่น") — ตอบจาก template ตรงจาก config
         # เลย ไม่ผ่าน AI เช่นเดียวกับ handle() (FB/IG) การันตีคำตอบ 100% ไม่มีวันเงียบ/ตอบห้วน (21 ก.ค. 2026)
         if _is_promo_query(user_text) and _is_thai(user_text):
-            reply = _render_promo_list(cfg, only_category=_detect_promo_category(user_text, cfg))
+            reply = _promo_reply(cfg, user_text)
             _remember_turn(history_key, user_text, reply)
             send_line_reply(channel_token, reply_token, reply)
             result["replied"] += 1
@@ -1348,7 +1361,7 @@ def handle(data: dict, client, page_token: str, slug: str = "lullabell",
                 # token แม้แต่บาทเดียว (คำถามราคาที่พิมพ์เองแบบเจาะจง เช่น "ทำสีราคาเท่าไหร่" ไม่มีคำว่า "โปร"
                 # เลย ไม่โดนจับ ยังให้ AI ตอบตามเดิม เพราะต้องใช้ความเข้าใจบริบท)
                 if (effective_payload == "IB_PRICE" or _is_promo_query(user_text)) and _is_thai(user_text):
-                    reply = _render_promo_list(cfg, only_category=_detect_promo_category(user_text, cfg))
+                    reply = _promo_reply(cfg, user_text)
                     _remember_turn(sender, user_text, reply)
                     _send_with_quick_replies(page_token, sender, reply, quick_replies=default_qr)
                     inbox_log(slug, sender, "bot", reply, platform)
