@@ -705,7 +705,8 @@ _PROMO_FILLER_RE = re.compile(
     r"โปรโมชั่น|โปรโมชัน|promotions?|promo|โปร|สวัสดี|หวัดดี|hello|hi|"
     r"หรือเปล่า|รึเปล่า|เปล่า|เท่าไหร่|เท่าไร|ทั้งหมด|ช่วงนี้|ตอนนี้|เดือนนี้|อะไร|บ้าง|"
     r"ไหม|มั้ย|มั๊ย|ป่ะ|ปะ|มี|คะ|ค่ะ|ค้า|ค่า|คับ|ครับ|จ้า|จ้ะ|นะ|หน่อย|ขอ|ทราบ|ดู|ราคา|"
-    r"อยู่|ไม่|ยัง|ล่ะ|แล้ว|สนใจ|อยาก|หรอ|เหรอ|ด้วย|ได้", re.I)
+    r"อยู่|ไม่|ยัง|ล่ะ|แล้ว|สนใจ|อยาก|หรอ|เหรอ|ด้วย|ได้|บริการ|เมนู|บ้าน|price|menu", re.I)
+_PRICE_GENERAL_RE = re.compile(r"ราคา|บริการ|เมนู|price|menu", re.I)
 _PROMO_CTX_TTL = 30 * 60   # คุยเรื่องบริการเจาะจงภายใน 30 นาที แล้วถาม "มีโปรไหม" = ถามโปรของบริการนั้น
 
 
@@ -736,7 +737,14 @@ def _use_promo_template(cfg: dict, sender_key: str, user_text: str, payload: str
     · ถามรวมล้วน/ถามรายหมวด = template (ราคาการันตี ไม่เสีย token) — AI มีกติกาโปร+วันหมดเขตใน system prompt อยู่แล้ว"""
     if payload == "IB_PRICE":
         return True
-    if not (_is_promo_query(user_text) and _is_thai(user_text)):
+    # 15 ต.ค. 2569: ลูกค้าจริงพิมพ์ "ขอทราบราคาค่ะ" / "มีบริการอะไรบ้าง" (ไม่มีคำว่าโปร) → เดิมไป AI ได้ลิสต์ยาว+แปะวันหมดเขต
+    # ซ้ำทุกบรรทัด · ร้านที่ตั้ง promo_summary ไว้ (ยังไม่หมดเขต) ให้คำถามราคา/บริการแบบรวมๆ ได้สรุปสั้นของร้านด้วย
+    # ถามราคาเจาะหมวด/บริการ (เช่น "ราคาทำเล็บ") ยังไป AI ที่มีสคริปต์ร้านเหมือนเดิม · ร้านไม่ตั้ง promo_summary = เหมือนเดิม
+    is_promo = _is_promo_query(user_text)
+    is_price_general = (not is_promo and bool(str(cfg.get("promo_summary") or "").strip())
+                        and not _promo_expired(cfg) and bool(_PRICE_GENERAL_RE.search(user_text or ""))
+                        and not _detect_promo_category(user_text, cfg))
+    if not ((is_promo or is_price_general) and _is_thai(user_text)):
         return False
     if _promo_core(user_text, cfg):
         return False
@@ -894,7 +902,8 @@ def _system_prompt(cfg: dict) -> str:
             f"\n- ราคาโปรโมชั่นในกลุ่มโปรทุกรายการมีถึง {promo_end}{_promo_list_txt} — ทุกครั้งที่บอกราคาโปร ให้บอกวันหมดเขตนี้สั้นๆ 1 ครั้งในคำตอบ "
             f"(เช่น \"โปรถึง {promo_end} นี้นะคะ\") คำตอบที่ไม่ได้พูดถึงราคาโปรไม่ต้องพูดถึงวันหมดเขต "
             "· บริการที่ไม่อยู่ในรายการโปร ห้ามพูดว่าเป็นโปร/ราคาพิเศษ และห้ามแปะวันหมดเขตโปรท้ายคำตอบเด็ดขาด "
-            "(ถ้าลูกค้าถามโปรของบริการนั้น ให้บอกตรงๆ ว่าบริการนี้ยังไม่มีโปร แล้วบอกราคาปกติ)")
+            "(ถ้าลูกค้าถามโปรของบริการนั้น ให้บอกตรงๆ ว่าบริการนี้ยังไม่มีโปร แล้วบอกราคาปกติ) "
+            "· วันหมดเขตโปรให้เขียนครั้งเดียวท้ายคำตอบ ห้ามแปะ \"(โปรถึง ...)\" ซ้ำทีละบรรทัด/ทีละรายการ")
     _scripts_cfg = cfg.get("reply_scripts")
     scripts = []
     for x in (_scripts_cfg if isinstance(_scripts_cfg, list) else []):
