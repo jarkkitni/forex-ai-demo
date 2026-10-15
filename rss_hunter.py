@@ -14,6 +14,12 @@ RSS Hunter v2 — ดักงานจากนอก FastWork ผ่าน RSS
   - จำงานที่เห็นแล้วใน Supabase hunter_seen_jobs (v1 จำแค่ในแรม → Render หลับ/ตื่นทีไร แจ้งซ้ำ)
   - ตัดโพสต์เก่ากว่า MAX_AGE_HOURS ทิ้ง (feed ใหม่จะไม่ระเบิดแจ้งงานเก่าทั้งหน้า)
   - ร่างข้อเสนอภาษาอังกฤษให้งานต่างประเทศ ภาษาไทยให้งานไทย
+
+v3 (15 ต.ค. 2026):
+  - เอาเฉพาะโพสต์ที่มีอีเมลให้สมัคร (RSS_REQUIRE_EMAIL=0 เพื่อปิด) — Claude ส่งอีเมลแทนได้, Reddit DM ไม่ได้
+  - ตัดงานที่จำกัดประเทศนอกเอเชีย/ต้องเข้าออฟฟิศ 2 ด่าน: regex ก่อนเรียก AI + AI ตอบ location_ok
+    (RSS_REGION_FILTER=0 เพื่อปิด) · งานที่พูดถึง Asia/SEA/ไทย/GMT+7 ได้ป้าย 📍 และดันเกรด B → A
+  - ร่างข้อเสนอเป็นเนื้ออีเมล + หัวเรื่อง และห้าม AI แต่งประสบการณ์ที่ไม่มีจริง
 """
 import os
 import re
@@ -75,6 +81,70 @@ NOISE = [
     "วิธีทำ", "สอนทำ", "คอร์สเรียน", "อบรม", "รีวิว", "โปรโมชั่น",
     "how to", "tutorial", "course", "showcase", "i built", "i made",
 ]
+
+# ====== ตัวกรอง v3 (15 ต.ค. 2026): เอาเฉพาะงานที่ "สมัครทางอีเมลได้" + ไม่จำกัดประเทศนอกเอเชีย ======
+# เหตุผล: Claude ส่งอีเมลสมัครแทนได้ทันทีผ่าน Gmail แต่เปิด Reddit ในเบราว์เซอร์ไม่ได้ (โดนบล็อก)
+#   งานที่ต้องตอบใต้โพสต์/DM จึงต้องทำมือทุกครั้ง ส่วนงานที่ลูกค้าอยู่ US/EU only สมัครไปก็เสียเวลาเปล่า
+# ปิดได้ด้วย env: RSS_REQUIRE_EMAIL=0 (กลับไปรับงาน DM ด้วย) · RSS_REGION_FILTER=0 (ไม่ตัดตามประเทศ)
+REQUIRE_EMAIL = os.environ.get("RSS_REQUIRE_EMAIL", "1").strip().lower() not in ("0", "false", "no", "off")
+REGION_FILTER = os.environ.get("RSS_REGION_FILTER", "1").strip().lower() not in ("0", "false", "no", "off")
+
+_EMAIL_RE = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9\-]+(?:\.[A-Za-z0-9\-]+)*\.[A-Za-z]{2,}")
+# อีเมลที่ไม่ใช่ช่องทางสมัครงาน (ระบบ/ตัวอย่าง/ของแพลตฟอร์มเอง)
+_EMAIL_IGNORE = ("example.com", "example.org", "noreply", "no-reply", "donotreply",
+                 "reddit.com", "redditmail", "n8n.io", "sentry.io", "@email.com", "@domain.com")
+
+# จำกัดพื้นที่นอกเอเชีย = ตัดทิ้ง (เขียนเป็น regex เพราะคำสั้นอย่าง "us" ต้องมีขอบเขตคำ)
+REGION_BLOCK = [
+    r"\b(?:us|u\.s\.|usa|uk|eu|canada|australia|europe|latam|north america)[- ]?(?:only|based only)\b",
+    r"\bonly (?:us|u\.s\.|usa|uk|eu|canada|australia|europe|latam|north america)\b",
+    r"\b(?:us|uk|eu|europe|canada|australia)[- ]based (?:candidates?|developers?|freelancers?|applicants?)\b",
+    r"\bmust (?:be )?(?:based|located|reside|live) in (?:the )?(?:us|u\.s\.|usa|united states|uk|united kingdom|eu|europe|canada|australia|north america|latam)\b",
+    r"\b(?:us|u\.s\.) (?:citizens?|residents?|persons?)\b",
+    r"\b(?:w-?2|1099)\b", r"\bsecurity clearance\b",
+    r"\b(?:on-?site|in[- ]person|in office|hybrid (?:role|position|work))\b",
+    r"\bmust (?:work|be available|overlap)[^.]{0,40}\b(?:est|pst|cst|mst|et|pt|cet|gmt|bst)\b(?! *\+ *[5-9])",
+]
+_REGION_BLOCK_RE = [re.compile(p, re.I) for p in REGION_BLOCK]
+
+# พูดถึงเอเชีย/ไทย/ทำได้ทุกที่ = บวกคะแนน (ดันเกรด B → A)
+REGION_BOOST = [
+    r"\basia\b", r"\bsoutheast asia\b", r"\bsea\b(?= ?(?:region|based|builders?|time))", r"\bapac\b",
+    r"\bthailand\b", r"\bthai\b", r"\bbangkok\b", r"\bsingapore\b", r"\bmalaysia\b",
+    r"\bphilippines\b", r"\bvietnam\b", r"\bindonesia\b",
+    r"\b(?:gmt|utc) ?\+ ?[5-9]\b", r"\bworldwide\b", r"\banywhere\b", r"\bany time ?zone\b",
+    r"ไทย", r"ประเทศไทย",
+]
+_REGION_BOOST_RE = [re.compile(p, re.I) for p in REGION_BOOST]
+
+
+def _extract_emails(*texts: str) -> list:
+    """ดึงอีเมลที่ใช้สมัครงานได้จากโพสต์ (รองรับแบบเลี่ยงบอท 'name [at] site [dot] com' ด้วย)"""
+    joined = " ".join(t or "" for t in texts)
+    joined = re.sub(r"\s*[\[\(]\s*at\s*[\]\)]\s*", "@", joined, flags=re.I)
+    joined = re.sub(r"\s*[\[\(]\s*dot\s*[\]\)]\s*", ".", joined, flags=re.I)
+    found = []
+    for m in _EMAIL_RE.findall(joined):
+        e = m.strip(".").lower()
+        if any(bad in e for bad in _EMAIL_IGNORE):
+            continue
+        if e not in found:
+            found.append(e)
+    return found
+
+
+def _region_blocked(text: str) -> str:
+    """คืนข้อความที่เจอ ถ้างานจำกัดพื้นที่นอกเอเชีย / ต้องเข้าออฟฟิศ — ไม่เจอคืน ''"""
+    for r in _REGION_BLOCK_RE:
+        m = r.search(text)
+        if m:
+            return m.group(0)
+    return ""
+
+
+def _region_boost(text: str) -> list:
+    return list(dict.fromkeys(m.group(0).lower() for r in _REGION_BOOST_RE for m in [r.search(text)] if m))
+
 
 _log: list = []
 
@@ -187,14 +257,24 @@ def _classify(item: dict) -> tuple:
     if not any(s in text for s in HIRING_SIGNALS):
         return (None, [])
 
+    # v3: ต้องมีอีเมลให้สมัคร (เก็บไว้ใน item ให้ข้อความ LINE/ร่างอีเมลใช้ต่อ)
+    item["emails"] = _extract_emails(item["title"], item["summary"])
+    if REQUIRE_EMAIL and not item["emails"]:
+        return (None, [])
+    # v3: จำกัดประเทศนอกเอเชีย / ต้องเข้าออฟฟิศ = ตัดทิ้ง
+    if REGION_FILTER and not thai and _region_blocked(text):
+        return (None, [])
+    boost = _region_boost(text)
+
     list_a = (fh.SKILL_KEYWORDS + EN_GRADE_A) if thai else EN_GRADE_A
     list_b = (fh.GRADE_B_KEYWORDS + EN_GRADE_B) if thai else EN_GRADE_B
     hit_a = [k for k in list_a if fh._kw_hit(k, text)]
     if hit_a:
-        return ("A", list(dict.fromkeys(hit_a)))
+        return ("A", list(dict.fromkeys(hit_a + [f"📍{b}" for b in boost])))
     hit_b = [k for k in list_b if fh._kw_hit(k, text)]
     if hit_b:
-        return ("B", list(dict.fromkeys(hit_b)))
+        # งานที่ระบุเอเชีย/ไทยชัดๆ คู่แข่งน้อยกว่า → ดันขึ้นเป็นเกรด A
+        return ("A" if boost else "B", list(dict.fromkeys(hit_b + [f"📍{b}" for b in boost])))
     return (None, [])
 
 
@@ -226,13 +306,24 @@ The developer does NOT take trading / forex / crypto / investment work.
 Many posts are discussions, tutorials or people offering their own services. Only a person
 or company that wants to PAY someone for work counts as a real job.
 
+The developer lives in Thailand (GMT+7) and works remotely only. Set "location_ok" to false
+if the post requires a specific country/region outside Asia (e.g. US/EU only, US citizens),
+on-site/in-person work, or full working hours in a far-off time zone. Otherwise true.
+
+The developer will apply BY EMAIL (to {", ".join(item.get("emails") or []) or "the address in the post"}),
+so the proposal is the body of that email. HONESTY RULE: never invent experience, numbers of
+clients/students, years, certificates or results. Only claim the skills listed above and point
+to the portfolio. If the post asks for specific info (rate, time zone, examples), answer each point.
+
 Reply with JSON only, no other text:
 {{
   "is_real_job": <true/false>,
+  "location_ok": <true/false>,
   "fit_score": <0-100 how well it fits the skills>,
   "budget": "<budget if stated, else 'not stated'>",
   "summary_th": "<สรุปงานเป็นภาษาไทย 1-2 ประโยค>",
   "how_to_contact": "<how to apply/contact, from the post>",
+  "email_subject": "<short email subject line for the application>",
   "proposal": "<{lang_rule}>"
 }}"""
     raw = fh._ai(client, prompt, max_tokens=900, smart=True, notify_fn=notify_fn,
@@ -250,10 +341,12 @@ def _msg(item: dict, a: dict, matched: list, grade: str) -> str:
         f"📰 {item['title'][:90]}\n"
         f"📋 {a.get('summary_th', '')}\n"
         f"💰 งบ: {a.get('budget', '-')}\n"
-        f"🎯 ตรง: {', '.join(matched[:5])}\n"
+        f"🎯 ตรง: {', '.join(matched[:6])}\n"
+        f"📧 สมัครทางอีเมล: {', '.join(item.get('emails') or []) or '-'}\n"
         f"📞 {a.get('how_to_contact', 'ดูในลิงก์')}\n"
         f"━━━━━━━━━━━━\n"
-        f"✍️ ร่างข้อเสนอ (copy ไปใช้ได้เลย):\n\n{a.get('proposal', '')}\n"
+        f"✉️ หัวเรื่อง: {a.get('email_subject', '')}\n"
+        f"✍️ ร่างอีเมล (copy ไปใช้ได้เลย หรือสั่ง Claude ส่งให้):\n\n{a.get('proposal', '')}\n"
         f"━━━━━━━━━━━━\n"
         f"🔗 {item['link']}"
     )
@@ -266,7 +359,8 @@ def _msg_offline(item: dict, matched: list, grade: str) -> str:
         f"━━━━━━━━━━━━\n"
         f"📰 {item['title'][:90]}\n"
         f"📝 {item['summary'][:220]}...\n"
-        f"🎯 ตรง: {', '.join(matched[:5])}\n"
+        f"🎯 ตรง: {', '.join(matched[:6])}\n"
+        f"📧 สมัครทางอีเมล: {', '.join(item.get('emails') or []) or '-'}\n"
         f"━━━━━━━━━━━━\n"
         f"⚠️ รอบนี้ AI ล่มทุกเจ้า — ยังไม่มีบทวิเคราะห์/ร่างข้อเสนอ\n"
         f"🔗 {item['link']}"
@@ -345,7 +439,11 @@ def run(anthropic_client, push_line_fn, line_user_id: str,
         entry.update({"score": score, "summary": a.get("summary_th", ""),
                       "is_real_job": a.get("is_real_job", False)})
 
-        if a.get("is_real_job") and score >= min_score:
+        entry["emails"] = it.get("emails") or []
+        entry["location_ok"] = a.get("location_ok", True)
+        # location_ok: ด่านที่ 2 ต่อจาก regex — AI จับเคสที่เขียนอ้อมๆ เช่น "need someone in Austin"
+        if (a.get("is_real_job") and score >= min_score
+                and (not REGION_FILTER or a.get("location_ok", True) is not False)):
             ok = push_line_fn(line_user_id, _msg(it, a, matched, grade),
                               buttons={"copy": a.get("proposal", ""), "url": it["link"]})
         else:
