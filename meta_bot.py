@@ -1329,6 +1329,126 @@ def _send_map_image(page_token: str, sender: str, cfg: dict, is_ig: bool) -> Non
         print(f"[meta_bot] ส่งรูปแผนที่ error: {e}", flush=True)
 
 
+# ---- รวมข้อความ + ตอบนอกเธรด webhook (20 ต.ค. 2026) ----
+# เคสจริง: ลูกค้าร้านทำผมพิมพ์ 2 ข้อความติดกัน บอทตอบเต็มๆ 2 รอบ ปิดท้ายชวนจองซ้ำ 2 ที
+# ("มันตอบซ้อนกันซับกัน") — เดิม handle() เรียก AI ทีละ event ในเธรด webhook เลย ช้าด้วย
+# (Meta รอ 200 นานจนส่ง event ซ้ำ) และไม่รู้ว่าลูกค้ายังพิมพ์ไม่จบ
+# ตอนนี้: ข้อความพิมพ์เองเข้าคิวต่อ (slug, sender) รอเงียบ _DEBOUNCE_SEC วิ แล้วรวมเป็นข้อความเดียว
+# ตอบครั้งเดียว · webhook ตอบ 200 ทันที · ตอบลูกค้าคนเดียวกันทีละคำตอบ (lock ต่อคน) ลำดับไม่สลับ
+# ข้อจำกัด: คิวอยู่ในแรม (โปรเซสเดียวตาม Procfile) ถ้า restart ภายในไม่กี่วินาทีนั้น ข้อความในคิวหาย
+_DEBOUNCE_SEC = float(os.environ.get("META_DEBOUNCE_SEC", "6") or 6)
+_pending: dict = {}            # (slug, sender) -> {"texts": [...], "ctx": {...}, "timer": Timer}
+_pending_lock = _threading.Lock()
+_sender_locks: dict = {}       # (slug, sender) -> Lock ตอบทีละคำตอบต่อคน
+
+
+def _sender_lock(key):
+    with _pending_lock:
+        lk = _sender_locks.get(key)
+        if lk is None:
+            lk = _sender_locks[key] = _threading.Lock()
+        return lk
+
+
+def _run_reply(key, ctx, user_text, effective_payload=""):
+    try:
+        with _sender_lock(key):
+            _reply_one(ctx, user_text, effective_payload)
+    except Exception as e:
+        print(f"[meta_bot] _run_reply error key={key}: {e}", flush=True)
+        traceback.print_exc()
+
+
+def _queue_text(key, ctx, text):
+    """เก็บข้อความเข้าคิว แล้วตั้งเวลาใหม่ทุกครั้งที่มีข้อความเพิ่ม (debounce)"""
+    with _pending_lock:
+        p = _pending.get(key)
+        if p:
+            p["timer"].cancel()
+            p["texts"].append(text)
+            p["ctx"] = ctx
+        else:
+            p = _pending[key] = {"texts": [text], "ctx": ctx}
+        t = _threading.Timer(_DEBOUNCE_SEC, _flush_pending, args=(key,))
+        t.daemon = True
+        p["timer"] = t
+        t.start()
+
+
+def _pop_pending(key):
+    with _pending_lock:
+        p = _pending.pop(key, None)
+        if p:
+            p["timer"].cancel()
+        return p
+
+
+def _flush_pending(key):
+    p = _pop_pending(key)   # ถ้า timer เก่ายิงชนกับข้อความใหม่ ตัวที่ pop ก่อนได้ทุกข้อความ ตัวหลังได้ None = ไม่ซ้ำ
+    if p:
+        _run_reply(key, p["ctx"], "\n".join(p["texts"]))
+
+
+def _dispatch_now(key, ctx, text, payload):
+    """ปุ่ม: ตอบข้อความที่ค้างคิวก่อน (ถ้ามี) แล้วค่อยตอบปุ่ม — ทั้งหมดในเธรดแยก"""
+    p = _pop_pending(key)
+
+    def _run():
+        if p:
+            _run_reply(key, p["ctx"], "\n".join(p["texts"]))
+        _run_reply(key, ctx, text, payload)
+    _threading.Thread(target=_run, daemon=True).start()
+
+
+def _reply_one(ctx, user_text, effective_payload=""):
+    """ตอบลูกค้า 1 ครั้ง (ย้ายมาจากลูปใน handle() เดิม) — user_text อาจเป็นหลายข้อความที่รวมแล้ว"""
+    client, cfg, sender = ctx["client"], ctx["cfg"], ctx["sender"]
+    page_token, slug, platform = ctx["page_token"], ctx["slug"], ctx["platform"]
+    is_ig, notify_fn, line_user_id = ctx["is_ig"], ctx["notify_fn"], ctx["line_user_id"]
+    # เลือกชุดปุ่มลัดให้ตรงภาษาที่ลูกค้าใช้ล่าสุด (ไทย/อังกฤษ) — ปุ่มเลือกโปร dynamic มาก่อนเสมอถ้ามี
+    default_qr = QUICK_REPLIES if _is_thai(user_text) else QUICK_REPLIES_EN
+    try:
+        # ปุ่ม "ดูราคา/โปรโมชั่น" (IB_PRICE) หรือพิมพ์ถามโปรโมชั่นเองตรงๆ (เช่น "มีโปรอะไรบ้างคะ",
+        # "ขอทราบโปรโมชั่น", "ขอทราบโปรทั้งหมด") — ตอบจาก template ตรงจาก config เลย ไม่ผ่าน AI
+        # การันตีคำตอบ 100% ไม่มีวันเงียบ/ปล่อยว่าง/ตอบแค่รอสักครู่ ไม่ว่า Claude/Groq/Gemini จะปกติ/ล่ม/
+        # ตอบห้วนแค่ไหนก็ตาม (21 ก.ค. 2026 ตามคำขอ sIRImeta หลังเจอเคส AI ตอบห้วนไม่ครบ) และไม่เสีย
+        # token แม้แต่บาทเดียว (คำถามราคาที่พิมพ์เองแบบเจาะจง เช่น "ทำสีราคาเท่าไหร่" ไม่มีคำว่า "โปร"
+        # เลย ไม่โดนจับ ยังให้ AI ตอบตามเดิม เพราะต้องใช้ความเข้าใจบริบท)
+        if _is_thai(user_text) and _use_promo_template(cfg, sender, user_text, effective_payload):
+            reply = _promo_reply(cfg, user_text)
+            _remember_turn(sender, user_text, reply)
+            _send_with_quick_replies(page_token, sender, reply, quick_replies=default_qr)
+            inbox_log(slug, sender, "bot", reply, platform)
+            return
+        reply, promo_choices = generate_reply(client, cfg, sender, user_text,
+                               notify_fn=notify_fn, line_user_id=line_user_id, slug=slug)
+        qr = _build_promo_quick_replies(promo_choices) if promo_choices else default_qr
+        _send_with_quick_replies(page_token, sender, reply, quick_replies=qr,
+                                  fallback_names=promo_choices)
+        inbox_log(slug, sender, "bot", reply, platform)
+        # ลูกค้าถามที่อยู่/แผนที่ (กดปุ่ม IB_LOCATION หรือพิมพ์เอง) → แนบรูปการ์ดแผนที่ตามหลังข้อความ
+        if effective_payload == "IB_LOCATION" or _is_location_query(user_text):
+            _send_map_image(page_token, sender, cfg, is_ig)
+    except Exception as e:
+        # AI ตาย ai_guard เด้ง LINE ให้แล้ว (ถ้าเป็นสาเหตุ) — ส่งข้อความ fallback ให้ลูกค้าไม่เงียบ
+        # เดิม except เปล่าไม่ log อะไรเลย — เจอเคสจริง 20 ก.ค. ลูกค้าโดน fallback ซ้ำๆ ตอนกดปุ่ม
+        # "ที่อยู่/เวลาเปิด" แต่ไม่มีทาง debug จาก Render logs ได้เลยว่า exception จริงคืออะไร
+        print(f"[meta_bot] generate_reply error sender={sender} payload={effective_payload}: {e}", flush=True)
+        traceback.print_exc()
+        # ใช้ retry_msg (ไม่ใช่ handoff_msg) — กรณีนี้คือ AI ดีเลย์/สะดุดชั่วคราว ไม่ใช่เคสที่ต้องส่งต่อแอดมินจริงๆ
+        # ลูกค้าทักท้วง 20 ก.ค. ว่าข้อความ "ส่งต่อให้แอดมิน" ทำให้เข้าใจผิดว่าเป็นเรื่องใหญ่ ทั้งที่แค่รอสักครู่ก็ตอบได้แล้ว
+        # ก่อนใช้ retry_msg เฉยๆ ลองเดาเจตนาก่อน — ถ้าถามราคา/ที่อยู่ ตอบจาก template จริงได้เลยไม่ต้องพึ่ง AI
+        # (เพิ่ม 21 ก.ค. — เคส Claude+Groq ล่มพร้อมกัน กันลูกค้าเจอแค่ "รอสักครู่" ทั้งที่ตอบได้จริง)
+        fb = (_offline_fallback_answer(cfg, user_text)
+              or cfg.get("advisor", {}).get("retry_msg", f"รบกวนรอสักครู่นะคะ {_ai_name(cfg)}กำลังดูให้อยู่ค่ะ 🤍"))
+        _send_with_quick_replies(page_token, sender, fb, quick_replies=default_qr)
+        inbox_log(slug, sender, "bot", fb, platform)
+        # AI ล่มสนิทแต่ลูกค้าถามที่อยู่ → แนบรูปการ์ดแผนที่ให้เหมือนตอน AI ตอบได้ปกติ (เพิ่ม 21 ก.ค. ตามคำขอ
+        # sIRImeta) กันลูกค้าที่ถามที่อยู่พลาดรูปแผนที่สวยๆ ไปแค่เพราะ AI ดันล่มพอดีตอนนั้น
+        if effective_payload == "IB_LOCATION" or _is_location_query(user_text):
+            _send_map_image(page_token, sender, cfg, is_ig)
+
+
 def handle(data: dict, client, page_token: str, slug: str = "lullabell",
            notify_fn=None, line_user_id: str = "", default_page_id: str = "") -> dict:
     """
@@ -1423,51 +1543,18 @@ def handle(data: dict, client, page_token: str, slug: str = "lullabell",
             if not _rate_ok(sender):
                 result["skipped"] += 1
                 continue
-            # เลือกชุดปุ่มลัดให้ตรงภาษาที่ลูกค้าใช้ล่าสุด (ไทย/อังกฤษ) — ปุ่มเลือกโปร dynamic มาก่อนเสมอถ้ามี
-            default_qr = QUICK_REPLIES if _is_thai(user_text) else QUICK_REPLIES_EN
-            try:
-                # ปุ่ม "ดูราคา/โปรโมชั่น" (IB_PRICE) หรือพิมพ์ถามโปรโมชั่นเองตรงๆ (เช่น "มีโปรอะไรบ้างคะ",
-                # "ขอทราบโปรโมชั่น", "ขอทราบโปรทั้งหมด") — ตอบจาก template ตรงจาก config เลย ไม่ผ่าน AI
-                # การันตีคำตอบ 100% ไม่มีวันเงียบ/ปล่อยว่าง/ตอบแค่รอสักครู่ ไม่ว่า Claude/Groq/Gemini จะปกติ/ล่ม/
-                # ตอบห้วนแค่ไหนก็ตาม (21 ก.ค. 2026 ตามคำขอ sIRImeta หลังเจอเคส AI ตอบห้วนไม่ครบ) และไม่เสีย
-                # token แม้แต่บาทเดียว (คำถามราคาที่พิมพ์เองแบบเจาะจง เช่น "ทำสีราคาเท่าไหร่" ไม่มีคำว่า "โปร"
-                # เลย ไม่โดนจับ ยังให้ AI ตอบตามเดิม เพราะต้องใช้ความเข้าใจบริบท)
-                if _is_thai(user_text) and _use_promo_template(cfg, sender, user_text, effective_payload):
-                    reply = _promo_reply(cfg, user_text)
-                    _remember_turn(sender, user_text, reply)
-                    _send_with_quick_replies(page_token, sender, reply, quick_replies=default_qr)
-                    inbox_log(slug, sender, "bot", reply, platform)
-                    result["replied"] += 1
-                    continue
-                reply, promo_choices = generate_reply(client, cfg, sender, user_text,
-                                       notify_fn=notify_fn, line_user_id=line_user_id, slug=slug)
-                qr = _build_promo_quick_replies(promo_choices) if promo_choices else default_qr
-                _send_with_quick_replies(page_token, sender, reply, quick_replies=qr,
-                                          fallback_names=promo_choices)
-                inbox_log(slug, sender, "bot", reply, platform)
-                result["replied"] += 1
-                # ลูกค้าถามที่อยู่/แผนที่ (กดปุ่ม IB_LOCATION หรือพิมพ์เอง) → แนบรูปการ์ดแผนที่ตามหลังข้อความ
-                if effective_payload == "IB_LOCATION" or _is_location_query(user_text):
-                    _send_map_image(page_token, sender, cfg, is_ig)
-            except Exception as e:
-                # AI ตาย ai_guard เด้ง LINE ให้แล้ว (ถ้าเป็นสาเหตุ) — ส่งข้อความ fallback ให้ลูกค้าไม่เงียบ
-                # เดิม except เปล่าไม่ log อะไรเลย — เจอเคสจริง 20 ก.ค. ลูกค้าโดน fallback ซ้ำๆ ตอนกดปุ่ม
-                # "ที่อยู่/เวลาเปิด" แต่ไม่มีทาง debug จาก Render logs ได้เลยว่า exception จริงคืออะไร
-                print(f"[meta_bot] generate_reply error sender={sender} payload={effective_payload}: {e}", flush=True)
-                traceback.print_exc()
-                # ใช้ retry_msg (ไม่ใช่ handoff_msg) — กรณีนี้คือ AI ดีเลย์/สะดุดชั่วคราว ไม่ใช่เคสที่ต้องส่งต่อแอดมินจริงๆ
-                # ลูกค้าทักท้วง 20 ก.ค. ว่าข้อความ "ส่งต่อให้แอดมิน" ทำให้เข้าใจผิดว่าเป็นเรื่องใหญ่ ทั้งที่แค่รอสักครู่ก็ตอบได้แล้ว
-                # ก่อนใช้ retry_msg เฉยๆ ลองเดาเจตนาก่อน — ถ้าถามราคา/ที่อยู่ ตอบจาก template จริงได้เลยไม่ต้องพึ่ง AI
-                # (เพิ่ม 21 ก.ค. — เคส Claude+Groq ล่มพร้อมกัน กันลูกค้าเจอแค่ "รอสักครู่" ทั้งที่ตอบได้จริง)
-                fb = (_offline_fallback_answer(cfg, user_text)
-                      or cfg.get("advisor", {}).get("retry_msg", f"รบกวนรอสักครู่นะคะ {_ai_name(cfg)}กำลังดูให้อยู่ค่ะ 🤍"))
-                _send_with_quick_replies(page_token, sender, fb, quick_replies=default_qr)
-                inbox_log(slug, sender, "bot", fb, platform)
-                # AI ล่มสนิทแต่ลูกค้าถามที่อยู่ → แนบรูปการ์ดแผนที่ให้เหมือนตอน AI ตอบได้ปกติ (เพิ่ม 21 ก.ค. ตามคำขอ
-                # sIRImeta) กันลูกค้าที่ถามที่อยู่พลาดรูปแผนที่สวยๆ ไปแค่เพราะ AI ดันล่มพอดีตอนนั้น
-                if effective_payload == "IB_LOCATION" or _is_location_query(user_text):
-                    _send_map_image(page_token, sender, cfg, is_ig)
-                result["skipped"] += 1
+            # 20 ต.ค. 2026: ไม่ตอบในเธรด webhook แล้ว — ส่งเข้าคิวต่อลูกค้า (ดู _queue_text/_dispatch_now)
+            # ข้อความพิมพ์เองจะรอ _DEBOUNCE_SEC เผื่อลูกค้าพิมพ์ต่อ แล้วรวมตอบครั้งเดียว
+            # ปุ่ม (postback/quick reply) ตอบทันที แต่ล้างข้อความที่ค้างคิวก่อน ให้ลำดับไม่สลับ
+            ctx = {"client": client, "cfg": cfg, "sender": sender, "page_token": page_token,
+                   "slug": slug, "platform": platform, "is_ig": is_ig,
+                   "notify_fn": notify_fn, "line_user_id": line_user_id}
+            key = (slug, sender)
+            if effective_payload:
+                _dispatch_now(key, ctx, user_text, effective_payload)
+            else:
+                _queue_text(key, ctx, user_text)
+            result["queued"] = result.get("queued", 0) + 1
     return result
 
 
