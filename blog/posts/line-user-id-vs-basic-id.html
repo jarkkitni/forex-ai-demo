@@ -1,0 +1,47 @@
+<p>ตอนตั้งระบบให้ส่งแจ้งเตือนเข้า LINE ของตัวเอง ช่องที่ต้องกรอกช่องหนึ่งคือ "user ID ของผู้รับ"
+ปัญหาคือในหน้า LINE Developers มี ID หลายตัวที่หน้าตาคล้ายกัน คนที่กรอกผิดส่วนใหญ่ไม่ได้พิมพ์ผิด
+แต่<strong>หยิบ ID ผิดตัวมาตั้งแต่แรก</strong> แล้ว API ก็ตอบ error กลับมาโดยที่ไม่บอกตรงๆ ว่าใส่ผิดประเภท</p>
+
+<h2>ID ที่เจอบ่อยในหน้า LINE Developers</h2>
+<table>
+<tr><th>ชื่อ</th><th>อยู่ที่ไหน</th><th>หน้าตา</th><th>ใช้ทำอะไร</th></tr>
+<tr><td><strong>Your user ID</strong></td><td>แท็บ <em>Basic settings</em> ของ channel ล่างสุด</td><td>ขึ้นต้นด้วย <code>U</code> ตามด้วยตัวอักษร 32 ตัว รวม <strong>33 ตัว</strong></td><td>ใช้เป็นผู้รับของ push message ได้</td></tr>
+<tr><td><strong>Bot basic ID</strong></td><td>แท็บ <em>Messaging API</em></td><td>ขึ้นต้นด้วย <code>@</code> สั้นๆ ประมาณ 9 ตัว</td><td>ให้คนค้นหาแล้วเพิ่มเพื่อน ใช้ส่ง push ไม่ได้</td></tr>
+<tr><td><strong>Channel ID</strong></td><td>แท็บ <em>Basic settings</em></td><td>ตัวเลขล้วน</td><td>ใช้ตอนขอ token / ยืนยันตัวตน channel</td></tr>
+</table>
+
+<div class="note">💡 วิธีเช็คเร็วที่สุด: <strong>นับตัวอักษร</strong> User ID ต้องยาว 33 ตัว ขึ้นต้นด้วยตัว U พิมพ์ใหญ่
+ถ้าขึ้นต้นด้วย @ หรือเป็นตัวเลขล้วน แปลว่าหยิบผิดตัว</div>
+
+<p>เพิ่มการตรวจนี้ไว้ในโค้ดตอนอ่านค่าตั้งค่าได้เลย ระบบจะฟ้องตั้งแต่ตอนเริ่มทำงาน ไม่ต้องรอจนส่งไม่ออก</p>
+<pre><code>import re
+def looks_like_line_user_id(v: str) -> bool:
+    return bool(re.fullmatch(r"U[0-9a-f]{32}", v or ""))
+
+if LINE_USER_ID and not looks_like_line_user_id(LINE_USER_ID):
+    print("⚠️ LINE_USER_ID ดูไม่เหมือน User ID (ต้องเป็น U + 32 ตัว) — หยิบ Bot basic ID มาหรือเปล่า?")</code></pre>
+
+<h2>User ID ของคนเดียวกัน เปลี่ยนตาม provider</h2>
+<p>เรื่องนี้ทำให้งงได้บ่อย User ID ใน Messaging API ไม่ได้เป็นของ "คน" ตายตัว แต่ผูกกับ
+<strong>คน × provider</strong> แปลว่า</p>
+<ul>
+<li>LINE OA หลายตัวที่อยู่ใต้ <strong>provider เดียวกัน</strong> เห็นคุณเป็น User ID เดียวกัน ใช้ค่าเดิมได้</li>
+<li>ถ้า OA อยู่<strong>คนละ provider</strong> User ID ของคุณจะเป็นคนละค่า ต้องเอาค่าจาก channel นั้นมาใช้</li>
+</ul>
+<p>ถ้าทำช่องแจ้งเตือนสำรองด้วย LINE OA ตัวที่สอง และตั้งไว้คนละ provider
+ต้องกรอก User ID แยกให้แต่ละช่อง ไม่อย่างนั้นช่องสำรองจะส่งไม่ออกตอนที่ต้องใช้จริง</p>
+
+<h2>ผู้รับเป็นลูกค้า ไม่ใช่ตัวเรา</h2>
+<p>ถ้าจะ push หาลูกค้า (เช่น เตือนก่อนถึงคิว) User ID ของลูกค้าไม่ได้ดูจากหน้า Developers
+แต่ได้จาก webhook ตอนลูกค้าทักมาหรือเพิ่มเพื่อน ในฟิลด์ <code>source.userId</code>
+ให้บันทึกค่านี้ลงฐานข้อมูลคู่กับข้อมูลการจอง แล้วใช้ค่านั้นตอนส่งแจ้งเตือน
+และลูกค้าต้องยังเป็นเพื่อนกับ OA อยู่ ถ้าบล็อกไปแล้วจะส่งไม่ได้</p>
+
+<h2>เช็คลิสต์เมื่อ push ไม่ออก</h2>
+<ol>
+<li>User ID ยาว 33 ตัว ขึ้นต้นด้วย U หรือเปล่า</li>
+<li>User ID มาจาก channel ใน provider เดียวกับ token ที่ใช้ส่งหรือเปล่า</li>
+<li>ผู้รับยังเป็นเพื่อนกับ OA อยู่ไหม</li>
+<li>Channel access token ยังใช้ได้ไหม</li>
+<li>โควตาข้อความเดือนนี้เต็มหรือยัง — ดูรายละเอียดที่ <a href="/blog/line-oa-message-quota">โควตา LINE OA 300 ข้อความ</a></li>
+</ol>

@@ -19,6 +19,7 @@ import seo_tracker
 import ai_guard
 import meta_bot
 import promptpay
+import blog
 
 app  = Flask(__name__)
 CORS(app)
@@ -59,6 +60,10 @@ BASE_HOST = BASE_URL.split("://", 1)[-1]     # ใช้ตอนพิมพ์
 # ทั้งคู่ตั้งบน Render เท่านั้น ห้าม hardcode (local/เทสต์จะไม่มี tag = พฤติกรรมเดิม)
 GTAG_IDS = [x.strip() for x in os.environ.get("GTAG_IDS", "").split(",") if x.strip()]
 GOOGLE_ADS_CONV_ORDER = os.environ.get("GOOGLE_ADS_CONV_ORDER", "").strip()
+# ---- หน้าแรกเป็นอะไร (24 ต.ค. 2026 — เปลี่ยนเว็บไปทางบทความ + AdSense) ----
+# "blog" (ดีฟอลต์) = หน้าแรกเป็นหน้ารวมบทความ · หน้าขาย BotKit ย้ายไปอยู่ /botkit
+# "botkit"         = ย้อนกลับเป็นแบบเดิมทันที (หน้าแรก = หน้าขาย, /botkit 301 มา /) ไม่ต้องแก้โค้ด
+HOME_MODE = os.environ.get("HOME_MODE", "blog").strip().lower()
 
 
 def _gtag_snippet() -> str:
@@ -2911,6 +2916,8 @@ footer a:hover{{text-decoration:underline}}
 <footer>
   BotKit by Jark — LINE Bot &amp; AI Agent Developer<br>
   <a href="/botkit">ดูแพ็กเกจทั้งหมด</a>{others}<br>
+  <a href="/blog">บทความ</a> · <a href="/about">เกี่ยวกับเรา</a> · <a href="/contact">ติดต่อเรา</a> ·
+  <a href="/privacy">นโยบายความเป็นส่วนตัว</a> · <a href="/terms">ข้อกำหนดการใช้งาน</a><br>
   <a href="https://www.facebook.com/profile.php?id=100086195540576" target="_blank" rel="noopener">📘 AI Claude Academy (Facebook Page)</a> ·
   <a href="https://www.facebook.com/jakkar.jakkar.39545" target="_blank" rel="noopener">👤 Jark Krit (Facebook)</a><br>
   <span style="opacity:.75">ทะเบียนพาณิชย์เลขที่ 1509900302285 · ชื่อที่ใช้ในการประกอบพาณิชยกิจ: บอทคิท (BOTKIT)</span>
@@ -2940,6 +2947,10 @@ def sitemap():
     urls = [("/", SITE_UPDATED), ("/chatmaker/", SITE_UPDATED)] + [
         (f"/{k}", v.get("updated", SITE_UPDATED)) for k, v in SEO_PAGES.items()
     ]
+    # ส่วนบทความ (24 ต.ค. 2026) — /botkit เข้า sitemap เฉพาะตอนที่มันเป็นหน้าจริง (HOME_MODE=blog)
+    if HOME_MODE != "botkit":
+        urls.append(("/botkit", SITE_UPDATED))
+    urls += blog.sitemap_urls()
     items = "".join(
         f"<url><loc>{BASE_URL}{u}</loc><lastmod>{lastmod}</lastmod>"
         f"<changefreq>weekly</changefreq>"
@@ -4507,9 +4518,14 @@ def posttoday_publish_submit():
 
 @app.route("/botkit")
 def botkit_page():
-    """เนื้อหาย้ายไปเป็นหน้าแรกแล้ว (22 ก.ค. 2026) — 301 กัน duplicate content
-    ลิงก์เก่าที่ส่งลูกค้าไปแล้ว + footer ของ landing SEO ทั้ง 6 หน้ายังใช้ได้ปกติ"""
-    return redirect("/", code=301)
+    """หน้าขาย BotKit
+    HOME_MODE=blog (ดีฟอลต์ ตั้งแต่ 24 ต.ค. 2026): หน้าแรกเป็นหน้ารวมบทความ หน้าขายอยู่ที่นี่
+    HOME_MODE=botkit: แบบเดิม (22 ก.ค. 2026) — หน้าขายเป็นหน้าแรก /botkit 301 มา / กัน duplicate content
+    ลิงก์เก่าที่ส่งลูกค้าไปแล้ว + footer ของ landing SEO ใช้ได้ทั้งสองโหมด"""
+    if HOME_MODE == "botkit":
+        return redirect("/", code=301)
+    _track_visit()
+    return _botkit_html("/botkit"), 200, {"Content-Type": "text/html; charset=utf-8"}
 
 
 @app.route("/api/botkit/order", methods=["POST"])
@@ -4868,9 +4884,21 @@ def index():
     เดิมเป็น dashboard.html "ForexAI Pro" ที่แจกสัญญาณเทรด — ถูกลบทั้งไฟล์เพราะความเสี่ยง ก.ล.ต.
     หน้านี้กับ /botkit เป็นเนื้อหาเดียวกัน จึงให้ /botkit 301 มาที่นี่ กัน duplicate content"""
     _track_visit()
+    if HOME_MODE != "botkit":          # 24 ต.ค. 2026 — หน้าแรก = หน้ารวมบทความ (ดู HOME_MODE)
+        return blog.hub_page(), 200, {"Content-Type": "text/html; charset=utf-8"}
+    return _botkit_html("/"), 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
+def _botkit_html(path: str) -> str:
+    """อ่าน botkit.html แล้วเติมโดเมน/Google tag ตอนเสิร์ฟ — path = ที่อยู่ที่หน้านี้ถูกเสิร์ฟ (ใช้ทำ canonical)"""
     p = os.path.join(os.path.dirname(__file__), "botkit.html")
     with open(p, "r", encoding="utf-8") as f:
         html = f.read()
+    # canonical/og:url ของหน้านี้ต้องชี้ที่อยู่จริงที่เสิร์ฟ (/ หรือ /botkit) ไม่งั้น Google งงว่าหน้าไหนตัวจริง
+    if path != "/":
+        for tag in ('<link rel="canonical" href="https://forex-ai-demo.onrender.com/">',
+                    '<meta property="og:url" content="https://forex-ai-demo.onrender.com/">'):
+            html = html.replace(tag, tag.replace(".com/", ".com" + path))
     # canonical/og:url ใน botkit.html ฮาร์ดโค้ดโดเมนเก่าไว้ → แทนที่ตอนเสิร์ฟให้ตาม BASE_URL เสมอ
     # ทำตรงนี้ที่เดียว เปลี่ยนโดเมนครั้งหน้าตั้ง PUBLIC_BASE_URL อย่างเดียว ไม่ต้องไล่แก้ HTML อีก
     # (ถ้าไม่ตั้ง env ค่า BASE_URL = โดเมนเดิม การแทนที่จะไม่เปลี่ยนอะไร ปลอดภัย)
@@ -4878,7 +4906,12 @@ def index():
     # Google tag แทรกตอนเสิร์ฟด้วยวิธีเดียวกัน — ไฟล์ botkit.html ไม่ต้องรู้จัก ID (ว่าง = ไม่เปลี่ยนอะไร)
     if GTAG_IDS:
         html = html.replace("</head>", _gtag_snippet() + "</head>", 1)
-    return html, 200, {"Content-Type": "text/html; charset=utf-8"}
+    return html
+
+
+# ส่วนบทความ /blog /about /contact /ads.txt (24 ต.ค. 2026) — โค้ดอยู่ใน blog.py
+blog.init(app, base_url=BASE_URL, head_extra=_gtag_snippet, track=_track_visit,
+          hub_is_home=(HOME_MODE != "botkit"))
 
 
 if __name__ == "__main__":

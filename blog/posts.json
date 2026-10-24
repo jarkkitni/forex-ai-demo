@@ -1,0 +1,66 @@
+[
+  {
+    "slug": "line-oa-message-quota",
+    "title": "LINE OA ฟรีส่งได้ 300 ข้อความ/เดือน: ข้อความแบบไหนนับโควตา และทำไมบอทแจ้งเตือนถึงเงียบ",
+    "desc": "แยกให้ชัดว่า reply กับ push ต่างกันยังไง ข้อความแบบไหนกินโควตา LINE OA แพ็กเกจฟรี และวิธีกันระบบแจ้งเตือนเงียบตอนโควตาเต็มกลางเดือน",
+    "date": "2026-10-24",
+    "category": "chatbot",
+    "minutes": 6
+  },
+  {
+    "slug": "line-user-id-vs-basic-id",
+    "title": "LINE User ID กับ Bot Basic ID ต่างกันยังไง — ใส่ผิดตัวเดียว ส่งข้อความไม่ออกทั้งระบบ",
+    "desc": "ID ใน LINE Developers มีหลายตัวหน้าตาคล้ายกัน บทความนี้บอกวิธีดูว่าตัวไหนคือ User ID ที่ใช้ push message ได้ และเช็คด้วยการนับตัวอักษร",
+    "date": "2026-10-24",
+    "category": "chatbot",
+    "minutes": 4
+  },
+  {
+    "slug": "facebook-messenger-bot-not-replying",
+    "title": "เชื่อมบอท Facebook Messenger แล้วบอทไม่ตอบ: 7 จุดที่ต้องเช็ค เรียงจากที่ลืมบ่อยที่สุด",
+    "desc": "เช็คลิสต์ไล่ปัญหาบอท Messenger/Instagram ที่ webhook ยืนยันผ่านแล้วแต่ไม่มีข้อความเข้า ตั้งแต่ field messages, การ subscribe เพจ, token หมดอายุ ไปจนถึงบอทตอบซ้ำสองรอบ",
+    "date": "2026-10-24",
+    "category": "chatbot",
+    "minutes": 8
+  },
+  {
+    "slug": "silent-failure-api-key-expiry",
+    "title": "ระบบตายเงียบทั้งวันเพราะ API key หมดอายุ: ออกแบบยังไงให้ของพังแล้วส่งเสียง",
+    "desc": "บทเรียนจากระบบจริงที่ API key หมดอายุแล้วไม่มีใครรู้ 1 วันเต็ม พร้อมหลักการ 4 ข้อ: คืน error ให้ถูก, health check, แจ้งเตือนแบบมี cooldown และช่องสำรอง",
+    "date": "2026-10-24",
+    "category": "dev",
+    "minutes": 7
+  },
+  {
+    "slug": "render-restart-lost-state",
+    "title": "บอทแจ้งเตือนซ้ำทุกครั้งที่เซิร์ฟเวอร์รีสตาร์ต: ทำไมห้ามเก็บ state สำคัญไว้ในแรม",
+    "desc": "ทำไมบอทบน Render / Railway / Heroku ถึงลืมของที่เคยทำแล้วหลัง deploy และวิธีย้าย state ไปเก็บในฐานข้อมูลแบบไม่ยิงแจ้งเตือนเก่ารัวๆ ตอนเปิดใช้ครั้งแรก",
+    "date": "2026-10-24",
+    "category": "dev",
+    "minutes": 6
+  },
+  {
+    "slug": "n8n-self-host-free",
+    "title": "ติดตั้ง n8n ใช้ฟรีบนเครื่องตัวเอง: npx, Docker และ 5 เรื่องที่ต้องรู้ก่อนใช้งานจริง",
+    "desc": "วิธีรัน n8n แบบ self-host ฟรีทั้งบน Windows และ Docker พร้อมเรื่องที่คู่มือไม่ค่อยบอก: webhook จากข้างนอก, ข้อมูลเก็บที่ไหน, license, การอัปเดตความปลอดภัย",
+    "date": "2026-10-24",
+    "category": "automation",
+    "minutes": 8
+  },
+  {
+    "slug": "control-ai-api-cost",
+    "title": "คุมค่า AI API ไม่ให้บิลบาน: 5 ชั้นป้องกันที่ใช้จริงในระบบแชทบอท",
+    "desc": "วิธีคุมค่าใช้จ่าย Claude / OpenAI API สำหรับแชทบอทและเครื่องมือสาธารณะ ตั้งแต่เพดานใช้จ่าย, rate limit ต่อ IP, ใช้โมเดลเล็กคัดก่อน ไปจนถึงตอบด้วย template เมื่อไม่จำเป็นต้องใช้ AI",
+    "date": "2026-10-24",
+    "category": "ai",
+    "minutes": 7
+  },
+  {
+    "slug": "promptpay-qr-emvco-explained",
+    "title": "QR พร้อมเพย์ระบุยอดทำงานยังไง: แกะโครงสร้าง EMVCo ทีละช่อง พร้อมโค้ด Python",
+    "desc": "อธิบาย payload ของ QR พร้อมเพย์แบบ TLV ทีละ tag ตั้งแต่ Application ID, เบอร์ผู้รับ, ยอดเงิน จนถึง CRC16 พร้อมโค้ด Python สร้าง QR ระบุยอดเองโดยไม่ต้องพึ่ง API ภายนอก",
+    "date": "2026-10-24",
+    "category": "payment",
+    "minutes": 9
+  }
+]
