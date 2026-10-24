@@ -37,6 +37,7 @@ CATEGORIES = {
     "ai": "ใช้ AI ทำงาน",
     "dev": "เขียนโค้ด & ดูแลระบบ",
     "payment": "รับเงินออนไลน์",
+    "ads": "โฆษณา Google Ads",
 }
 
 _ctx: dict = {"base_url": "", "head_extra": lambda: "", "track": lambda: None, "hub_is_home": True}

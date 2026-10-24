@@ -1,0 +1,70 @@
+<p>ถ้ารัน n8n, Postiz หรือบอทไว้บนคอมที่บ้าน ปัญหาแรกที่เจอคือ<strong>บริการข้างนอกเรียกเข้ามาไม่ได้</strong>
+LINE หรือ Facebook ส่ง webhook มาที่ <code>localhost</code> ไม่ได้ และเน็ตบ้านส่วนใหญ่ไม่มี IP คงที่หรือเปิดพอร์ตไม่ได้</p>
+<p>Cloudflare Tunnel แก้ตรงนี้โดยให้โปรแกรมเล็กๆ ชื่อ <code>cloudflared</code> บนเครื่องเรา
+<strong>ต่อออกไปหา Cloudflare</strong> แทนที่จะให้คนข้างนอกต่อเข้ามา ไม่ต้องเปิดพอร์ตที่เราเตอร์
+และได้ HTTPS ให้อัตโนมัติ</p>
+
+<h2>แบบทดสอบเร็ว: Quick Tunnel (ไม่ต้องมีโดเมน)</h2>
+<p>ติดตั้ง cloudflared แล้วสั่ง</p>
+<pre><code>cloudflared tunnel --url http://localhost:5678</code></pre>
+<p>จะได้ URL แบบ <code>https://คำสุ่ม.trycloudflare.com</code> ที่ชี้เข้าเครื่องเราทันที
+เหมาะกับลองยิง webhook ทดสอบ แต่<strong>URL เปลี่ยนทุกครั้งที่รันใหม่</strong> จึงใช้กับงานจริงไม่ได้
+(ต้องไปแก้ URL webhook ทุกที่ทุกครั้ง)</p>
+
+<h2>แบบใช้จริง: Named Tunnel + โดเมนของตัวเอง</h2>
+<p>ต้องมีโดเมนที่ใช้ DNS ของ Cloudflare ก่อน (ย้าย nameserver มาที่ Cloudflare แผนฟรีก็ได้)</p>
+<h3>1. ล็อกอินและสร้าง tunnel</h3>
+<pre><code>cloudflared tunnel login
+cloudflared tunnel create home</code></pre>
+<p>คำสั่งที่สองจะสร้างไฟล์ credentials (ชื่อเป็น ID ของ tunnel ลงท้าย <code>.json</code>) ไว้ในโฟลเดอร์ <code>.cloudflared</code>
+ของผู้ใช้ เก็บไฟล์นี้ดีๆ ใครได้ไปก็รัน tunnel ของเราได้</p>
+
+<h3>2. เขียนไฟล์ config</h3>
+<p>สร้าง <code>config.yml</code> ในโฟลเดอร์เดียวกัน บอกว่าชื่อโดเมนไหนชี้ไปบริการไหนบนเครื่อง</p>
+<pre><code>tunnel: home
+credentials-file: C:\Users\ชื่อผู้ใช้\.cloudflared\&lt;tunnel-id&gt;.json
+
+ingress:
+  - hostname: n8n.example.com
+    service: http://localhost:5678
+  - hostname: postiz.example.com
+    service: http://localhost:5000
+  - service: http_status:404</code></pre>
+<p>บรรทัดสุดท้าย (ไม่มี hostname) จำเป็นต้องมี เป็นตัวรับทุกอย่างที่ไม่ตรงกฎข้างบน</p>
+
+<h3>3. ผูกชื่อโดเมนกับ tunnel</h3>
+<pre><code>cloudflared tunnel route dns home n8n.example.com
+cloudflared tunnel route dns home postiz.example.com</code></pre>
+<h3>4. รัน</h3>
+<pre><code>cloudflared tunnel run home</code></pre>
+<p>เปิด <code>https://n8n.example.com</code> จากมือถือที่ใช้เน็ตมือถือ (ไม่ใช่ WiFi บ้าน) เพื่อยืนยันว่าเข้าจากข้างนอกได้จริง</p>
+
+<h2>กับดักที่เจอจริง: ปิดหน้าต่างแล้ว tunnel ตาย</h2>
+<p>ถ้ารัน <code>cloudflared tunnel run</code> ในหน้าต่าง PowerShell ธรรมดา มันคือโปรแกรมของผู้ใช้
+ปิดหน้าต่าง ล็อกเอาต์ หรือรีสตาร์ตเครื่อง tunnel ก็หยุด และ webhook ทั้งหมดก็หยุดตาม</p>
+<p>บน Windows ให้ติดตั้งเป็น <strong>service</strong> ที่เริ่มเองตอนเปิดเครื่อง เปิด PowerShell แบบ
+Run as administrator แล้วสั่ง</p>
+<pre><code>cloudflared service install
+Start-Service Cloudflared</code></pre>
+<p>ตอนติดตั้งแบบ service ตัว cloudflared จะไม่ได้อ่าน config จากโฟลเดอร์ของผู้ใช้เสมอไป
+ถ้า service ขึ้นแต่เข้าโดเมนไม่ได้ ให้เช็คเอกสารของ Cloudflare เรื่องตำแหน่งไฟล์ config ของ service บน Windows
+หรือเปลี่ยนไปสร้าง tunnel ผ่านหน้า Dashboard (Zero Trust → Networks → Tunnels)
+ซึ่งให้คำสั่งติดตั้ง service พร้อม token มาเลย ไม่ต้องจัดการไฟล์ config เอง</p>
+
+<h2>อีกกับดัก: บริการต้นทางตาย tunnel ยังอยู่</h2>
+<p>tunnel แค่ส่งต่อ ถ้าโปรแกรมปลายทางไม่ทำงาน คนข้างนอกจะเจอ error 502
+เคสที่ผมเจอคือ Docker Desktop ปิดตัวเองตอนบูตเครื่อง ทำให้ทุกบริการที่รันใน Docker หายหมด
+ทั้งที่ tunnel ยังขึ้นปกติ สิ่งที่ช่วยได้คือ</p>
+<ul>
+<li>ตั้งให้ Docker Desktop เริ่มเองตอนล็อกอิน และใส่ <code>restart: unless-stopped</code> ให้ทุก container</li>
+<li>มีตัวตรวจจากข้างนอก (เช่นบริการ uptime monitor ฟรี) ยิงเช็ค URL ทุก 5 นาที และแจ้งเตือนเมื่อล่ม</li>
+</ul>
+
+<h2>เรื่องความปลอดภัย</h2>
+<ul>
+<li>tunnel ทำให้บริการบนเครื่องเรา<strong>อยู่บนอินเทอร์เน็ตจริง</strong> ทุกบริการที่เปิดต้องมีรหัสผ่านที่แข็งแรง</li>
+<li>หน้าแอดมินที่ไม่ต้องให้คนนอกเข้า ใช้ Cloudflare Access ครอบไว้ (ล็อกอินด้วยอีเมลก่อนถึงตัวบริการ)</li>
+<li>บริการที่เปิดให้สมัครสมาชิกเอง (เช่น Postiz) ให้ปิดการสมัครหลังสร้างบัญชีแอดมินแล้ว</li>
+<li>อัปเดตบริการที่เปิดออกไปสม่ำเสมอ โดยเฉพาะเมื่อมีประกาศช่องโหว่</li>
+</ul>
+<p>อ่านต่อ: <a href="/blog/n8n-self-host-free">ติดตั้ง n8n ใช้ฟรีบนเครื่องตัวเอง</a></p>

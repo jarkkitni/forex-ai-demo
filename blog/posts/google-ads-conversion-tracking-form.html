@@ -1,0 +1,82 @@
+<p>Google Ads จะฉลาดได้ก็ต่อเมื่อรู้ว่า<strong>คลิกไหนกลายเป็นลูกค้า</strong> ถ้าไม่ได้บอก
+ระบบจะเห็นแค่คลิก แล้วพยายามหาคลิกเพิ่ม ไม่ใช่หาคนที่จะจ้างคุณ บทความนี้เล่าวิธีติด conversion
+ให้ฟอร์มสั่งงานบนเว็บที่ผมใช้จริง ตั้งแต่สร้าง conversion action ไปจนถึงตรวจว่าทำงานจริง</p>
+
+<div class="toc"><b>ภาพรวม</b>
+<ol><li>สร้าง conversion action ใน Google Ads</li><li>ติด Google tag ทุกหน้า</li>
+<li>ยิง event ตอนส่งฟอร์ม<em>สำเร็จ</em></li><li>ตรวจว่าทำงานจริง</li></ol></div>
+
+<h2>1. สร้าง conversion action</h2>
+<p>ใน Google Ads ไปที่ Goals → Conversions → สร้างใหม่ → Website แล้วเลือกตั้งค่าเอง (manual)
+ค่าที่ผมใช้กับฟอร์มขอใบเสนอราคา/สั่งทำระบบ</p>
+<table>
+<tr><th>ช่อง</th><th>ค่า</th><th>เหตุผล</th></tr>
+<tr><td>Category</td><td>Submit lead form</td><td>ตรงกับการกรอกฟอร์ม</td></tr>
+<tr><td>Value</td><td>ใช้ค่าต่างกันแต่ละครั้ง (ค่าตั้งต้น 0)</td><td>ถ้าฟอร์มรู้ยอด ส่งยอดจริงได้</td></tr>
+<tr><td>Count</td><td>One</td><td>คนเดียวกรอก 3 รอบ นับเป็น lead เดียว</td></tr>
+<tr><td>Primary</td><td>ใช่</td><td>ให้ระบบใช้ตัวนี้ในการเรียนรู้และ bid</td></tr>
+</table>
+<p>เสร็จแล้วจะได้ค่าสองตัวที่ต้องจดไว้: <strong>Conversion ID</strong> (หน้าตา <code>AW-123456789</code>)
+และ <strong>Conversion label</strong> (ตัวอักษรสุ่มยาวๆ) ใช้คู่กันเป็น <code>AW-123456789/AbCdEf...</code></p>
+<p>ตรวจด้วยว่าเปิด <strong>Auto-tagging</strong> ในการตั้งค่าบัญชีแล้ว ตัวนี้ทำให้ URL ที่คนคลิกมามี
+<code>gclid</code> ติดมาด้วย และ Google ใช้ค่านี้จับคู่คลิกกับ conversion</p>
+
+<h2>2. ติด Google tag ทุกหน้า</h2>
+<p>ใส่ใน <code>&lt;head&gt;</code> ของทุกหน้าที่คนอาจเข้ามาจากโฆษณา ไม่ใช่แค่หน้าฟอร์ม
+เพราะต้องให้ tag อ่าน gclid ได้ตั้งแต่หน้าแรกที่คนเข้ามา</p>
+<pre><code>&lt;script async src="https://www.googletagmanager.com/gtag/js?id=AW-123456789"&gt;&lt;/script&gt;
+&lt;script&gt;
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'AW-123456789');
+&lt;/script&gt;</code></pre>
+<p>ถ้าใช้ GA4 ด้วย ใส่สคริปต์ชุดเดียว แล้วเพิ่ม <code>gtag('config', 'G-XXXXXXX')</code> อีกบรรทัด</p>
+
+<h3>ทริค: อย่าฝัง ID ไว้ในโค้ด</h3>
+<p>ผมเก็บ ID ไว้ในตัวแปรสภาพแวดล้อมบนเซิร์ฟเวอร์ (เช่น <code>GTAG_IDS</code>) แล้วให้เซิร์ฟเวอร์แทรกสคริปต์ตอนส่งหน้าเว็บ
+ข้อดีคือ เครื่องที่ใช้ทดสอบจะไม่มี tag (ไม่ทำให้ข้อมูลจริงเพี้ยน) และเปลี่ยนบัญชีได้โดยไม่ต้องแก้โค้ด
+ถ้าตัวแปรว่าง หน้าเว็บก็เหมือนเดิมทุกไบต์</p>
+
+<h2>3. ยิง event ตอนส่งฟอร์มสำเร็จเท่านั้น</h2>
+<p>จุดที่คนพลาดบ่อยที่สุดคือยิง conversion ตอน<em>กดปุ่ม</em> ซึ่งนับรวมคนที่กรอกไม่ครบ หรือส่งไม่สำเร็จด้วย
+ให้ยิงหลังจากเซิร์ฟเวอร์ตอบว่าบันทึกสำเร็จแล้วเท่านั้น</p>
+<pre><code>const res = await fetch('/api/order', {method: 'POST', body: JSON.stringify(data),
+                                       headers: {'Content-Type': 'application/json'}});
+const j = await res.json();
+if (j.success) {
+  if (window.gtag) {
+    gtag('event', 'conversion', {
+      send_to: 'AW-123456789/AbCdEfGh',   // ID/label จากข้อ 1
+      value: Number(j.amount || 0),
+      currency: 'THB'
+    });
+  }
+  showThankYou();
+}</code></pre>
+<p>การเช็ค <code>if (window.gtag)</code> ไว้ก่อนทำให้ฟอร์มยังทำงานได้ปกติ แม้ผู้ใช้จะบล็อกสคริปต์โฆษณา</p>
+<p>อีกทางที่ง่ายกว่า คือส่งคนไปหน้าขอบคุณ (เช่น <code>/thank-you</code>) หลังส่งฟอร์ม แล้วนับ conversion
+เมื่อมีคนเปิดหน้านั้น แต่วิธีนี้นับซ้ำได้ถ้าคนรีเฟรชหน้า และมีคนเข้าตรงจากลิงก์ได้ การยิง event หลังสำเร็จแม่นกว่า</p>
+
+<h2>4. ตรวจว่าทำงานจริง</h2>
+<ol>
+<li><strong>ดูซอร์สหน้าเว็บจริง</strong> (ไม่ใช่เครื่องตัวเอง) ว่ามีสคริปต์ <code>gtag/js?id=AW-…</code> และ config ถูก ID</li>
+<li><strong>ใช้ Tag Assistant</strong> ของ Google เปิดเว็บแล้วลองส่งฟอร์มทดสอบ ต้องเห็น event conversion ยิงออกไปพร้อม send_to ที่ถูก</li>
+<li><strong>ดูสถานะใน Google Ads</strong> ที่หน้า Conversions สถานะจะเปลี่ยนจาก Unverified หรือ Inactive
+เป็นกำลังบันทึก หลังมีการยิงครั้งแรก (อาจใช้เวลาหลายชั่วโมง)</li>
+</ol>
+<div class="note">💡 ผมเขียนสคริปต์เล็กๆ ไว้ตรวจหน้าเว็บจริงว่ามี tag และ label ถูกต้อง
+ใช้รันทุกครั้งหลังแก้หรือ deploy เว็บ เพราะ conversion ที่หายไปเงียบๆ อันตรายกว่าไม่มีเลย
+(เดียวกับเรื่อง <a href="/blog/silent-failure-api-key-expiry">ระบบที่พังแล้วไม่ส่งเสียง</a>)</div>
+
+<h2>คำถามที่เจอบ่อย</h2>
+<h3>ต้องมีแถบขอความยินยอมคุกกี้ไหม</h3>
+<p>ถ้ามีผู้ใช้จากยุโรปหรือสหราชอาณาจักร Google กำหนดให้ใช้ระบบขอความยินยอม (consent) สำหรับข้อมูลโฆษณา
+สำหรับเว็บไทย ควรแจ้งการใช้คุกกี้ในนโยบายความเป็นส่วนตัวให้ครบตาม PDPA อย่างน้อยที่สุด</p>
+<h3>ถ้าลูกค้าทักแชทแทนกรอกฟอร์ม</h3>
+<p>นับคลิกปุ่ม "ทักแชท" หรือ "โทร" เป็น conversion รอง (secondary) ได้ แต่อย่าตั้งเป็น primary คู่กับฟอร์ม
+เพราะคลิกปุ่มทักแชทไม่ได้แปลว่าคุยจริง ระบบจะเรียนผิด</p>
+<h3>เมื่อไหร่ควรเปลี่ยนจาก Maximize clicks เป็น Maximize conversions</h3>
+<p>เมื่อมี conversion สะสมพอให้ระบบเรียน (หลายสิบครั้งในช่วง 30 วัน) ก่อนหน้านั้นใช้ Maximize clicks
+พร้อมเพดานราคาต่อคลิกจะคุมงบได้ดีกว่า</p>
+<p>อ่านต่อ: <a href="/blog/google-ads-beginner-traps">7 ค่าตั้งต้นที่เผางบ ต้องปิดก่อนเผยแพร่</a></p>

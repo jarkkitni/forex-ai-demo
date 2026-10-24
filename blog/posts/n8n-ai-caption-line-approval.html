@@ -1,0 +1,79 @@
+<p>ให้ AI เขียนแคปชั่นแล้วโพสต์เองทันที ฟังดูสะดวก แต่ถ้าวันไหน AI แต่งราคาผิด หรือเขียนโปรที่ร้านไม่มี
+โพสต์นั้นจะออกไปถึงลูกค้าก่อนที่ใครจะเห็น ทางสายกลางที่ผมใช้คือ<strong>ให้ AI ร่าง ส่งเข้า LINE ให้คนกดอนุมัติ
+แล้วค่อยโพสต์</strong> ทั้งหมดทำใน n8n workflow เดียว</p>
+
+<h2>ภาพรวม workflow</h2>
+<pre><code>หัวข้อ/สินค้า
+  → AI Agent (Claude) เขียนแคปชั่น 3 แพลตฟอร์ม
+  → Code: แยก JSON เป็น tiktok / facebook / instagram
+  → Code: สร้างการ์ด LINE + ปุ่ม อนุมัติ / ยกเลิก
+  → HTTP: ส่งการ์ดเข้า LINE เจ้าของร้าน
+  → Wait: หยุดรอจนกว่าจะมีคนกดปุ่ม
+  → Code + IF: อนุมัติไหม
+      ├ ใช่ → HTTP: โพสต์ลง Facebook
+      └ ไม่ → HTTP: แจ้ง LINE ว่ายกเลิกแล้ว</code></pre>
+
+<h2>1. ให้ AI ตอบเป็น JSON และรับมือตอนมันไม่ทำตาม</h2>
+<p>ใน system message ของ AI Agent node บอกให้ตอบเป็น JSON อย่างเดียว เช่น</p>
+<pre><code>ตอบกลับเป็น JSON เท่านั้น ห้ามมีข้อความอื่นนอก JSON:
+{"tiktok":"...","facebook":"...","instagram":"..."}</code></pre>
+<p>แต่ AI ไม่ได้ทำตามทุกครั้ง บางครั้งครอบมาด้วย <code>```json</code> บางครั้งพูดนำก่อน
+node ถัดไปจึงต้องแกะแบบกันพลาด และ<strong>ถ้าแกะไม่ได้ ห้ามโพสต์</strong> ให้ส่งข้อความดิบเข้า LINE แทนพร้อมคำเตือน</p>
+<pre><code>const raw = ($input.first().json.output || '').trim();
+let data;
+try {
+  let s = raw;
+  if (s.startsWith('```')) s = s.replace(/```json|```/g, '').trim();
+  data = JSON.parse(s);
+} catch (e) {
+  data = { _error: true, raw };
+}
+return [{ json: { tiktok: data.tiktok || '', facebook: data.facebook || '',
+                  instagram: data.instagram || '', _error: !!data._error, raw: data.raw || '' } }];</code></pre>
+
+<h2>2. หัวใจของระบบ: Wait node + resumeUrl</h2>
+<p>Wait node ใน n8n ตั้งให้ resume แบบ <strong>On Webhook Call</strong> ได้ เมื่อ workflow มาถึง node นี้
+มันจะหยุดรอ และ n8n สร้าง URL เฉพาะของรอบนั้นให้ในตัวแปร <code>$execution.resumeUrl</code>
+ใครเรียก URL นี้ workflow จะเดินต่อ พร้อมข้อมูลที่แนบมากับ request</p>
+<p>เราจึงสร้างปุ่มสองปุ่มในการ์ด LINE ที่ชี้ไป URL เดียวกันแต่ต่าง parameter</p>
+<pre><code>const resume = $execution.resumeUrl;
+const approveUrl = resume + '?approved=1';
+const rejectUrl  = resume + '?approved=0';
+// ใส่เป็น action แบบ uri ของปุ่มใน Flex Message
+{ type: 'button', style: 'primary',
+  action: { type: 'uri', label: '✅ อนุมัติ โพสต์เลย', uri: approveUrl } }</code></pre>
+<div class="note">💡 ตัวแปร <code>$execution.resumeUrl</code> ใช้ได้ใน node ที่อยู่<strong>ก่อน</strong> Wait node
+ในรอบเดียวกัน จึงสร้างการ์ดและส่งออกไปก่อนจะเริ่มรอได้</div>
+<p>ข้อสำคัญ: ถ้า n8n รันบนเครื่องที่บ้าน URL ที่ได้จะเป็น localhost ซึ่งกดจากมือถือไม่ได้
+ต้องตั้ง <code>WEBHOOK_URL</code> ให้เป็นโดเมนจริง (ผ่าน tunnel) ก่อน ดูวิธีที่
+<a href="/blog/cloudflare-tunnel-home-server">Cloudflare Tunnel</a></p>
+
+<h2>3. ตรวจผลแบบ "ไม่แน่ใจ = ไม่โพสต์"</h2>
+<pre><code>const j = $input.first().json || {};
+const q = j.query || (j.body && j.body.query) || j.params || {};
+let approved = q.approved;
+if (approved === undefined && j.approved !== undefined) approved = j.approved;
+// ต้องเป็น '1' ชัดเจนเท่านั้นถึงจะโพสต์ อ่านไม่ได้ = ไม่โพสต์
+return [{ json: { approved: String(approved) === '1' } }];</code></pre>
+<p>รูปแบบข้อมูลที่ Wait node ส่งต่อมาอาจต่างกันตามเวอร์ชัน n8n จึงอ่านเผื่อไว้หลายแบบ
+แต่ค่าตั้งต้นต้องเป็น "ไม่อนุมัติ" เสมอ</p>
+
+<h2>4. โพสต์ผ่านเซิร์ฟเวอร์ของเรา ไม่ใช่ใส่ token ใน n8n ตรงๆ</h2>
+<p>ผมไม่ได้ให้ n8n เรียก Facebook Graph API เอง แต่ให้เรียก endpoint บนเซิร์ฟเวอร์ของเราที่ถือ Page token ไว้
+และตรวจ secret ที่ส่งมาด้วย ข้อดีคือ token ของเพจอยู่ที่เดียว ถ้า token เปลี่ยนก็แก้ที่เดียว
+และ endpoint ที่ไม่มี secret ถูกต้อง จะไม่มีใครยิงมาโพสต์มั่วได้</p>
+
+<h2>ข้อควรระวัง</h2>
+<ul>
+<li><strong>ลิงก์ GET ถูกเปิดโดยไม่ได้ตั้งใจได้</strong> — บางแอปหรือระบบสแกนความปลอดภัยเปิดลิงก์ล่วงหน้าเพื่อดูตัวอย่าง
+ถ้ากังวล ให้ลิงก์อนุมัติพาไปหน้ายืนยันที่ต้องกดอีกครั้ง หรือใช้ปุ่มแบบ postback ให้บอทรับแล้วเรียก resumeUrl ด้วย POST แทน</li>
+<li><strong>ตั้งเวลาหมดอายุให้ Wait</strong> — ถ้าไม่มีใครกดภายใน 24 ชั่วโมง ให้ยกเลิกเอง ไม่ให้ workflow ค้างไปเรื่อยๆ</li>
+<li><strong>resumeUrl คือกุญแจ</strong> — ใครได้ URL ไปก็อนุมัติได้ ส่งเฉพาะในแชทของเจ้าของ อย่าส่งในกลุ่ม</li>
+<li><strong>ข้อความยาว</strong> — Flex Message มีข้อจำกัดความยาว ตัดข้อความในการ์ดให้สั้นลง แต่โพสต์ฉบับเต็ม</li>
+</ul>
+
+<h2>ต่อยอด</h2>
+<p>เมื่อ flow นี้นิ่งแล้ว เปลี่ยนขั้นโพสต์จาก Facebook อย่างเดียวเป็นหลายช่องทางได้ เช่น ส่งต่อให้เครื่องมือตั้งเวลาโพสต์
+และเปลี่ยน trigger จากกดรันเองเป็นตั้งเวลา หรือรับหัวข้อจาก Google Sheet
+หลักการเดิมยังใช้ได้: AI ร่าง คนตัดสิน ระบบลงมือ</p>
+<p>ถ้าในขั้นตอนเรียก AI บ่อย อ่านต่อเรื่อง <a href="/blog/control-ai-api-cost">การคุมค่า AI API</a></p>

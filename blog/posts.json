@@ -62,5 +62,53 @@
     "date": "2026-10-24",
     "category": "payment",
     "minutes": 9
+  },
+  {
+    "slug": "google-ads-beginner-traps",
+    "title": "Google Ads มือใหม่: 7 ค่าตั้งต้นที่เผางบ ต้องปิดก่อนกดเผยแพร่แคมเปญแรก",
+    "desc": "รวมการตั้งค่า Google Ads ที่ค่าตั้งต้นทำให้เสียงบฟรี ตั้งแต่ Smart campaign, Auto-apply, Display Network, broad match, location ไปจนถึง negative keyword ที่ต้องใส่ตั้งแต่วันแรก",
+    "date": "2026-10-24",
+    "category": "ads",
+    "minutes": 7
+  },
+  {
+    "slug": "google-ads-conversion-tracking-form",
+    "title": "ติด Conversion Tracking ให้ฟอร์มบนเว็บ: ยิงตอนส่งสำเร็จ ไม่ใช่ตอนกดปุ่ม",
+    "desc": "วิธีติด Google Ads conversion ให้ฟอร์มขอใบเสนอราคาทีละขั้น ตั้ง conversion action, ติด Google tag, ยิง event หลังบันทึกสำเร็จ และตรวจว่าทำงานจริง",
+    "date": "2026-10-24",
+    "category": "ads",
+    "minutes": 8
+  },
+  {
+    "slug": "keyword-planner-real-data",
+    "title": "วัดตลาดด้วย Keyword Planner: คำว่า \"รับทำ LINE Bot\" มีคนค้นจริงแค่ไหน",
+    "desc": "ตัวเลขจริงจาก Keyword Planner ของคีย์เวิร์ดสายแชทบอทและระบบจองคิว พร้อมวิธีอ่านปริมาณค้นหา แนวโน้ม และตั้งเพดานราคาต่อคลิกจากข้อมูลจริง",
+    "date": "2026-10-24",
+    "category": "ads",
+    "minutes": 7
+  },
+  {
+    "slug": "cloudflare-tunnel-home-server",
+    "title": "Cloudflare Tunnel: เปิดเครื่องที่บ้านให้รับ webhook ได้ ไม่ต้องเปิดพอร์ต",
+    "desc": "ตั้ง Cloudflare Tunnel ให้ n8n หรือบอทบนคอมที่บ้านมี HTTPS และโดเมนจริง ตั้งแต่ quick tunnel, named tunnel, รันเป็น service บน Windows และเรื่องความปลอดภัย",
+    "date": "2026-10-24",
+    "category": "dev",
+    "minutes": 7
+  },
+  {
+    "slug": "n8n-ai-caption-line-approval",
+    "title": "n8n: ให้ AI ร่างแคปชั่น แล้วกดอนุมัติใน LINE ก่อนโพสต์จริง",
+    "desc": "สร้าง workflow ใน n8n ที่ให้ AI เขียนแคปชั่นหลายแพลตฟอร์ม ส่งการ์ดเข้า LINE ให้กดอนุมัติด้วย Wait node และ resumeUrl แล้วค่อยโพสต์ลง Facebook",
+    "date": "2026-10-24",
+    "category": "automation",
+    "minutes": 8
+  },
+  {
+    "slug": "postiz-self-host-lessons",
+    "title": "Postiz self-host: โพสต์หลายโซเชียลจากที่เดียว และ 3 ปัญหาที่เจอตอนติดตั้งจริง",
+    "desc": "สิ่งที่ควรรู้ก่อนติดตั้ง Postiz บนเครื่องตัวเอง: ต้องสมัครแอปนักพัฒนาของแต่ละแพลตฟอร์มเอง, ตัวแปรที่จำเป็น, Docker Desktop ปิดตัวตอนบูต และการปิดหน้าสมัครสมาชิก",
+    "date": "2026-10-24",
+    "category": "automation",
+    "minutes": 7
   }
 ]
