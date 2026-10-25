@@ -226,7 +226,7 @@ def site_footer_html() -> str:
 
 def _page(*, title: str, desc: str, path: str, body: str, active: str = "",
           og_type: str = "website", extra_head: str = "", ads: bool = True,
-          robots: str = "index, follow") -> str:
+          robots: str = "index, follow", og_image: str = "/static/og/home.png") -> str:
     base = _ctx["base_url"]
     url = f"{base}{path}"
     t, d = _html.escape(title), _html.escape(desc)
@@ -240,8 +240,9 @@ def _page(*, title: str, desc: str, path: str, body: str, active: str = "",
 <meta property="og:type" content="{og_type}"><meta property="og:locale" content="th_TH">
 <meta property="og:site_name" content="{SITE_NAME}"><meta property="og:title" content="{t}">
 <meta property="og:description" content="{d}"><meta property="og:url" content="{url}">
-<meta property="og:image" content="{base}/static/og/home.png">
-<meta name="twitter:card" content="summary_large_image">
+<meta property="og:image" content="{base}{og_image}">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="{base}{og_image}">
 <link rel="alternate" type="application/rss+xml" title="{SITE_NAME}" href="{base}/blog/feed.xml">
 {extra_head}<style>{CSS}</style></head><body>
 {_nav(active)}
@@ -350,7 +351,14 @@ def post_page(slug: str) -> str:
 </main>"""
     robots = "noindex, nofollow" if p.get("draft") else "index, follow"
     return _page(title=f"{p['title']} | {SITE_NAME}", desc=p["desc"], path=f"/blog/{slug}",
-                 body=body, active="blog", og_type="article", extra_head=extra, robots=robots)
+                 body=body, active="blog", og_type="article", extra_head=extra, robots=robots,
+                 og_image=_post_og(slug))
+
+
+def _post_og(slug: str) -> str:
+    """รูปตัวอย่างลิงก์ของบทความ (สร้างด้วย tools/make_blog_og.py) — ไม่มีไฟล์ใช้รูปหน้าแรก"""
+    f = os.path.join(os.path.dirname(_DIR), "static", "og", "blog", f"{slug}.png")
+    return f"/static/og/blog/{slug}.png" if os.path.exists(f) else "/static/og/home.png"
 
 
 def about_page() -> str:
