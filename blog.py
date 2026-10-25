@@ -29,7 +29,11 @@ SITE_NAME = "BotKit"
 SITE_TAGLINE = "สอนใช้ AI และระบบอัตโนมัติ ภาษาไทย — จากงานจริง"
 AUTHOR = "Jark"
 CONTACT_EMAIL = "jarkkitni@gmail.com"
-ADSENSE_CLIENT = os.environ.get("ADSENSE_CLIENT", "").strip()
+# รหัสผู้เผยแพร่ AdSense ของ thailinebot.com (สมัคร 25 ต.ค. 2026) — ไม่ใช่ความลับ (โชว์ในซอร์สทุกหน้าอยู่แล้ว)
+# ตั้ง env ADSENSE_CLIENT เพื่อเปลี่ยน หรือตั้งเป็น "off" เพื่อปิดโฆษณาทั้งหมดโดยไม่ต้องแก้โค้ด
+ADSENSE_CLIENT = os.environ.get("ADSENSE_CLIENT", "ca-pub-3663263203324308").strip()
+if ADSENSE_CLIENT.lower() in ("off", "0", "none", "false"):
+    ADSENSE_CLIENT = ""
 
 CATEGORIES = {
     "chatbot": "แชทบอท LINE / Facebook",
