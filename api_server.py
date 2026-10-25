@@ -2885,7 +2885,7 @@ footer a:hover{{text-decoration:underline}}
 .note{{background:var(--surface);border-left:3px solid var(--ac);border-radius:0 12px 12px 0;
       padding:14px 17px;margin:20px 0;font-size:15.5px;color:#cbd6ea}}
 @media (prefers-reduced-motion:reduce){{*{{transition:none!important}}}}
-</style></head><body><div class="w">
+</style></head><body>{blog.site_header_html("svc") if HOME_MODE != "botkit" else ""}<div class="w">
 <h1>{p['h1']}<br><span>ลองฟรีก่อนตัดสินใจ</span></h1>
 <p class="lead">{p['lead']}</p>
 <div class="grid">{pts}</div>
@@ -4906,6 +4906,9 @@ def _botkit_html(path: str) -> str:
     # Google tag แทรกตอนเสิร์ฟด้วยวิธีเดียวกัน — ไฟล์ botkit.html ไม่ต้องรู้จัก ID (ว่าง = ไม่เปลี่ยนอะไร)
     if GTAG_IDS:
         html = html.replace("</head>", _gtag_snippet() + "</head>", 1)
+    # เสิร์ฟที่ /botkit (หน้าแรกเป็นหน้าบทความ) → แปะเมนูเว็บไว้บนสุด ให้กลับหน้าแรก/บทความได้
+    if path != "/":
+        html = html.replace("<body>", "<body>" + blog.site_header_html("svc"), 1)
     return html
 
 

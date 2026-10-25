@@ -191,6 +191,28 @@ def _nav(active: str = "") -> str:
             f'<nav class="nav">{links}</nav></div></header>')
 
 
+def site_header_html(active: str = "svc") -> str:
+    """แถบเมนูบนสุดแบบแยกสไตล์ (คลาส bkh-*) — แปะบนหน้าขาย /botkit และหน้า landing บริการ
+    ให้คนที่กด "บริการ" จากหน้าบทความกลับไปหน้าแรก/บทความได้ ไม่ใช้คลาสร่วมกับ CSS ของหน้านั้นเลย"""
+    items = [("/", "หน้าแรก", "home"), ("/blog", "บทความ", "blog"),
+             ("/blog#tools", "เครื่องมือฟรี", "tools"), ("/botkit", "บริการ", "svc"),
+             ("/about", "เกี่ยวกับเรา", "about"), ("/contact", "ติดต่อ", "contact")]
+    links = "".join(
+        f'<a href="{h}" class="bkh-a{" bkh-on" if k == active else ""}">{t}</a>' for h, t, k in items)
+    return (
+        "<style>.bkh{position:relative;z-index:50;border-bottom:1px solid #1f2b46;background:rgba(10,15,28,.94)}"
+        ".bkh-in{max-width:1080px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;"
+        "font-family:'Segoe UI',system-ui,-apple-system,Tahoma,'Noto Sans Thai',sans-serif}"
+        ".bkh-b{font-weight:800;font-size:18px;color:#fff;text-decoration:none}.bkh-b span{color:#00e47a}"
+        ".bkh-n{display:flex;gap:4px;flex-wrap:wrap;margin-left:auto}"
+        ".bkh-a{color:#c9d5ea;text-decoration:none;font-size:14.5px;padding:6px 10px;border-radius:8px;line-height:1.4}"
+        ".bkh-a:hover,.bkh-on{background:#121b30;color:#fff}"
+        "@media (max-width:560px){.bkh-n{margin-left:0;width:100%}}</style>"
+        f'<header class="bkh"><div class="bkh-in"><a class="bkh-b" href="/">Bot<span>Kit</span></a>'
+        f'<nav class="bkh-n">{links}</nav></div></header>'
+    )
+
+
 def site_footer_html() -> str:
     """footer มาตรฐาน — ลิงก์นโยบายครบทุกหน้า (AdSense/Google ตรวจตรงนี้)"""
     return f"""<footer class="site"><div class="in">
