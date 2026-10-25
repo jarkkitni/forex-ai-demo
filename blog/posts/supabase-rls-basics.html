@@ -1,0 +1,62 @@
+<p>Supabase ให้ key มาสองแบบ และหลายคนเอา key ที่ใช้ในเว็บ (anon key) ใส่ในหน้าเว็บแล้วคิดว่าปลอดภัย
+เพราะ "เป็นแค่ key สาธารณะ" สิ่งที่ทำให้ปลอดภัยจริงๆ ไม่ใช่ตัว key แต่คือ <strong>Row Level Security (RLS)</strong>
+ถ้าไม่ได้เปิด ใครที่เปิดซอร์สหน้าเว็บเราได้ ก็อ่านและแก้ข้อมูลทั้งตารางได้</p>
+
+<h2>key สองแบบ ใช้ต่างกัน</h2>
+<table>
+<tr><th>key</th><th>ใส่ที่ไหนได้</th><th>สิทธิ์</th></tr>
+<tr><td>anon / publishable</td><td>หน้าเว็บ แอปมือถือ (คนเห็นได้)</td><td>ถูกจำกัดด้วย RLS</td></tr>
+<tr><td>service_role / secret</td><td><strong>เซิร์ฟเวอร์เท่านั้น</strong></td><td>ข้าม RLS ทั้งหมด ทำได้ทุกอย่าง</td></tr>
+</table>
+<div class="note warn">⚠️ ห้ามใส่ service_role key ในแอปมือถือหรือหน้าเว็บเด็ดขาด แอปมือถือถูกแกะไฟล์ได้
+ใครได้ key นี้ไปเท่ากับได้สิทธิ์แอดมินทั้งฐานข้อมูล</div>
+
+<h2>เปิด RLS แล้วเกิดอะไรขึ้น</h2>
+<pre><code>alter table bookings enable row level security;</code></pre>
+<p>พอเปิดแล้ว<strong>ยังไม่มี policy</strong> คำขอที่ใช้ anon key จะอ่าน/เขียนตารางนั้นไม่ได้เลย (ได้ผลว่าง ไม่ใช่ error)
+ส่วนเซิร์ฟเวอร์ที่ใช้ service_role ยังทำงานได้ปกติ</p>
+<p>นี่คือค่าที่ผมใช้กับตารางภายในเกือบทุกตัว เช่น ตารางจำงานที่แจ้งเตือนไปแล้ว ตารางสถิติคนเข้าเว็บ
+หรือตารางเทรดทดลอง: <strong>เปิด RLS และไม่ให้ policy กับ anon เลย</strong> ให้เซิร์ฟเวอร์เป็นคนเดียวที่แตะข้อมูล</p>
+
+<h2>เมื่อไหร่ต้องเขียน policy</h2>
+<p>เมื่อหน้าเว็บหรือแอปต้องคุยกับฐานข้อมูลตรงๆ ตัวอย่างจากแอปท่องเที่ยวที่ให้คนทั่วไปอ่านรายการสถานที่ได้
+แต่แก้ไม่ได้</p>
+<pre><code>alter table places enable row level security;
+
+-- ทุกคนอ่านได้ เฉพาะรายการที่เผยแพร่แล้ว
+create policy "public read published places"
+  on places for select
+  to anon, authenticated
+  using (is_published = true);</code></pre>
+<p>ถ้าให้ผู้ใช้ที่ล็อกอินเพิ่มข้อมูลของตัวเองได้ ใช้ <code>auth.uid()</code> ผูกกับคอลัมน์เจ้าของ</p>
+<pre><code>create policy "users insert own reviews"
+  on reviews for insert
+  to authenticated
+  with check (user_id = auth.uid());
+
+create policy "users update own reviews"
+  on reviews for update
+  to authenticated
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());</code></pre>
+<p><code>using</code> ตรวจแถวที่มีอยู่ (แก้ได้เฉพาะแถวของตัวเอง) ส่วน <code>with check</code> ตรวจค่าใหม่
+(เปลี่ยน user_id เป็นของคนอื่นไม่ได้) ตอน update ควรมีทั้งสองอย่าง</p>
+
+<h2>ทดสอบว่าปิดจริง</h2>
+<p>อย่าทดสอบใน SQL Editor ของหน้า dashboard เพราะรันด้วยสิทธิ์สูง จะเห็นข้อมูลทุกแถวเสมอ
+ให้ยิง REST API ด้วย anon key ตรงๆ แบบที่คนนอกทำได้</p>
+<pre><code>curl "https://&lt;project&gt;.supabase.co/rest/v1/bookings?select=*" \
+  -H "apikey: &lt;ANON_KEY&gt;" -H "Authorization: Bearer &lt;ANON_KEY&gt;"</code></pre>
+<p>ตารางภายในต้องได้ <code>[]</code> ถ้าได้ข้อมูลจริงกลับมา แปลว่ายังเปิดอยู่</p>
+<p>ใน dashboard ของ Supabase มีหน้าแจ้งเตือนความปลอดภัย (security advisor) ที่บอกว่าตารางไหนยังไม่เปิด RLS
+เปิดดูหลังสร้างตารางใหม่ทุกครั้ง</p>
+
+<h2>เช็คลิสต์</h2>
+<ul>
+<li>เปิด RLS ทุกตารางใน schema <code>public</code> ตั้งแต่สร้าง</li>
+<li>ตารางที่มีแค่เซิร์ฟเวอร์ใช้: ไม่ต้องมี policy ให้ anon</li>
+<li>ตารางที่หน้าเว็บอ่าน: policy เฉพาะ select และกรองเฉพาะแถวที่ควรเห็น</li>
+<li>service_role อยู่บนเซิร์ฟเวอร์และตัวแปรสภาพแวดล้อมเท่านั้น ไม่อยู่ในไฟล์ที่ commit</li>
+<li>ข้อมูลอ่อนไหว (ข้อมูลสุขภาพ เบอร์โทรลูกค้า) อย่าให้หน้าเว็บอ่านตรง ให้ผ่าน API ของเซิร์ฟเวอร์ที่ตรวจสิทธิ์แล้ว</li>
+</ul>
+<p>อ่านต่อ: <a href="/blog/render-restart-lost-state">ย้าย state ไปเก็บใน Supabase</a></p>

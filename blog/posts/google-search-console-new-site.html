@@ -1,0 +1,62 @@
+<p>เว็บที่เพิ่งเปิด Google ยังไม่รู้จัก ต้องรอให้มันเจอเอง ซึ่งอาจนานหลายสัปดาห์
+Google Search Console ช่วยให้เราบอก Google ตรงๆ ว่ามีหน้าอะไรบ้าง และดูได้ว่าหน้าไหนติดปัญหาอะไร
+บทความนี้คือสิ่งที่ผมทำกับเว็บใหม่ทุกเว็บ เรียงตามลำดับ</p>
+
+<h2>1. เพิ่ม property และยืนยันว่าเป็นเจ้าของ</h2>
+<p>มีสองแบบ</p>
+<table>
+<tr><th>แบบ</th><th>ครอบคลุม</th><th>ยืนยันด้วย</th></tr>
+<tr><td>Domain</td><td>ทุก subdomain ทั้ง http และ https</td><td>เพิ่ม TXT record ใน DNS</td></tr>
+<tr><td>URL prefix</td><td>เฉพาะ URL ที่ขึ้นต้นตามที่ใส่</td><td>ไฟล์ HTML, meta tag, Google Analytics ฯลฯ</td></tr>
+</table>
+<p>ถ้าจัดการ DNS ได้ ใช้แบบ Domain ครอบคลุมที่สุด ถ้าใช้แบบไฟล์ HTML (เช่น <code>google1234abcd.html</code>)
+<strong>อย่าลบไฟล์นั้นทีหลัง</strong> Google ตรวจซ้ำเป็นระยะ ลบแล้วจะหลุดสถานะเจ้าของ
+ผมเขียนคอมเมนต์ "ห้ามลบ" ไว้ในโค้ดตรงที่เสิร์ฟไฟล์นี้ กันตัวเองลบตอนเก็บกวาดโค้ด</p>
+<p>ถ้าย้ายโดเมน ต้องเพิ่ม property ใหม่ของโดเมนใหม่ด้วย property เดิมไม่ตามไปเอง</p>
+
+<h2>2. ทำ sitemap.xml ให้ถูก</h2>
+<p>sitemap คือรายการ URL ที่อยากให้ Google รู้จัก รูปแบบพื้นฐาน</p>
+<pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"&gt;
+  &lt;url&gt;&lt;loc&gt;https://example.com/&lt;/loc&gt;&lt;lastmod&gt;2026-10-24&lt;/lastmod&gt;&lt;/url&gt;
+  &lt;url&gt;&lt;loc&gt;https://example.com/blog/hello&lt;/loc&gt;&lt;lastmod&gt;2026-10-20&lt;/lastmod&gt;&lt;/url&gt;
+&lt;/urlset&gt;</code></pre>
+<h3>กับดัก: lastmod ที่เปลี่ยนทุกครั้ง</h3>
+<p>ถ้าสร้าง sitemap ด้วยโค้ดแล้วใส่ <code>lastmod</code> เป็นเวลาปัจจุบัน ทุกครั้งที่มีคนเปิด sitemap
+วันที่จะขยับทั้งที่เนื้อหาไม่ได้เปลี่ยน Google รู้ว่าค่านี้ไม่น่าเชื่อถือ แล้วจะเลิกใช้ lastmod ของเว็บเรา
+ให้ใส่<strong>วันที่แก้เนื้อหาจริงครั้งล่าสุด</strong>ของแต่ละหน้า</p>
+<h3>ใส่เฉพาะหน้าที่อยากให้ติดอันดับ</h3>
+<ul>
+<li>ไม่ใส่หน้าที่ redirect ไปที่อื่น (ใส่ปลายทางแทน)</li>
+<li>ไม่ใส่หน้า noindex เช่น หน้าแอดมิน หน้าเดโมสำหรับลูกค้ารายเดียว</li>
+<li>ไม่ใส่หน้าที่เนื้อหาซ้ำกับหน้าอื่น</li>
+</ul>
+<p>บอกตำแหน่ง sitemap ใน <code>robots.txt</code> ด้วย</p>
+<pre><code>User-agent: *
+Allow: /
+Disallow: /admin
+Sitemap: https://example.com/sitemap.xml</code></pre>
+
+<h2>3. ส่ง sitemap และขอ index หน้าสำคัญ</h2>
+<ol>
+<li>เมนู Sitemaps → ใส่ <code>sitemap.xml</code> → ส่ง ควรขึ้นสถานะสำเร็จพร้อมจำนวน URL ที่พบ</li>
+<li>เมนูตรวจสอบ URL → ใส่ URL หน้าแรก → ขอการจัดทำดัชนี (ทำกับหน้าสำคัญไม่กี่หน้าพอ มีโควตาต่อวัน)</li>
+</ol>
+<p>ส่ง sitemap ครั้งเดียวพอ Google จะกลับมาอ่านเองเป็นระยะ เวลาเพิ่มหน้าใหม่แค่อัปเดตไฟล์ ไม่ต้องส่งใหม่</p>
+
+<h2>4. อ่านรายงานให้เป็น</h2>
+<h3>Pages (การจัดทำดัชนี)</h3>
+<p>บอกว่าหน้าไหนถูก index และหน้าไหนไม่ถูก พร้อมเหตุผล เหตุผลที่ควรดูเป็นพิเศษ</p>
+<ul>
+<li><strong>Duplicate, Google chose different canonical</strong> — Google คิดว่าหน้านี้ซ้ำกับอีกหน้า ตรวจ canonical</li>
+<li><strong>Crawled – currently not indexed</strong> — Google เห็นแล้วแต่ยังไม่เก็บ เว็บใหม่เจอบ่อย ปรับเนื้อหาให้มีประโยชน์ขึ้นและรอ</li>
+<li><strong>Excluded by noindex</strong> — ถ้าเป็นหน้าที่ควรติดอันดับ แปลว่ามี noindex ค้าง</li>
+</ul>
+<h3>Performance</h3>
+<p>ดูคำค้นที่ทำให้เว็บแสดงผล จำนวนคลิก และอันดับเฉลี่ย เว็บใหม่จะมีข้อมูลน้อยในช่วงแรก
+สิ่งที่น่าดูคือคำที่มีการแสดงผลเยอะแต่คลิกน้อย อาจปรับ title ให้ตรงกับคำนั้นมากขึ้น</p>
+
+<h2>ใช้เวลานานแค่ไหน</h2>
+<p>หลังส่ง sitemap Googlebot มักเริ่มเข้ามาภายในไม่กี่วัน แต่การติดอันดับใช้เวลานานกว่านั้นมาก
+โดยเฉพาะเว็บใหม่ ระหว่างรอ ให้ดึงคนอ่านจากช่องทางอื่น เช่น แชร์บทความในเพจหรือกลุ่มที่เกี่ยวข้อง</p>
+<p>อ่านต่อ: <a href="/blog/technical-seo-small-business-case">เคสแก้ SEO เว็บธุรกิจเล็กในหนึ่งวัน</a></p>

@@ -110,5 +110,109 @@
     "date": "2026-10-24",
     "category": "automation",
     "minutes": 7
+  },
+  {
+    "slug": "line-rich-menu-api",
+    "title": "สร้าง LINE Rich Menu ผ่าน API ด้วย Python และสาเหตุที่เมนูไม่ขึ้น",
+    "desc": "สอนสร้าง Rich Menu ของ LINE OA ผ่าน Messaging API ทีละขั้น ตั้งแต่ขนาดรูป พิกัดปุ่ม อัปโหลด ตั้งเป็นเมนูหลัก และลำดับความสำคัญของเมนูที่ทำให้เมนูไม่แสดง",
+    "date": "2026-10-25",
+    "category": "chatbot",
+    "minutes": 6
+  },
+  {
+    "slug": "line-booking-bot-state-machine",
+    "title": "ทำบอทจองคิวผ่าน LINE ด้วย state machine: เก็บสถานะ กันจองซ้อน และเรื่อง timezone",
+    "desc": "โครงสร้างบอทจองคิวที่ถามทีละขั้น เก็บสถานะใน Supabase ให้ session หมดอายุ ใช้ Quick Reply และกันการจองเวลาซ้อนด้วย unique index",
+    "date": "2026-10-25",
+    "category": "chatbot",
+    "minutes": 8
+  },
+  {
+    "slug": "meta-app-review-messenger-bot",
+    "title": "ผ่าน Meta App Review สำหรับบอท Messenger: ลำดับที่ควรทำ และเหตุผลที่โดนตีกลับ",
+    "desc": "ขั้นตอนขอ Advanced Access ให้บอท Messenger ตอบลูกค้าทั่วไป ตั้งแต่ Business Verification, เตรียมแอป, เลือก permission, เขียนเหตุผล และอัดคลิปสาธิต",
+    "date": "2026-10-25",
+    "category": "chatbot",
+    "minutes": 8
+  },
+  {
+    "slug": "thai-commercial-registration-online-business",
+    "title": "จดทะเบียนพาณิชย์สำหรับฟรีแลนซ์และธุรกิจออนไลน์: เอกสาร ค่าธรรมเนียม และใช้ยืนยันกับแพลตฟอร์ม",
+    "desc": "ประสบการณ์จดทะเบียนพาณิชย์อิเล็กทรอนิกส์แบบบุคคลธรรมดา ใครต้องจด จดที่ไหน เอกสารที่ต้องเตรียม ค่าธรรมเนียม 50 บาท และเอาใบไปยืนยันธุรกิจกับ Meta",
+    "date": "2026-10-25",
+    "category": "dev",
+    "minutes": 7
+  },
+  {
+    "slug": "tiktok-content-posting-api-review",
+    "title": "TikTok Content Posting API: แอปยังไม่ผ่าน audit ทำอะไรได้ และเคสโดนปฏิเสธเพราะเว็บเปิดไม่ได้",
+    "desc": "ข้อจำกัดของแอปที่ยังไม่ผ่าน audit (SELF_ONLY, 5 บัญชีต่อวัน) เคสแอปโดนปฏิเสธเพราะ URL เว็บตาย และเช็คลิสต์ก่อนยื่นตรวจ",
+    "date": "2026-10-25",
+    "category": "automation",
+    "minutes": 6
+  },
+  {
+    "slug": "supabase-rls-basics",
+    "title": "Supabase RLS เบื้องต้น: anon key ไม่ได้ปลอดภัยเอง ถ้าไม่เปิด Row Level Security",
+    "desc": "อธิบาย anon key กับ service_role key, ผลของการเปิด RLS, ตัวอย่าง policy สำหรับอ่านสาธารณะและข้อมูลของผู้ใช้ และวิธีทดสอบว่าตารางปิดจริง",
+    "date": "2026-10-25",
+    "category": "dev",
+    "minutes": 7
+  },
+  {
+    "slug": "technical-seo-small-business-case",
+    "title": "แก้ SEO เว็บธุรกิจเล็กในหนึ่งวัน: canonical ชี้ผิด ไม่มี H1 — เคสจริงพร้อมผลที่วัดได้",
+    "desc": "เคสจริงของเว็บโรงงานป้ายไฟที่แก้ปัญหาทางเทคนิค canonical และ H1 ในหนึ่งวัน คำหลักขึ้นจากนอก 20 อันดับเป็นอันดับ 2–3 พร้อมเช็คลิสต์ตรวจเว็บตัวเอง",
+    "date": "2026-10-25",
+    "category": "seo",
+    "minutes": 6
+  },
+  {
+    "slug": "google-search-console-new-site",
+    "title": "เว็บใหม่ต้องทำอะไรใน Google Search Console: ยืนยันเจ้าของ sitemap และอ่านรายงาน",
+    "desc": "ขั้นตอนตั้ง Search Console ให้เว็บใหม่ เลือก property, ยืนยันความเป็นเจ้าของ, ทำ sitemap ที่ lastmod ถูกต้อง, ส่ง sitemap และอ่านรายงาน Pages",
+    "date": "2026-10-25",
+    "category": "seo",
+    "minutes": 7
+  },
+  {
+    "slug": "freelance-tech-listing-lessons",
+    "title": "ฟรีแลนซ์สายเทค: นับ 150 งานบนกระดานหางาน แล้วเปลี่ยนมาเน้นหน้าบริการแทน",
+    "desc": "สิ่งที่เห็นจากการนับงานบนกระดานประกาศของเว็บฟรีแลนซ์ และวิธีทำหน้าบริการให้ขายได้ด้วยเคสจริง แพ็กหลายระดับ และการวัดต้นทุนต่อคนทัก",
+    "date": "2026-10-25",
+    "category": "seo",
+    "minutes": 6
+  },
+  {
+    "slug": "render-free-tier-bot-hosting",
+    "title": "รันบอทบน Render แผนฟรี: หลับหลัง 15 นาที ดิสก์หาย และวิธีอยู่ร่วมกับมัน",
+    "desc": "พฤติกรรมของ Render แผนฟรีที่กระทบบอท LINE/Facebook การปลุกด้วย cron กับโควตา 750 ชั่วโมง ดิสก์ชั่วคราว และการ deploy อย่างปลอดภัย",
+    "date": "2026-10-25",
+    "category": "dev",
+    "minutes": 6
+  },
+  {
+    "slug": "find-shop-clients-without-spam",
+    "title": "หาลูกค้าร้านค้าให้บริการแชทบอทโดยไม่สแปม: มองหาร้านที่มี \"อาการ\"",
+    "desc": "วิธีหาร้านที่กำลังเสียลูกค้าเพราะตอบแชทช้า จากป้ายเวลาตอบ คอมเมนต์ค้าง และร้านที่ยิงโฆษณา พร้อมโครงข้อความและกฎที่ไม่ควรฝ่าฝืน",
+    "date": "2026-10-25",
+    "category": "seo",
+    "minutes": 6
+  },
+  {
+    "slug": "flutter-supabase-offline-data-version",
+    "title": "แอป Flutter + Supabase ใช้ออฟไลน์ได้ และประหยัดโควตาด้วยการเช็คเลขเวอร์ชันข้อมูล",
+    "desc": "เทคนิคเก็บข้อมูลในเครื่องแล้วเช็คแค่ data_version ก่อนโหลดใหม่ ทำให้แอปเปิดได้ตอนไม่มีสัญญาณและใช้แผนฟรีของ Supabase ได้คุ้มขึ้น",
+    "date": "2026-10-25",
+    "category": "dev",
+    "minutes": 6
+  },
+  {
+    "slug": "keep-secrets-out-of-git",
+    "title": "กัน API key หลุดขึ้น GitHub: 4 ชั้นป้องกัน และสิ่งที่ต้องทำเมื่อหลุดไปแล้ว",
+    "desc": "วิธีเก็บ secret ของบอทและเว็บให้ปลอดภัย ตัวแปรสภาพแวดล้อม, .gitignore แบบ whitelist, สคริปต์ตรวจก่อน commit และขั้นตอนเมื่อ key หลุด",
+    "date": "2026-10-25",
+    "category": "dev",
+    "minutes": 6
   }
 ]

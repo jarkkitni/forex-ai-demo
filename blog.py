@@ -38,6 +38,7 @@ CATEGORIES = {
     "dev": "เขียนโค้ด & ดูแลระบบ",
     "payment": "รับเงินออนไลน์",
     "ads": "โฆษณา Google Ads",
+    "seo": "SEO และหาลูกค้า",
 }
 
 _ctx: dict = {"base_url": "", "head_extra": lambda: "", "track": lambda: None, "hub_is_home": True}
