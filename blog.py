@@ -138,6 +138,7 @@ color:var(--fg);display:flex;flex-direction:column;gap:8px;transition:border-col
 .tool:hover{border-color:var(--ac2)}
 .tool b{display:block;color:#fff;margin-bottom:4px}
 .tool span{font-size:14px;color:var(--muted)}
+.tool .wake{display:block;font-style:normal;font-size:12.5px;color:#fbbf24;margin-top:8px}
 .svc{margin-top:40px;background:linear-gradient(135deg,#0f2233,#111a30);border:1px solid var(--line);border-radius:16px;padding:22px}
 .svc b{color:#fff}
 .svc p{color:var(--muted);font-size:15px;margin:6px 0 12px}
@@ -237,8 +238,8 @@ def _card(p: dict) -> str:
 
 TOOLS_HTML = """<div class="tools">
 <a class="tool" href="/chatmaker/" target="_blank" rel="noopener"><b>💬 สร้างภาพแชทตัวอย่าง</b><span>พิมพ์บทสนทนาเองทั้งสองฝั่ง ได้ภาพหน้าจอแชทไว้ทำสไลด์/โฆษณา</span></a>
-<a class="tool" href="https://smarthook-viral-video-ai.onrender.com/" target="_blank" rel="noopener"><b>🎬 สร้างคลิปเล่าเรื่องด้วย AI</b><span>พิมพ์พล็อตสั้นๆ ได้ภาพ เสียงพากย์ไทย และวิดีโอแนวตั้ง 9:16</span></a>
-<a class="tool" href="https://siladon-shop-demo.onrender.com/" target="_blank" rel="noopener"><b>🏺 ร้านค้าออนไลน์ + QR พร้อมเพย์</b><span>ลองระบบตะกร้าและหน้าชำระเงินที่เปลี่ยนสถานะเอง (โหมดสาธิต)</span></a>
+<a class="tool" href="https://smarthook-viral-video-ai.onrender.com/" target="_blank" rel="noopener"><b>🎬 สร้างคลิปเล่าเรื่องด้วย AI</b><span>พิมพ์พล็อตสั้นๆ ได้ภาพ เสียงพากย์ไทย และวิดีโอแนวตั้ง 9:16</span><em class="wake">⏳ เปิดครั้งแรกอาจรอ ~1 นาที ระบบกำลังตื่น</em></a>
+<a class="tool" href="https://siladon-shop-demo.onrender.com/" target="_blank" rel="noopener"><b>🏺 ร้านค้าออนไลน์ + QR พร้อมเพย์</b><span>ลองระบบตะกร้าและหน้าชำระเงินที่เปลี่ยนสถานะเอง (โหมดสาธิต)</span><em class="wake">⏳ เปิดครั้งแรกอาจรอ ~1 นาที ระบบกำลังตื่น</em></a>
 </div>"""
 
 
