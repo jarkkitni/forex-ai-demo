@@ -2918,7 +2918,7 @@ footer a:hover{{text-decoration:underline}}
   <a href="/botkit">ดูแพ็กเกจทั้งหมด</a>{others}<br>
   <a href="/blog">บทความ</a> · <a href="/about">เกี่ยวกับเรา</a> · <a href="/contact">ติดต่อเรา</a> ·
   <a href="/privacy">นโยบายความเป็นส่วนตัว</a> · <a href="/terms">ข้อกำหนดการใช้งาน</a><br>
-  <a href="https://www.facebook.com/profile.php?id=100086195540576" target="_blank" rel="noopener">📘 AI Claude Academy (Facebook Page)</a> ·
+  <a href="https://www.facebook.com/profile.php?id=61594739807940" target="_blank" rel="noopener">📘 Anuman (Facebook Page)</a> ·
   <a href="https://www.facebook.com/jakkar.jakkar.39545" target="_blank" rel="noopener">👤 Jark Krit (Facebook)</a><br>
   <span style="opacity:.75">ทะเบียนพาณิชย์เลขที่ 1509900302285 · ชื่อที่ใช้ในการประกอบพาณิชยกิจ: บอทคิท (BOTKIT)</span>
 </footer>

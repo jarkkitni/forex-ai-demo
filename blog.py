@@ -388,8 +388,8 @@ def contact_page() -> str:
 <p>มีคำถามเรื่องบทความ แจ้งข้อมูลผิด เสนอหัวข้อที่อยากให้เขียน หรือติดต่องาน ติดต่อได้ตามช่องทางนี้</p>
 <table>
 <tr><th>อีเมล</th><td><a href="mailto:{CONTACT_EMAIL}">{CONTACT_EMAIL}</a> (ตอบภายใน 1–2 วันทำการ)</td></tr>
-<tr><th>Facebook Page</th><td><a href="https://www.facebook.com/profile.php?id=100086195540576" rel="noopener">AI Claude Academy</a></td></tr>
-<tr><th>Facebook ส่วนตัว</th><td><a href="https://www.facebook.com/jakkar.jakkar.39545" rel="noopener">Jark Krit</a></td></tr>
+<tr><th>Facebook Page</th><td><a href="https://www.facebook.com/profile.php?id=61594739807940" target="_blank" rel="noopener">Anuman</a></td></tr>
+<tr><th>Facebook ส่วนตัว</th><td><a href="https://www.facebook.com/jakkar.jakkar.39545" target="_blank" rel="noopener">Jark Krit</a></td></tr>
 <tr><th>จ้างงาน</th><td><a href="/botkit#order">ฟอร์มสั่งทำระบบ</a> — กรอกไม่ถึง 1 นาที</td></tr>
 </table>
 <h2>ผู้ดำเนินการเว็บไซต์</h2>
