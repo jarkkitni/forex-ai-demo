@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ขับดี รถเช่าเชียงใหม่ — เดโมเว็บรถเช่า + ระบบชำระเงิน | thailinebot.com</title>
+<meta name="description" content="เว็บรถเช่าตัวอย่าง เลือกรถ คำนวณราคาอัตโนมัติ จองและจ่ายเงินผ่าน QR พร้อมเพย์ ตรวจสลิป หรือบัตรเครดิต">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@500;600;700&family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* layout: highway-sign green header strip, fleet grid, sticky booking panel beside it */
+  --bg:#f3f5f2; --surface:#ffffff; --ink:#18211d; --muted:#5d6b64;
+  --accent:#0f6b4f; --accent-ink:#ffffff; --amber:#f2b632; --line:#d9e0db;
+  --font-display:"Prompt", "Noto Sans Thai", system-ui, sans-serif;
+  --font-body:"Sarabun", "Noto Sans Thai", system-ui, sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#101614; --surface:#18201d; --ink:#e8eee9; --muted:#9aaba2;
+    --accent:#2fa77c; --accent-ink:#06130e; --amber:#f2c14e; --line:#2a3530;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#101614; --surface:#18201d; --ink:#e8eee9; --muted:#9aaba2;
+  --accent:#2fa77c; --accent-ink:#06130e; --amber:#f2c14e; --line:#2a3530;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.6}
+h1,h2,h3{font-family:var(--font-display);line-height:1.25;text-wrap:balance;margin:0}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+header.top{background:var(--accent);color:var(--accent-ink)}
+.nav{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 20px;max-width:1120px;margin:0 auto;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:700;font-size:20px}
+.plate{background:#fff;color:#18211d;border:2px solid #18211d;border-radius:6px;padding:0 8px;font-size:13px;font-weight:600;letter-spacing:.02em}
+.nav a{color:inherit;text-decoration:none;font-weight:500;opacity:.9}
+.nav a:hover{opacity:1;text-decoration:underline}
+.navlinks{display:flex;gap:18px;flex-wrap:wrap}
+.hero{padding:28px 0 8px;display:grid;gap:10px}
+.hero h1{font-size:clamp(26px,4vw,38px)}
+.hero p{color:var(--muted);max-width:62ch;margin:0}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 12px;font-size:14px;color:var(--muted)}
+.chip b{color:var(--ink)}
+.main{display:grid;grid-template-columns:1fr 340px;gap:24px;padding:20px 0 40px;align-items:start}
+@media (max-width:880px){.main{grid-template-columns:1fr}}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.filters button{font:inherit;font-weight:500;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:6px 14px;border-radius:8px;cursor:pointer}
+.filters button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.car{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;cursor:pointer;text-align:left;font:inherit;color:inherit}
+.car:hover{border-color:var(--accent)}
+.car[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset}
+.car svg{width:100%;height:auto;display:block}
+.car .row{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.car h3{font-size:17px}
+.tag{font-size:12px;font-weight:600;border-radius:6px;padding:1px 8px;background:var(--bg);color:var(--muted);white-space:nowrap}
+.tag.free{background:var(--amber);color:#2a1f00}
+.price{font-family:var(--font-display);font-weight:600;font-size:20px;font-variant-numeric:tabular-nums}
+.price small{font-family:var(--font-body);font-weight:400;font-size:13px;color:var(--muted)}
+.spec{font-size:14px;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap}
+aside.book{position:sticky;top:16px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:grid;gap:12px}
+aside.book h2{font-size:20px}
+.sel{font-size:15px;padding:8px 10px;border-radius:8px;background:var(--bg)}
+label{font-size:14px;font-weight:600;display:grid;gap:4px}
+input,select{font:inherit;font-weight:400;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);width:100%}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.check{display:flex;gap:8px;align-items:center;font-weight:500}
+.check input{width:auto}
+table.sum{width:100%;border-collapse:collapse;font-size:15px;font-variant-numeric:tabular-nums}
+table.sum td{padding:4px 0}
+table.sum td:last-child{text-align:right}
+table.sum tr.total td{border-top:1px solid var(--line);padding-top:8px;font-family:var(--font-display);font-weight:600;font-size:18px}
+.btn{font:inherit;font-family:var(--font-display);font-weight:600;font-size:17px;background:var(--accent);color:var(--accent-ink);border:0;border-radius:10px;padding:12px;cursor:pointer}
+.btn:hover{filter:brightness(1.08)}
+.err{color:#c0392b;font-size:14px;min-height:1em;margin:0}
+:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+section.info{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;padding-bottom:28px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px}
+.box h3{font-size:17px;margin-bottom:6px}
+.box ul{margin:0;padding-left:20px;color:var(--muted)}
+footer{border-top:1px solid var(--line);padding:18px 0 28px;color:var(--muted);font-size:14px}
+.dlg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:16px;z-index:10}
+.dlg.open{display:flex}
+.dlg .card{background:var(--surface);border-radius:14px;padding:22px;max-width:420px;width:100%;display:grid;gap:10px}
+.code{font-family:var(--font-display);font-size:24px;font-weight:700;color:var(--accent);letter-spacing:.04em}
+.pay-info{padding-bottom:28px;display:grid;gap:10px}
+.pay-info h2{font-size:24px}
+.lead{margin:0;max-width:70ch;color:var(--muted)}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+table.opts{border-collapse:collapse;width:100%;min-width:720px;font-size:15px}
+table.opts th,table.opts td{padding:10px 12px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+table.opts th{font-family:var(--font-display);font-weight:600;font-size:14px;background:var(--bg)}
+table.opts tr:last-child td{border-bottom:0}
+.note{font-size:14px;color:var(--muted);margin:0}
+.dlg .card{max-height:92vh;overflow:auto}
+#step1,#step2{display:grid;gap:12px}
+#step1[hidden],#step2[hidden],.pane[hidden]{display:none}
+.paysum{display:flex;justify-content:space-between;gap:8px;align-items:baseline;background:var(--bg);border-radius:8px;padding:8px 12px}
+.amt{font-family:var(--font-display);font-weight:700;font-size:22px;font-variant-numeric:tabular-nums}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs button{font:inherit;font-weight:500;flex:1;padding:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.pane{display:grid;gap:10px}
+.qr{background:#fff;border-radius:10px;padding:8px;width:200px;margin:0 auto}
+.qr svg{width:100%;height:auto;display:block}
+.small{font-size:14px;color:var(--muted);margin:0}
+.link{font:inherit;background:none;border:0;color:var(--muted);text-decoration:underline;cursor:pointer}
+.ok{width:52px;height:52px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-size:28px;font-weight:700}
+@media (prefers-reduced-motion:no-preference){.car{transition:border-color .15s}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="nav">
+    <div class="brand"><span class="plate">ขด 2569</span> ขับดี คาร์เร้นท์</div>
+    <nav class="navlinks"><a href="#fleet">รถทั้งหมด</a><a href="#terms">เงื่อนไข</a><a href="#payinfo">ชำระเงิน</a><a href="#contact">ติดต่อ</a></nav>
+  </div>
+</header>
+
+<div class="wrap">
+  <section class="hero">
+    <h1>เช่ารถเชียงใหม่ รับที่สนามบินได้ทันที</h1>
+    <p>เลือกรถ เลือกวัน ระบบคำนวณราคาให้ทันที รถทุกคันมีประกันชั้น 1 และมีเจ้าหน้าที่ช่วยเหลือ 24 ชม.</p>
+    <div class="chips">
+      <span class="chip">รับรถ <b>สนามบิน CNX</b></span>
+      <span class="chip">มัดจำเริ่ม <b>3,000 บาท</b></span>
+      <span class="chip">เช่า 7 วันขึ้นไป <b>ลด 10%</b></span>
+    </div>
+  </section>
+
+  <div class="main">
+    <section id="fleet" aria-label="รายการรถ">
+      <div class="filters" role="group" aria-label="กรองประเภทรถ">
+        <button type="button" data-f="all" aria-pressed="true">ทั้งหมด</button>
+        <button type="button" data-f="eco">อีโค่คาร์</button>
+        <button type="button" data-f="sedan">เก๋ง</button>
+        <button type="button" data-f="suv">SUV / 7 ที่นั่ง</button>
+        <button type="button" data-f="van">รถตู้</button>
+      </div>
+      <div class="grid" id="grid"></div>
+    </section>
+
+    <aside class="book" id="book" aria-label="จองรถ">
+      <h2>จองรถ</h2>
+      <div class="sel" id="selName">ยังไม่ได้เลือกรถ กดเลือกรถทางซ้ายได้เลย</div>
+      <form id="form" novalidate>
+        <div style="display:grid;gap:10px">
+          <div class="two">
+            <label for="d1">วันรับรถ<input type="date" id="d1" required></label>
+            <label for="d2">วันคืนรถ<input type="date" id="d2" required></label>
+          </div>
+          <label for="place">จุดรับรถ
+            <select id="place">
+              <option value="0">สนามบินเชียงใหม่ (ฟรี)</option>
+              <option value="0">สาขานิมมานฯ (ฟรี)</option>
+              <option value="300">ส่งถึงโรงแรมในเมือง (+300 บาท)</option>
+            </select>
+          </label>
+          <label class="check" for="ins"><input type="checkbox" id="ins"> ประกันเพิ่มไม่ต้องจ่ายส่วนแรก (+200 บาท/วัน)</label>
+          <label class="check" for="seat"><input type="checkbox" id="seat"> คาร์ซีทเด็ก (+100 บาท/วัน)</label>
+          <label for="name">ชื่อผู้เช่า<input type="text" id="name" placeholder="เช่น สมชาย ใจดี" autocomplete="name"></label>
+          <label for="tel">เบอร์โทร / LINE ID<input type="text" id="tel" placeholder="08x-xxx-xxxx"></label>
+          <table class="sum" aria-live="polite">
+            <tr><td id="sDays">ค่าเช่า</td><td id="sRent">–</td></tr>
+            <tr><td>ส่วนลด</td><td id="sDisc">–</td></tr>
+            <tr><td>บริการเสริม</td><td id="sExtra">–</td></tr>
+            <tr class="total"><td>รวมทั้งหมด</td><td id="sTotal">–</td></tr>
+            <tr><td>มัดจำ (คืนตอนคืนรถ)</td><td id="sDep">–</td></tr>
+          </table>
+          <p class="err" id="err"></p>
+          <button class="btn" type="submit">ยืนยันการจอง</button>
+        </div>
+      </form>
+    </aside>
+  </div>
+
+  <section class="info" id="terms">
+    <div class="box"><h3>เอกสารที่ใช้</h3><ul><li>บัตรประชาชน หรือพาสปอร์ต</li><li>ใบขับขี่ (ต่างชาติใช้ใบขับขี่สากล)</li></ul></div>
+    <div class="box"><h3>เงื่อนไขการเช่า</h3><ul><li>คิดค่าเช่าเป็นรอบ 24 ชม.</li><li>รับรถน้ำมันเต็มถัง คืนเต็มถัง</li><li>ยกเลิกฟรีก่อนรับรถ 48 ชม.</li></ul></div>
+    <div class="box" id="contact"><h3>ติดต่อ</h3><ul><li>โทร 053-000-000</li><li>LINE: @khapdee-demo</li><li>เปิดทุกวัน 07:00–22:00</li></ul></div>
+  </section>
+
+</div>
+
+<section class="wrap pay-info" id="payinfo">
+  <h2>ระบบรับชำระเงินออนไลน์ (ส่วนเสริม)</h2>
+  <p class="lead">เว็บนี้มีหน้าชำระเงินตัวอย่าง ลองกดจองรถด้านบนแล้วเลือกวิธีจ่ายได้เลย ถ้าร้านต้องการเปิดรับเงินจริง ต้องสมัครผู้ให้บริการภายนอกและจ่ายค่าบริการให้ผู้ให้บริการนั้นโดยตรง ค่าบริการนี้แยกจากค่าทำเว็บ</p>
+  <div class="tbl">
+  <table class="opts">
+    <thead><tr><th>วิธีรับเงิน</th><th>ทำงานอย่างไร</th><th>ผู้ให้บริการ (ตัวอย่าง)</th><th>ค่าใช้จ่ายที่ร้านต้องจ่าย</th></tr></thead>
+    <tbody>
+      <tr><td><b>1. QR พร้อมเพย์ + ตรวจสลิปอัตโนมัติ</b></td><td>ลูกค้าโอนเข้าบัญชีร้าน แนบสลิป ระบบเช็คกับธนาคารว่าสลิปจริงและไม่ซ้ำ แล้วยืนยันการจองให้เอง</td><td>EasySlip, SlipOK, RDCW Slip Verify</td><td>แพ็กเกจรายเดือน คิดตามจำนวนสลิป เริ่มประมาณหลักร้อยบาท/เดือน ไม่หัก % จากยอดเงิน</td></tr>
+      <tr><td><b>2. Payment Gateway (QR ตัดเงินอัตโนมัติ)</b></td><td>ระบบสร้าง QR ตามยอดจอง พอลูกค้าจ่ายแล้ว gateway แจ้งกลับมาที่เว็บทันที ไม่ต้องแนบสลิป</td><td>Omise (Opn), GB Prime Pay, 2C2P, Pay Solutions</td><td>หัก % ต่อรายการ (พร้อมเพย์มักต่ำกว่าบัตร) บางเจ้ามีค่าแรกเข้า/รายปี ส่วนใหญ่ต้องจดทะเบียนบริษัทหรือห้างฯ</td></tr>
+      <tr><td><b>3. บัตรเครดิต / เดบิต</b></td><td>ลูกค้ากรอกบัตรในหน้าของ gateway เหมาะกับลูกค้าต่างชาติ</td><td>Omise, 2C2P, GB Prime Pay</td><td>หัก % ต่อรายการ สูงกว่าพร้อมเพย์ (ประมาณ 3–4%)</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="note">ราคาเป็นค่าประมาณเพื่อเปรียบเทียบ อัตราจริงขึ้นกับแพ็กเกจและสัญญาของผู้ให้บริการแต่ละเจ้า ควรเช็คราคาล่าสุดก่อนเสนอลูกค้า · <a href="/blog/car-rental-website-payment" style="color:inherit">อ่านรายละเอียดเต็มในบทความ</a></p>
+</section>
+<div class="wrap"><footer>เว็บไซต์ตัวอย่าง (เดโม) ร้านและข้อมูลทั้งหมดเป็นข้อมูลสมมติ · ออกแบบและพัฒนาโดย <a href="/blog/car-rental-website-payment" style="color:inherit">thailinebot.com</a></footer></div>
+
+<div class="dlg" id="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgT">
+  <div class="card">
+    <div id="step1">
+      <h2 id="dlgT">ชำระเงิน</h2>
+      <div class="paysum"><span id="pCar"></span><span class="amt" id="pAmt"></span></div>
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" data-p="qr" aria-selected="true">QR พร้อมเพย์</button>
+        <button type="button" role="tab" data-p="slip" aria-selected="false">แนบสลิป</button>
+        <button type="button" role="tab" data-p="card" aria-selected="false">บัตรเครดิต</button>
+      </div>
+      <div class="pane" data-p="qr">
+        <div class="qr" id="qr" aria-label="QR ตัวอย่าง"></div>
+        <p class="small">สแกนด้วยแอปธนาคารใดก็ได้ ยอดเงินกรอกให้แล้ว QR หมดอายุใน <b id="timer">15:00</b> นาที<br>(QR ตัวอย่างนี้ไม่ใช่ QR รับเงินจริง)</p>
+        <button class="btn" type="button" id="simPay">จำลอง: ลูกค้าจ่ายเงินสำเร็จ</button>
+      </div>
+      <div class="pane" data-p="slip" hidden>
+        <p class="small">โอนเข้า ธ.กสิกรไทย 000-0-00000-0 (บจก.ขับดี ตัวอย่าง) แล้วแนบสลิป ระบบจะตรวจสลิปกับธนาคารให้อัตโนมัติ</p>
+        <label for="slipFile">ไฟล์สลิป<input type="file" id="slipFile" accept="image/*"></label>
+        <button class="btn" type="button" id="checkSlip">ตรวจสอบสลิป</button>
+        <p class="small" id="slipMsg" aria-live="polite"></p>
+      </div>
+      <div class="pane" data-p="card" hidden>
+        <label for="cc">หมายเลขบัตร<input type="text" id="cc" value="4242 4242 4242 4242" readonly></label>
+        <div class="two"><label for="ccExp">หมดอายุ<input type="text" id="ccExp" value="12/30" readonly></label><label for="ccCvv">CVV<input type="text" id="ccCvv" value="123" readonly></label></div>
+        <p class="small">ช่องนี้กรอกค่าบัตรทดสอบไว้ให้ ระบบจริงจะกรอกบัตรในหน้าของ payment gateway เว็บร้านไม่เก็บเลขบัตรเอง</p>
+        <button class="btn" type="button" id="payCard">จำลอง: ชำระด้วยบัตร</button>
+      </div>
+      <button class="link" type="button" id="cancel">ยกเลิก</button>
+    </div>
+    <div id="step2" hidden>
+      <div class="ok" aria-hidden="true">✓</div>
+      <h2>ชำระเงินสำเร็จ จองรถเรียบร้อย</h2>
+      <div>เลขที่การจอง</div>
+      <div class="code" id="code"></div>
+      <div id="dlgBody" class="small"></div>
+      <p class="small">ระบบจริงจะบันทึกลงฐานข้อมูล ส่งใบเสร็จให้ลูกค้า และแจ้งเตือนเข้า LINE ร้านทันที</p>
+      <button class="btn" type="button" id="close">ปิด</button>
+    </div>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+
+<script>
+const cars=[
+  {id:1,n:"Toyota Yaris Ativ",t:"eco",p:900,s:5,g:"ออโต้",f:"เบนซิน",dep:3000,c:"#c8423a",tag:"ยอดนิยม"},
+  {id:2,n:"Honda City",t:"eco",p:1000,s:5,g:"ออโต้",f:"เบนซิน",dep:3000,c:"#e9e9e9"},
+  {id:3,n:"Toyota Corolla Cross",t:"suv",p:1600,s:5,g:"ออโต้",f:"ไฮบริด",dep:5000,c:"#3a5a8c"},
+  {id:4,n:"Honda Civic",t:"sedan",p:1500,s:5,g:"ออโต้",f:"เบนซิน",dep:5000,c:"#2b2b2b"},
+  {id:5,n:"Toyota Fortuner",t:"suv",p:2200,s:7,g:"ออโต้",f:"ดีเซล",dep:8000,c:"#6b6f73",tag:"ขึ้นดอยสบาย"},
+  {id:6,n:"Toyota Commuter",t:"van",p:2800,s:12,g:"ธรรมดา",f:"ดีเซล",dep:10000,c:"#f2f2f2",tag:"มีคนขับ +800"},
+];
+const fmt=n=>n.toLocaleString("th-TH")+" บาท";
+const shape={eco:"M30 70 L48 48 Q58 40 75 40 L130 40 Q150 40 162 52 L180 62 Q192 64 192 76 L192 84 L18 84 L18 76 Q18 70 30 70Z",
+ sedan:"M22 70 L50 46 Q60 40 78 40 L128 40 Q146 40 160 54 L184 62 Q196 66 196 76 L196 84 L14 84 L14 76 Q14 70 22 70Z",
+ suv:"M20 66 L38 38 Q44 30 60 30 L150 30 Q162 30 170 44 L186 60 Q196 62 196 74 L196 86 L14 86 L14 72 Q14 66 20 66Z",
+ van:"M16 40 Q16 26 32 26 L150 26 Q166 26 176 42 L192 62 Q196 66 196 74 L196 86 L14 86 L14 44Z"};
+function carSvg(c){return `<svg viewBox="0 0 210 104" aria-hidden="true"><rect x="0" y="92" width="210" height="4" rx="2" fill="var(--line)"/><path d="${shape[c.t]}" fill="${c.c}" stroke="var(--ink)" stroke-width="2"/><path d="M60 46 L76 46 L76 62 L46 62Z M84 46 L124 46 Q138 46 148 62 L84 62Z" fill="#9fc2d6" opacity=".85" ${c.t==='van'?'transform="translate(-14,-8)"':''}/><circle cx="52" cy="86" r="12" fill="#222"/><circle cx="52" cy="86" r="5" fill="#bbb"/><circle cx="160" cy="86" r="12" fill="#222"/><circle cx="160" cy="86" r="5" fill="#bbb"/></svg>`}
+let filter="all",sel=null;
+const grid=document.getElementById("grid");
+function render(){
+  grid.innerHTML="";
+  cars.filter(c=>filter==="all"||c.t===filter).forEach(c=>{
+    const b=document.createElement("button");b.type="button";b.className="car";b.setAttribute("aria-pressed",sel&&sel.id===c.id);
+    b.innerHTML=`${carSvg(c)}<div class="row"><h3>${c.n}</h3>${c.tag?`<span class="tag ${c.id===1?'free':''}">${c.tag}</span>`:""}</div>
+    <div class="spec"><span>${c.s} ที่นั่ง</span><span>${c.g}</span><span>${c.f}</span></div>
+    <div class="price">${c.p.toLocaleString("th-TH")} <small>บาท/วัน</small></div>`;
+    b.onclick=()=>{sel=c;render();calc();if(innerWidth<880)document.getElementById("book").scrollIntoView({behavior:"smooth"})};
+    grid.appendChild(b);
+  });
+}
+document.querySelectorAll(".filters button").forEach(b=>b.onclick=()=>{
+  filter=b.dataset.f;document.querySelectorAll(".filters button").forEach(x=>x.setAttribute("aria-pressed",x===b));render();});
+const $=id=>document.getElementById(id);
+const iso=d=>d.toISOString().slice(0,10);
+const today=new Date();const t1=new Date(today);t1.setDate(t1.getDate()+3);const t2=new Date(today);t2.setDate(t2.getDate()+6);
+$("d1").value=iso(t1);$("d2").value=iso(t2);$("d1").min=iso(today);$("d2").min=iso(today);
+function days(){const a=new Date($("d1").value),b=new Date($("d2").value);const d=Math.round((b-a)/864e5);return isNaN(d)?0:d}
+function calc(){
+  $("selName").textContent=sel?`${sel.n} · ${fmt(sel.p)}/วัน`:"ยังไม่ได้เลือกรถ กดเลือกรถทางซ้ายได้เลย";
+  const d=days();
+  if(!sel||d<1){["sRent","sDisc","sExtra","sTotal","sDep"].forEach(i=>$(i).textContent="–");$("sDays").textContent="ค่าเช่า";return null}
+  const rent=sel.p*d,disc=d>=7?Math.round(rent*.1):0;
+  const extra=(+$("place").value)+($("ins").checked?200*d:0)+($("seat").checked?100*d:0);
+  const total=rent-disc+extra;
+  $("sDays").textContent=`ค่าเช่า ${d} วัน`;$("sRent").textContent=fmt(rent);
+  $("sDisc").textContent=disc?"−"+fmt(disc):"0 บาท";$("sExtra").textContent=fmt(extra);
+  $("sTotal").textContent=fmt(total);$("sDep").textContent=fmt(sel.dep);
+  return {d,total};
+}
+["d1","d2","place","ins","seat"].forEach(i=>$(i).addEventListener("change",calc));
+$("form").addEventListener("submit",e=>{
+  e.preventDefault();const r=calc();
+  if(!sel){$("err").textContent="กรุณาเลือกรถก่อน";return}
+  if(!r){$("err").textContent="วันคืนรถต้องอยู่หลังวันรับรถอย่างน้อย 1 วัน";return}
+  if(!$("name").value.trim()||!$("tel").value.trim()){$("err").textContent="กรุณากรอกชื่อและเบอร์โทร/LINE";return}
+  $("err").textContent="";
+  current={...r,code:"KD-"+Math.floor(100000+Math.random()*900000)};
+  $("pCar").textContent=`${sel.n} · ${r.d} วัน`;$("pAmt").textContent=fmt(r.total);
+  try{const q=qrcode(0,"M");q.addData("DEMO ONLY - KHAPDEE "+current.code+" THB "+r.total);q.make();$("qr").innerHTML=q.createSvgTag({cellSize:5,margin:2,scalable:true});}
+  catch(_){$("qr").textContent="QR "+current.code}
+  showTab("qr");$("step1").hidden=false;$("step2").hidden=true;$("slipMsg").textContent="";
+  $("dlg").classList.add("open");startTimer();
+});
+let current=null,tId=null;
+function startTimer(){let s=900;clearInterval(tId);tId=setInterval(()=>{s--;$("timer").textContent=`${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;if(s<=0)clearInterval(tId)},1000)}
+function showTab(p){document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.p===p));document.querySelectorAll(".pane").forEach(x=>x.hidden=x.dataset.p!==p)}
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>showTab(b.dataset.p));
+function paid(method){
+  clearInterval(tId);
+  $("code").textContent=current.code;
+  $("dlgBody").textContent=`${sel.n} · ${current.d} วัน · ชำระ ${fmt(current.total)} ผ่าน${method} · ส่งยืนยันไปที่ ${$("tel").value.trim()}`;
+  $("step1").hidden=true;$("step2").hidden=false;$("close").focus();
+}
+$("simPay").onclick=()=>paid("QR พร้อมเพย์");
+$("payCard").onclick=()=>paid("บัตรเครดิต");
+$("checkSlip").onclick=()=>{
+  if(!$("slipFile").files.length){$("slipMsg").textContent="กรุณาเลือกไฟล์รูปสลิปก่อน";return}
+  $("slipMsg").textContent="กำลังตรวจสอบสลิปกับธนาคาร...";
+  setTimeout(()=>paid("การโอน (ตรวจสลิปแล้ว)"),1200);
+};
+$("cancel").onclick=()=>{clearInterval(tId);$("dlg").classList.remove("open")};
+$("close").onclick=()=>$("dlg").classList.remove("open");
+render();calc();
+</script>
+</body>
+</html>

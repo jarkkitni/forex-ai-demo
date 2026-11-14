@@ -738,6 +738,19 @@ def moto_demo():
     return resp
 
 
+@app.route("/carrent")
+def car_rental_demo():
+    """ขับดี คาร์เร้นท์ — เดโมเว็บรถเช่า + หน้าชำระเงิน (QR พร้อมเพย์ / แนบสลิป / บัตร) (14 พ.ย. 2026)
+    ทำงานฝั่งเบราว์เซอร์ล้วน ไม่มี backend — ร้านและข้อมูลสมมติ, QR ในหน้าเป็นข้อความเดโม สแกนจ่ายไม่ได้
+    บทความคู่กัน: /blog/car-rental-website-payment"""
+    from flask import send_from_directory
+    _track_visit()
+    resp = send_from_directory(
+        os.path.join(os.path.dirname(__file__), "static", "works"), "car-rental.html")
+    resp.headers["Cache-Control"] = "no-cache, must-revalidate"
+    return resp
+
+
 @app.route("/shop")
 def shop_demo_shortlink():
     """ทางลัดสำหรับใช้ในรูปโปรโมท/โพสต์: thailinebot.com/shop
