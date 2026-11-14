@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FileKlang ร้านไฟล์ดิจิทัล — เดโมเว็บขายไฟล์ เติมเครดิต ตัดสต็อก | thailinebot.com</title>
+<meta name="description" content="เดโมเว็บขายสินค้าดิจิทัล ล็อกอิน เติมเครดิตผ่าน QR พร้อมเพย์ กดซื้อด้วยเครดิต จำกัดจำนวนสินค้า แสดงของคงเหลือ และหลังบ้านสำหรับเจ้าของร้าน">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* layout: top bar with wallet, tabbed workspace (shop / purchases / admin), cards in a grid */
+  --bg:#f4f4f7; --surface:#ffffff; --ink:#16161d; --muted:#5f6070;
+  --accent:#3b3bd6; --accent-ink:#ffffff; --ok:#12805c; --warn:#b4540a; --bad:#c03030; --line:#dcdce6;
+  --font:"IBM Plex Sans Thai", system-ui, sans-serif; --mono:"IBM Plex Mono", ui-monospace, monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#111117; --surface:#1b1b24; --ink:#ececf3; --muted:#a2a3b5; --accent:#8b8bff; --accent-ink:#0d0d1a;
+    --ok:#3ccf97; --warn:#f0a35a; --bad:#ff7a7a; --line:#2c2c3a; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#111117; --surface:#1b1b24; --ink:#ececf3; --muted:#a2a3b5; --accent:#8b8bff; --accent-ink:#0d0d1a;
+  --ok:#3ccf97; --warn:#f0a35a; --bad:#ff7a7a; --line:#2c2c3a; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.6}
+h1,h2,h3{line-height:1.3;margin:0;text-wrap:balance}
+button,input,select{font:inherit;color:inherit}
+.wrap{max-width:1100px;margin:0 auto;padding:0 18px}
+.bar{background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.bar .wrap{display:flex;align-items:center;gap:14px;justify-content:space-between;padding:12px 18px;flex-wrap:wrap}
+.logo{font-weight:700;font-size:20px;display:flex;align-items:center;gap:8px}
+.logo i{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:8px;background:var(--accent);color:var(--accent-ink);font-style:normal;font-family:var(--mono);font-size:14px}
+.acct{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.wallet{font-family:var(--mono);font-variant-numeric:tabular-nums;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:4px 12px}
+.btn{border:0;border-radius:10px;padding:9px 16px;font-weight:600;cursor:pointer;background:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn:hover:not(:disabled){filter:brightness(1.08)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.tabs{display:flex;gap:4px;margin:18px 0 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tabs button{background:none;border:0;padding:10px 14px;cursor:pointer;color:var(--muted);font-weight:600;border-bottom:3px solid transparent;margin-bottom:-1px}
+.tabs button[aria-selected="true"]{color:var(--ink);border-color:var(--accent)}
+.intro{display:grid;gap:4px;padding:22px 0 0}
+.intro h1{font-size:clamp(24px,3.6vw,32px)}
+.intro p{margin:0;color:var(--muted);max-width:68ch}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:8px}
+.thumb{height:92px;border-radius:10px;display:grid;place-items:center;font-family:var(--mono);font-size:22px;color:#fff}
+.card h3{font-size:17px}
+.card p{margin:0;font-size:14px;color:var(--muted)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.price{font-weight:700;font-size:19px;font-variant-numeric:tabular-nums}
+.stock{font-size:13px;font-weight:600;border-radius:6px;padding:2px 8px}
+.stock.ok{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok)}
+.stock.low{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
+.stock.out{background:color-mix(in srgb,var(--bad) 14%,transparent);color:var(--bad)}
+.meter{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.meter span{display:block;height:100%;background:var(--accent)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:13px;color:var(--muted);font-weight:600}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.key{font-family:var(--mono);font-size:13px;background:var(--bg);border-radius:6px;padding:2px 6px;word-break:break-all}
+.tbl{overflow-x:auto}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}
+.stat b{display:block;font-size:22px;font-variant-numeric:tabular-nums}
+.stat span{font-size:13px;color:var(--muted)}
+.empty{color:var(--muted);text-align:center;padding:24px}
+.mini{width:80px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:500;display:none;z-index:30;max-width:90vw}
+.toast.show{display:block}
+.dlg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:16px;z-index:20}
+.dlg.open{display:flex}
+.dlg .box{background:var(--surface);border-radius:16px;padding:22px;width:100%;max-width:400px;display:grid;gap:12px;max-height:92vh;overflow:auto}
+label{display:grid;gap:4px;font-size:14px;font-weight:600}
+input[type=text],input[type=password],input[type=number]{padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chips button{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:6px 12px;cursor:pointer;font-weight:600;font-variant-numeric:tabular-nums}
+.chips button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent);color:var(--accent-ink)}
+.qr{background:#fff;border-radius:10px;padding:8px;width:180px;margin:0 auto}
+.qr svg{width:100%;height:auto;display:block}
+.small{font-size:13px;color:var(--muted);margin:0}
+.note{font-size:14px;color:var(--muted);border-left:3px solid var(--accent);padding:4px 12px;margin:18px 0}
+footer{color:var(--muted);font-size:14px;padding:26px 0 34px;border-top:1px solid var(--line);margin-top:28px}
+[hidden]{display:none !important}
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="wrap">
+    <div class="logo"><i>FK</i> FileKlang</div>
+    <div class="acct">
+      <span id="who" class="small"></span>
+      <span class="wallet" id="wallet" hidden></span>
+      <button class="btn" type="button" id="topupBtn" hidden>เติมเครดิต</button>
+      <button class="btn ghost" type="button" id="authBtn">เข้าสู่ระบบ</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="intro">
+    <h1>ร้านไฟล์ดิจิทัล เติมเครดิตครั้งเดียว ซื้อได้ทันที</h1>
+    <p>เดโมเว็บขายไฟล์และโปรแกรม: สมัคร/ล็อกอิน เติมเครดิตผ่าน QR พร้อมเพย์ กดซื้อด้วยเครดิต ระบบตัดสต็อกและแสดงจำนวนคงเหลือ ได้ลิงก์ดาวน์โหลดหรือคีย์ทันที ลองกดได้ทุกปุ่ม (ร้านและสินค้าเป็นตัวอย่าง)</p>
+  </section>
+
+  <div class="tabs" role="tablist">
+    <button type="button" role="tab" data-t="shop" aria-selected="true">สินค้า</button>
+    <button type="button" role="tab" data-t="mine" aria-selected="false">ของที่ซื้อแล้ว</button>
+    <button type="button" role="tab" data-t="hist" aria-selected="false">ประวัติเครดิต</button>
+    <button type="button" role="tab" data-t="admin" aria-selected="false">หลังบ้าน (เจ้าของร้าน)</button>
+  </div>
+
+  <section data-p="shop"><div class="grid" id="grid"></div></section>
+  <section data-p="mine" hidden><div class="panel tbl" id="mine"></div></section>
+  <section data-p="hist" hidden><div class="panel tbl" id="hist"></div></section>
+  <section data-p="admin" hidden>
+    <div class="stats" id="stats"></div>
+    <div class="panel tbl" id="admin"></div>
+    <p class="note">ระบบจริง: ตัดเครดิตและตัดสต็อกในคำสั่งเดียวของฐานข้อมูล (transaction) กันสองคนซื้อชิ้นสุดท้ายพร้อมกัน, เติมเครดิตยืนยันอัตโนมัติด้วยตรวจสลิปหรือ payment gateway (<a href="/blog/slip-verification-api-fake-slip" style="color:inherit">อ่านเรื่องตรวจสลิป</a>), ลิงก์ดาวน์โหลดหมดอายุได้และผูกกับบัญชีผู้ซื้อ</p>
+  </section>
+
+  <footer>เว็บไซต์ตัวอย่าง (เดโม) ข้อมูลเก็บไว้ในหน้านี้เท่านั้น รีเฟรชแล้วเริ่มใหม่ · ออกแบบและพัฒนาโดย <a href="/" style="color:inherit">thailinebot.com</a></footer>
+</main>
+
+<div class="dlg" id="loginDlg" role="dialog" aria-modal="true" aria-labelledby="lt">
+  <form class="box" id="loginForm">
+    <h2 id="lt">เข้าสู่ระบบ</h2>
+    <label for="lu">ชื่อผู้ใช้หรืออีเมล<input type="text" id="lu" value="demo@fileklang.shop" autocomplete="off"></label>
+    <label for="lp">รหัสผ่าน<input type="password" id="lp" value="demo1234" autocomplete="off"></label>
+    <p class="small">เดโมกรอกไว้ให้แล้ว กดเข้าสู่ระบบได้เลย ระบบจริงเก็บรหัสผ่านแบบเข้ารหัส (hash) และล็อกอินด้วย Google/LINE ได้</p>
+    <button class="btn" type="submit">เข้าสู่ระบบ</button>
+    <button class="btn ghost" type="button" data-close>ยกเลิก</button>
+  </form>
+</div>
+
+<div class="dlg" id="topDlg" role="dialog" aria-modal="true" aria-labelledby="tt">
+  <div class="box">
+    <h2 id="tt">เติมเครดิต</h2>
+    <div class="chips" id="amts"></div>
+    <div class="qr" id="qr" aria-label="QR ตัวอย่าง"></div>
+    <p class="small">สแกนจ่ายแล้วเครดิตเข้าอัตโนมัติ (QR นี้เป็นตัวอย่าง สแกนจ่ายไม่ได้)</p>
+    <button class="btn" type="button" id="paid">จำลอง: จ่ายเงินสำเร็จ</button>
+    <button class="btn ghost" type="button" data-close>ปิด</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const baht=n=>n.toLocaleString("th-TH")+" ฿";
+const st={user:null,credit:0,
+ products:[
+  {id:1,name:"เทมเพลตใบเสนอราคา Excel",desc:"คำนวณ VAT/ส่วนลดอัตโนมัติ ไฟล์ .xlsx",price:59,stock:999,max:999,type:"file",color:"#1f7a4d",icon:"XLS"},
+  {id:2,name:"Lightroom Preset โทนคาเฟ่ 20 แบบ",desc:"ไฟล์ .xmp + .dng ใช้ได้ทั้งมือถือและคอม",price:129,stock:42,max:50,type:"file",color:"#b0532c",icon:"LR"},
+  {id:3,name:"คีย์โปรแกรมจัดการสต็อก (1 ปี)",desc:"โปรแกรมตัวอย่าง ส่งคีย์ให้ทันทีหลังซื้อ",price:490,stock:3,max:20,type:"key",color:"#3b3bd6",icon:"KEY"},
+  {id:4,name:"ฟอนต์ไทยลายมือ (ใช้เชิงพาณิชย์)",desc:"ไฟล์ .ttf + .otf พร้อมใบอนุญาต",price:250,stock:0,max:30,type:"file",color:"#7a3db8",icon:"Aa"},
+  {id:5,name:"E-book คู่มือขายของออนไลน์",desc:"PDF 86 หน้า อัปเดตฟรีตลอด",price:99,stock:999,max:999,type:"file",color:"#0f6a8a",icon:"PDF"},
+  {id:6,name:"สคริปต์บอท LINE แจ้งเตือนออเดอร์",desc:"Python พร้อมคู่มือติดตั้ง",price:350,stock:8,max:10,type:"file",color:"#06833a",icon:"PY"},
+ ],
+ orders:[],ledger:[],sales:[
+  {pid:2,at:"เมื่อวาน 21:14",buyer:"pim***@gmail.com",price:129},{pid:3,at:"เมื่อวาน 18:02",buyer:"kan***@hotmail.com",price:490},
+  {pid:1,at:"เมื่อวาน 10:40",buyer:"tor***@gmail.com",price:59},{pid:6,at:"12 พ.ย. 16:25",buyer:"nut***@yahoo.com",price:350}]};
+let amt=100;
+function toast(t){const e=$("toast");e.textContent=t;e.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove("show"),2600)}
+function open(id){$(id).classList.add("open")}
+document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>b.closest(".dlg").classList.remove("open"));
+function stockTag(p){if(p.stock<=0)return'<span class="stock out">สินค้าหมด</span>';if(p.max>=999)return'<span class="stock ok">ไม่จำกัด</span>';
+ return `<span class="stock ${p.stock<=5?"low":"ok"}">เหลือ ${p.stock} ชิ้น</span>`}
+function renderShop(){
+ $("grid").innerHTML=st.products.map(p=>{
+  const limited=p.max<999,pct=limited?Math.round(p.stock/p.max*100):100;
+  const can=p.stock>0;
+  return `<article class="card"><div class="thumb" style="background:${p.color}">${p.icon}</div>
+  <h3>${p.name}</h3><p>${p.desc}</p>
+  <div class="row"><span class="price">${baht(p.price)}</span>${stockTag(p)}</div>
+  ${limited?`<div class="meter" aria-hidden="true"><span style="width:${pct}%"></span></div>`:""}
+  <button class="btn" type="button" data-buy="${p.id}" ${can?"":"disabled"}>${can?"ซื้อด้วยเครดิต":"สินค้าหมด"}</button></article>`}).join("");
+ document.querySelectorAll("[data-buy]").forEach(b=>b.onclick=()=>buy(+b.dataset.buy));
+}
+function renderBar(){
+ const on=!!st.user;$("wallet").hidden=!on;$("topupBtn").hidden=!on;
+ $("wallet").textContent="เครดิต "+baht(st.credit);$("who").textContent=on?st.user:"";
+ $("authBtn").textContent=on?"ออกจากระบบ":"เข้าสู่ระบบ";
+}
+function key(){const c="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let s="";for(let i=0;i<16;i++){s+=c[Math.floor(Math.random()*c.length)];if(i%4==3&&i<15)s+="-"}return s}
+function buy(id){
+ const p=st.products.find(x=>x.id===id);
+ if(!st.user){toast("เข้าสู่ระบบก่อนซื้อสินค้า");open("loginDlg");return}
+ if(p.stock<=0){toast("สินค้าหมดแล้ว");return}
+ if(st.credit<p.price){toast(`เครดิตไม่พอ ขาดอีก ${baht(p.price-st.credit)}`);amt=Math.max(100,Math.ceil((p.price-st.credit)/100)*100);openTop();return}
+ st.credit-=p.price;if(p.max<999)p.stock--;
+ const now=new Date().toLocaleString("th-TH",{dateStyle:"short",timeStyle:"short"});
+ st.orders.unshift({p,at:now,key:p.type==="key"?key():null});
+ st.ledger.unshift({at:now,what:"ซื้อ "+p.name,amt:-p.price,bal:st.credit});
+ st.sales.unshift({pid:p.id,at:now,buyer:st.user.replace(/^(.{3}).*(@.*)$/,"$1***$2"),price:p.price});
+ renderAll();toast("ซื้อสำเร็จ ดูไฟล์ได้ที่แท็บ \"ของที่ซื้อแล้ว\"");
+}
+function renderMine(){
+ $("mine").innerHTML=!st.orders.length?'<p class="empty">ยังไม่มีรายการซื้อ</p>':
+ `<table><thead><tr><th>สินค้า</th><th>วันที่</th><th>รับสินค้า</th></tr></thead><tbody>${st.orders.map(o=>`<tr><td>${o.p.name}</td><td>${o.at}</td><td>${o.key?`<span class="key">${o.key}</span>`:`<button class="btn ghost" type="button" data-dl>ดาวน์โหลด</button>`}</td></tr>`).join("")}</tbody></table>`;
+ document.querySelectorAll("[data-dl]").forEach(b=>b.onclick=()=>toast("ระบบจริงจะได้ลิงก์ดาวน์โหลดเฉพาะบัญชีนี้ หมดอายุใน 24 ชม."));
+}
+function renderHist(){
+ $("hist").innerHTML=!st.ledger.length?'<p class="empty">ยังไม่มีความเคลื่อนไหว</p>':
+ `<table><thead><tr><th>วันที่</th><th>รายการ</th><th class="num">จำนวน</th><th class="num">คงเหลือ</th></tr></thead><tbody>${st.ledger.map(l=>`<tr><td>${l.at}</td><td>${l.what}</td><td class="num" style="color:var(${l.amt>0?"--ok":"--bad"})">${l.amt>0?"+":""}${baht(l.amt)}</td><td class="num">${baht(l.bal)}</td></tr>`).join("")}</tbody></table>`;
+}
+function renderAdmin(){
+ const rev=st.sales.reduce((s,x)=>s+x.price,0),low=st.products.filter(p=>p.max<999&&p.stock<=5).length;
+ $("stats").innerHTML=`<div class="stat"><b>${baht(rev)}</b><span>ยอดขายช่วงนี้</span></div><div class="stat"><b>${st.sales.length}</b><span>ออร์เดอร์</span></div><div class="stat"><b style="color:var(${low?"--warn":"--ok"})">${low}</b><span>สินค้าใกล้หมด/หมด</span></div>`;
+ $("admin").innerHTML=`<h3 style="margin-bottom:8px">สต็อกและราคา</h3><table><thead><tr><th>สินค้า</th><th class="num">ราคา</th><th class="num">คงเหลือ</th><th>เติมสต็อก</th></tr></thead><tbody>${st.products.map(p=>`<tr><td>${p.name}</td><td class="num"><input class="mini" type="number" min="1" value="${p.price}" data-price="${p.id}" aria-label="ราคา ${p.name}"></td><td class="num">${p.max>=999?"ไม่จำกัด":p.stock}</td><td>${p.max>=999?"–":`<button class="btn ghost" type="button" data-add="${p.id}">+5</button>`}</td></tr>`).join("")}</tbody></table>
+ <h3 style="margin:18px 0 8px">ออร์เดอร์ล่าสุด</h3><table><thead><tr><th>เวลา</th><th>สินค้า</th><th>ผู้ซื้อ</th><th class="num">ยอด</th></tr></thead><tbody>${st.sales.slice(0,8).map(s=>`<tr><td>${s.at}</td><td>${st.products.find(p=>p.id===s.pid).name}</td><td>${s.buyer}</td><td class="num">${baht(s.price)}</td></tr>`).join("")}</tbody></table>`;
+ document.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>{const p=st.products.find(x=>x.id==b.dataset.add);p.stock+=5;p.max=Math.max(p.max,p.stock);renderAll();toast("เติมสต็อก +5 แล้ว")});
+ document.querySelectorAll("[data-price]").forEach(i=>i.onchange=()=>{const v=Math.max(1,Math.round(+i.value||1));st.products.find(x=>x.id==i.dataset.price).price=v;renderShop();toast("อัปเดตราคาแล้ว")});
+}
+function renderAll(){renderBar();renderShop();renderMine();renderHist();renderAdmin()}
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
+ document.querySelectorAll(".tabs button").forEach(x=>x.setAttribute("aria-selected",x===b));
+ document.querySelectorAll("[data-p]").forEach(s=>s.hidden=s.dataset.p!==b.dataset.t)});
+$("authBtn").onclick=()=>{if(st.user){st.user=null;renderAll();toast("ออกจากระบบแล้ว")}else open("loginDlg")};
+$("loginForm").onsubmit=e=>{e.preventDefault();const u=$("lu").value.trim();if(!u||!$("lp").value){toast("กรอกชื่อผู้ใช้และรหัสผ่าน");return}
+ st.user=u;$("loginDlg").classList.remove("open");renderAll();toast("เข้าสู่ระบบแล้ว เติมเครดิตเพื่อเริ่มซื้อ")};
+function drawAmts(){$("amts").innerHTML=[100,300,500,1000].map(a=>`<button type="button" aria-pressed="${a===amt}" data-a="${a}">${baht(a)}</button>`).join("")+(amt>1000||![100,300,500,1000].includes(amt)?`<button type="button" aria-pressed="true">${baht(amt)}</button>`:"");
+ document.querySelectorAll("[data-a]").forEach(b=>b.onclick=()=>{amt=+b.dataset.a;drawAmts();drawQr()})}
+function drawQr(){try{const q=qrcode(0,"M");q.addData("DEMO ONLY FILEKLANG TOPUP "+amt);q.make();$("qr").innerHTML=q.createSvgTag({cellSize:5,margin:2,scalable:true})}catch(_){$("qr").textContent="QR "+amt}}
+function openTop(){drawAmts();drawQr();open("topDlg")}
+$("topupBtn").onclick=()=>{amt=amt||100;openTop()};
+$("paid").onclick=()=>{st.credit+=amt;const now=new Date().toLocaleString("th-TH",{dateStyle:"short",timeStyle:"short"});
+ st.ledger.unshift({at:now,what:"เติมเครดิต QR พร้อมเพย์",amt:amt,bal:st.credit});$("topDlg").classList.remove("open");renderAll();toast(`เติมเครดิต ${baht(amt)} สำเร็จ`)};
+renderAll();
+</script>
+</body>
+</html>

@@ -751,6 +751,18 @@ def car_rental_demo():
     return resp
 
 
+@app.route("/digishop")
+def digital_shop_demo():
+    """FileKlang — เดโมเว็บขายไฟล์/โปรแกรมดิจิทัล: ล็อกอิน เติมเครดิต (QR) ซื้อด้วยเครดิต จำกัดสต็อก + หลังบ้าน (14 พ.ย. 2026)
+    ทำไว้ตอบโพสต์หาคนทำเว็บขายไฟล์แบบเติมเครดิต — ทำงานฝั่งเบราว์เซอร์ล้วน ไม่มี backend, สินค้าและข้อมูลเป็นตัวอย่าง"""
+    from flask import send_from_directory
+    _track_visit()
+    resp = send_from_directory(
+        os.path.join(os.path.dirname(__file__), "static", "works"), "digishop.html")
+    resp.headers["Cache-Control"] = "no-cache, must-revalidate"
+    return resp
+
+
 @app.route("/shop")
 def shop_demo_shortlink():
     """ทางลัดสำหรับใช้ในรูปโปรโมท/โพสต์: thailinebot.com/shop
