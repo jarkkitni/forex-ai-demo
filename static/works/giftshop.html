@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hugbox ส่งของขวัญ — เดโมเว็บช่อดอกไม้ โฟโต้บูธ จดหมาย ส่งเพลง | thailinebot.com</title>
+<meta name="description" content="เดโมเว็บร้านของขวัญ สั่งช่อดอกไม้ ทำโฟโต้บูธออนไลน์ เขียนจดหมาย แนบเพลง แล้วส่งเป็นลิงก์เซอร์ไพรส์ให้คนพิเศษ">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mitr:wght@400;500;600&family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* layout: blush header, product strip, then a 2-column gift builder (form | live preview) */
+  --bg:#fbf6f3; --surface:#ffffff; --ink:#2a1d22; --muted:#7a6670;
+  --accent:#c2416b; --accent-ink:#ffffff; --leaf:#4f7a5a; --line:#efdfe2;
+  --display:"Mitr", "Noto Sans Thai", system-ui, sans-serif; --body:"Sarabun", "Noto Sans Thai", system-ui, sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){--bg:#1a1316;--surface:#241b1f;--ink:#f4e9ec;--muted:#b9a3ab;--accent:#ff7aa2;--accent-ink:#2a0d17;--leaf:#8fc29b;--line:#3a2b31;color-scheme:dark}
+}
+:root[data-theme="dark"]{--bg:#1a1316;--surface:#241b1f;--ink:#f4e9ec;--muted:#b9a3ab;--accent:#ff7aa2;--accent-ink:#2a0d17;--leaf:#8fc29b;--line:#3a2b31;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.6}
+h1,h2,h3{font-family:var(--display);font-weight:500;line-height:1.3;margin:0;text-wrap:balance}
+button,input,select,textarea{font:inherit;color:inherit}
+.wrap{max-width:1080px;margin:0 auto;padding:0 18px}
+header{border-bottom:1px solid var(--line);background:var(--surface)}
+header .wrap{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 18px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-size:22px;font-weight:600;color:var(--accent)}
+nav{display:flex;gap:16px;flex-wrap:wrap}
+nav a{color:var(--ink);text-decoration:none;font-weight:500}
+nav a:hover{color:var(--accent)}
+.hero{padding:26px 0 8px;display:grid;gap:6px}
+.hero h1{font-size:clamp(26px,4vw,36px)}
+.hero p{margin:0;color:var(--muted);max-width:62ch}
+h2.sec{font-size:22px;margin:26px 0 12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:6px}
+.card svg{width:100%;height:120px;display:block}
+.card h3{font-size:17px}
+.card p{margin:0;font-size:14px;color:var(--muted)}
+.price{font-family:var(--display);font-size:18px;font-variant-numeric:tabular-nums}
+.btn{border:0;border-radius:999px;padding:9px 18px;font-weight:600;cursor:pointer;background:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
+.btn:hover{filter:brightness(1.07)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.builder{display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start}
+@media (max-width:860px){.builder{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;display:grid;gap:14px}
+label{display:grid;gap:4px;font-size:14px;font-weight:600}
+input[type=text],input[type=date],input[type=url],textarea,select{padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--bg);width:100%}
+textarea{min-height:110px;resize:vertical}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.opts{display:flex;gap:8px;flex-wrap:wrap}
+.opts button{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:6px 12px;cursor:pointer}
+.opts button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent);color:var(--accent-ink)}
+.small{font-size:13px;color:var(--muted);margin:0}
+.preview{position:sticky;top:14px;display:grid;gap:12px}
+.letter{background:#fffaf2;color:#3b2a20;border-radius:14px;padding:20px;box-shadow:0 6px 22px rgba(80,30,40,.12);font-family:var(--display);font-weight:400;display:grid;gap:10px}
+.letter .to{font-size:18px}
+.letter .msg{white-space:pre-wrap;font-family:var(--body);font-size:16px;min-height:60px}
+.letter .from{text-align:right}
+.song{display:flex;gap:10px;align-items:center;background:#f6e7ea;border-radius:10px;padding:8px 10px;font-family:var(--body);font-size:14px}
+.song i{width:34px;height:34px;border-radius:8px;background:var(--accent);color:#fff;display:grid;place-items:center;font-style:normal}
+canvas{width:100%;max-width:220px;height:auto;display:block;margin:0 auto;border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.15)}
+.total{display:flex;justify-content:space-between;font-family:var(--display);font-size:18px;font-variant-numeric:tabular-nums}
+.dlg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:16px;z-index:20}
+.dlg.open{display:flex}
+.dlg .box{background:var(--surface);border-radius:18px;padding:22px;width:100%;max-width:400px;display:grid;gap:12px;max-height:92vh;overflow:auto}
+.qr{background:#fff;border-radius:10px;padding:8px;width:180px;margin:0 auto}
+.qr svg{width:100%;height:auto;display:block}
+.link{font-family:monospace;font-size:13px;background:var(--bg);border-radius:8px;padding:8px;word-break:break-all}
+footer{color:var(--muted);font-size:14px;padding:26px 0 34px;border-top:1px solid var(--line);margin-top:30px}
+[hidden]{display:none !important}
+</style>
+</head>
+<body>
+<header><div class="wrap"><div class="logo">Hugbox</div>
+<nav><a href="#shop">ช่อดอกไม้</a><a href="#make">ทำของขวัญออนไลน์</a><a href="#how">วิธีสั่ง</a></nav></div></header>
+
+<main class="wrap">
+  <section class="hero">
+    <h1>ส่งความรู้สึกถึงคนพิเศษ ทั้งของจริงและเซอร์ไพรส์ออนไลน์</h1>
+    <p>สั่งช่อดอกไม้ส่งถึงบ้าน หรือทำของขวัญออนไลน์ด้วยตัวเอง: เขียนจดหมาย แนบเพลง ใส่รูปโฟโต้บูธ แล้วส่งเป็นลิงก์ให้เขาเปิดดู (ร้านและสินค้าเป็นตัวอย่าง)</p>
+  </section>
+
+  <h2 class="sec" id="shop">ช่อดอกไม้และของขวัญ</h2>
+  <div class="grid" id="grid"></div>
+
+  <h2 class="sec" id="make">ทำของขวัญออนไลน์</h2>
+  <div class="builder">
+    <form class="panel" id="form" novalidate>
+      <div class="two">
+        <label for="to">ถึง<input type="text" id="to" value="น้องมายด์"></label>
+        <label for="from">จาก<input type="text" id="from" value="พี่ต้น"></label>
+      </div>
+      <label for="msg">จดหมาย<textarea id="msg">สุขสันต์วันเกิดนะ ขอให้ปีนี้เป็นปีที่ดีที่สุด ยิ้มเยอะๆ แบบในรูปพวกนี้ทุกวันเลย</textarea></label>
+      <div><span class="small" style="font-weight:600;color:var(--ink)">ธีมกระดาษ</span>
+        <div class="opts" id="themes"></div></div>
+      <label for="song">เพลงที่อยากส่ง<input type="text" id="song" value="เพลงโปรดของเรา — ศิลปินในใจ"></label>
+      <label for="songUrl">ลิงก์เพลง (YouTube / Spotify)<input type="url" id="songUrl" placeholder="https://..."></label>
+      <label for="photos">รูปโฟโต้บูธ (เลือกได้สูงสุด 4 รูป)<input type="file" id="photos" accept="image/*" multiple></label>
+      <p class="small">ยังไม่เลือกรูปจะแสดงกรอบตัวอย่าง ระบบจริงลูกค้ากดถ่ายจากกล้องมือถือได้ทันที</p>
+      <div class="two">
+        <label for="when">วันที่ให้ลิงก์เปิดได้<input type="date" id="when"></label>
+        <label for="addFlower">แนบช่อดอกไม้จริง<select id="addFlower"></select></label>
+      </div>
+      <div class="total"><span>รวม</span><span id="total"></span></div>
+      <button class="btn" type="submit">สั่งและรับลิงก์ของขวัญ</button>
+    </form>
+
+    <aside class="preview" aria-label="ตัวอย่างของขวัญ">
+      <div class="letter" id="letter">
+        <div class="to" id="pTo"></div>
+        <div class="msg" id="pMsg"></div>
+        <div class="song"><i aria-hidden="true">♪</i><span id="pSong"></span></div>
+        <div class="from" id="pFrom"></div>
+      </div>
+      <canvas id="strip" width="300" height="900" aria-label="โฟโต้บูธ"></canvas>
+      <button class="btn ghost" type="button" id="dl">บันทึกรูปโฟโต้บูธ</button>
+    </aside>
+  </div>
+
+  <h2 class="sec" id="how">วิธีสั่ง</h2>
+  <div class="grid">
+    <div class="card"><h3>1. เลือกของขวัญ</h3><p>ช่อดอกไม้ส่งถึงบ้าน หรือทำของขวัญออนไลน์</p></div>
+    <div class="card"><h3>2. จ่ายผ่าน QR</h3><p>สแกนพร้อมเพย์ ระบบยืนยันออร์เดอร์อัตโนมัติ</p></div>
+    <div class="card"><h3>3. ส่งลิงก์ให้เขา</h3><p>ตั้งวันเปิดได้ เช่น เที่ยงคืนวันเกิดพอดี</p></div>
+  </div>
+  <footer>เว็บไซต์ตัวอย่าง (เดโม) ร้านและสินค้าเป็นข้อมูลสมมติ · ออกแบบและพัฒนาโดย <a href="/" style="color:inherit">thailinebot.com</a></footer>
+</main>
+
+<div class="dlg" id="dlg" role="dialog" aria-modal="true" aria-labelledby="dt">
+  <div class="box">
+    <div id="s1"><h2 id="dt">ชำระเงิน</h2>
+      <div class="total" style="margin:10px 0"><span id="dItem"></span><span id="dAmt"></span></div>
+      <div class="qr" id="qr" aria-label="QR ตัวอย่าง"></div>
+      <p class="small" style="text-align:center;margin:8px 0">QR ตัวอย่าง สแกนจ่ายไม่ได้</p>
+      <button class="btn" type="button" id="paid" style="width:100%">จำลอง: จ่ายเงินสำเร็จ</button>
+    </div>
+    <div id="s2" hidden><h2>สั่งเรียบร้อย 💐</h2>
+      <p class="small" id="dDone"></p>
+      <div class="link" id="giftLink"></div>
+      <p class="small">ระบบจริงจะสร้างหน้าของขวัญเฉพาะคนนี้ ส่งลิงก์ทาง LINE ได้ และแจ้งเตือนร้านเมื่อมีออร์เดอร์ช่อดอกไม้</p>
+    </div>
+    <button class="btn ghost" type="button" id="close">ปิด</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const baht=n=>n.toLocaleString("th-TH")+" บาท";
+const items=[
+ {id:"rose",name:"ช่อกุหลาบแดง 12 ดอก",desc:"ส่งในเมือง ภายในวัน",price:890,c:["#c0263f","#e04a64"]},
+ {id:"tulip",name:"ช่อทิวลิปพาสเทล",desc:"สั่งล่วงหน้า 1 วัน",price:1290,c:["#f2a7c0","#f7d36b"]},
+ {id:"sun",name:"ช่อทานตะวันให้กำลังใจ",desc:"ส่งในเมือง ภายในวัน",price:590,c:["#f2b51f","#e08a12"]},
+ {id:"money",name:"ช่อธนบัตร (ใส่เงินเอง)",desc:"ค่าจัดช่อ ไม่รวมธนบัตร",price:450,c:["#3f8a5a","#9bd0a8"]},
+];
+const ONLINE=99;
+const themes={cream:["#fffaf2","#3b2a20"],pink:["#ffe6ee","#5a1c30"],night:["#1f2440","#f3eefc"]};
+let theme="cream",photos=[];
+function flowerSvg(c){let s="";for(let i=0;i<7;i++){const x=40+((i*37)%120),y=30+((i*23)%40);s+=`<circle cx="${x+20}" cy="${y}" r="16" fill="${c[i%2]}"/>`}
+ return `<svg viewBox="0 0 200 120" aria-hidden="true"><path d="M70 70 L100 118 L130 70Z" fill="#e9d9c8"/><path d="M100 70 L100 118" stroke="#4f7a5a" stroke-width="3"/>${s}</svg>`}
+$("grid").innerHTML=items.map(p=>`<article class="card">${flowerSvg(p.c)}<h3>${p.name}</h3><p>${p.desc}</p><div class="price">${baht(p.price)}</div><button class="btn" type="button" data-buy="${p.id}">สั่งช่อนี้</button></article>`).join("");
+$("addFlower").innerHTML=`<option value="">ไม่แนบ (ออนไลน์อย่างเดียว)</option>`+items.map(p=>`<option value="${p.id}">${p.name} +${baht(p.price)}</option>`).join("");
+$("themes").innerHTML=Object.keys(themes).map(k=>`<button type="button" data-th="${k}" aria-pressed="${k===theme}">${{cream:"ครีม",pink:"ชมพู",night:"กลางคืน"}[k]}</button>`).join("");
+document.querySelectorAll("[data-th]").forEach(b=>b.onclick=()=>{theme=b.dataset.th;document.querySelectorAll("[data-th]").forEach(x=>x.setAttribute("aria-pressed",x===b));render()});
+const d=new Date();d.setDate(d.getDate()+1);$("when").value=d.toISOString().slice(0,10);
+function total(){const f=items.find(p=>p.id===$("addFlower").value);return ONLINE+(f?f.price:0)}
+function render(){
+ const [bg,fg]=themes[theme];const L=$("letter");L.style.background=bg;L.style.color=fg;
+ $("pTo").textContent="ถึง "+($("to").value||"…");$("pMsg").textContent=$("msg").value;
+ $("pFrom").textContent="จาก "+($("from").value||"…");$("pSong").textContent=$("song").value||"ยังไม่ได้เลือกเพลง";
+ $("total").textContent=baht(total());drawStrip();
+}
+function drawStrip(){
+ const c=$("strip"),x=c.getContext("2d"),[bg,fg]=themes[theme];
+ x.fillStyle=theme==="night"?"#1f2440":"#ffffff";x.fillRect(0,0,300,900);
+ for(let i=0;i<4;i++){const y=20+i*200,w=260,h=180;
+  if(photos[i]){const im=photos[i],s=Math.max(w/im.width,h/im.height),sw=w/s,sh=h/s;x.drawImage(im,(im.width-sw)/2,(im.height-sh)/2,sw,sh,20,y,w,h)}
+  else{x.fillStyle=["#f7c6d4","#f9e1a8","#c9e4cf","#cfd8f5"][i];x.fillRect(20,y,w,h);x.fillStyle="rgba(0,0,0,.25)";x.font="500 18px Mitr, sans-serif";x.textAlign="center";x.fillText("รูปที่ "+(i+1),150,y+h/2+6)}}
+ x.fillStyle=fg==="#3b2a20"?"#c2416b":fg;x.font="500 22px Mitr, sans-serif";x.textAlign="center";
+ x.fillText(($("to").value||"")+" ♡",150,848);x.font="14px Sarabun, sans-serif";x.fillStyle="#8a7a80";x.fillText(new Date($("when").value||Date.now()).toLocaleDateString("th-TH",{dateStyle:"medium"}),150,876);
+}
+["to","from","msg","song","when","addFlower"].forEach(i=>$(i).addEventListener("input",render));
+$("photos").onchange=e=>{photos=[];const fs=[...e.target.files].slice(0,4);let n=0;if(!fs.length){render();return}
+ fs.forEach((f,i)=>{const im=new Image();im.onload=()=>{photos[i]=im;if(++n===fs.length)render()};im.src=URL.createObjectURL(f)})};
+$("dl").onclick=()=>{try{const a=document.createElement("a");a.href=$("strip").toDataURL("image/png");a.download="photobooth.png";a.click()}catch(_){}};
+let cur=null;
+function pay(name,amt){cur={name,amt};$("dItem").textContent=name;$("dAmt").textContent=baht(amt);
+ try{const q=qrcode(0,"M");q.addData("DEMO ONLY HUGBOX "+amt);q.make();$("qr").innerHTML=q.createSvgTag({cellSize:5,margin:2,scalable:true})}catch(_){$("qr").textContent="QR"}
+ $("s1").hidden=false;$("s2").hidden=true;$("dlg").classList.add("open")}
+document.querySelectorAll("[data-buy]").forEach(b=>b.onclick=()=>{const p=items.find(x=>x.id===b.dataset.buy);pay(p.name,p.price)});
+$("form").onsubmit=e=>{e.preventDefault();const f=items.find(p=>p.id===$("addFlower").value);pay("ของขวัญออนไลน์"+(f?" + "+f.name:""),total())};
+$("paid").onclick=()=>{const code=Math.random().toString(36).slice(2,8);
+ $("dDone").textContent=`${cur.name} · ชำระ ${baht(cur.amt)} · ลิงก์เปิดได้ตั้งแต่ ${new Date($("when").value).toLocaleDateString("th-TH",{dateStyle:"long"})}`;
+ $("giftLink").textContent="hugbox.shop/g/"+code;$("s1").hidden=true;$("s2").hidden=false};
+$("close").onclick=()=>$("dlg").classList.remove("open");
+render();
+</script>
+</body>
+</html>

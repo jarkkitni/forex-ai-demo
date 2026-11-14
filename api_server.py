@@ -763,6 +763,18 @@ def digital_shop_demo():
     return resp
 
 
+@app.route("/giftshop")
+def gift_shop_demo():
+    """Hugbox — เดโมเว็บร้านของขวัญ: ช่อดอกไม้ + ทำของขวัญออนไลน์ (จดหมาย เพลง โฟโต้บูธ) ส่งเป็นลิงก์ (14 พ.ย. 2026)
+    ทำงานฝั่งเบราว์เซอร์ล้วน ไม่มี backend — ร้าน/สินค้าสมมติ, QR เป็นข้อความเดโม สแกนจ่ายไม่ได้"""
+    from flask import send_from_directory
+    _track_visit()
+    resp = send_from_directory(
+        os.path.join(os.path.dirname(__file__), "static", "works"), "giftshop.html")
+    resp.headers["Cache-Control"] = "no-cache, must-revalidate"
+    return resp
+
+
 @app.route("/shop")
 def shop_demo_shortlink():
     """ทางลัดสำหรับใช้ในรูปโปรโมท/โพสต์: thailinebot.com/shop
