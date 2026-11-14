@@ -1,0 +1,59 @@
+<p>LINE Notify เคยเป็นวิธีที่ง่ายที่สุดในการส่งแจ้งเตือนเข้า LINE ตัวเอง แค่ขอ token แล้วยิง HTTP ครั้งเดียว
+แต่ LINE <strong>ปิดบริการ LINE Notify ไปแล้วตั้งแต่ 31 มีนาคม 2025</strong> ระบบเก่าที่ยังเรียกใช้อยู่จึงส่งไม่ออกทั้งหมด
+บทความนี้บอกวิธีย้ายไปใช้ Messaging API แทน และเรื่องที่ต่างไปจากเดิมที่ต้องรู้ก่อนย้าย</p>
+
+<h2>อาการของระบบที่ยังใช้ LINE Notify</h2>
+<ul>
+<li>แจ้งเตือนออเดอร์ / แจ้งเตือนเซิร์ฟเวอร์ล่ม / แจ้งเตือนจากกล้องวงจรปิด เงียบไปเฉยๆ</li>
+<li>ถ้าระบบไม่ได้เช็คผลตอบกลับ จะไม่มีใครรู้เลยว่าส่งไม่ออก (เรื่องนี้อันตราย ดู <a href="/blog/silent-failure-api-key-expiry">ระบบตายเงียบ</a>)</li>
+</ul>
+
+<h2>ตัวแทน: LINE Official Account + Messaging API</h2>
+<p>วิธีที่ LINE แนะนำคือสร้าง LINE Official Account (บัญชีฟรีก็ได้) เปิด Messaging API แล้วให้บอทเป็นคนส่งข้อความหาคุณ</p>
+<ol>
+<li>สร้าง LINE OA และเปิดใช้ Messaging API ใน LINE Official Account Manager</li>
+<li>เข้า LINE Developers Console → channel ของบอท → ออก <strong>Channel access token</strong></li>
+<li>เพิ่มบอทเป็นเพื่อนด้วยบัญชี LINE ของคุณเอง (หรือเชิญเข้ากลุ่มที่ต้องการให้แจ้งเตือน)</li>
+<li>หา <strong>User ID</strong> ของคุณ (หรือ Group ID ของกลุ่ม) เพื่อใช้เป็นปลายทาง — อย่าสับสนกับ Basic ID ของบอท ดู <a href="/blog/line-user-id-vs-basic-id">User ID กับ Basic ID ต่างกันยังไง</a></li>
+<li>ส่งข้อความด้วย push message</li>
+</ol>
+
+<h2>โค้ดเทียบ: ก่อนและหลัง</h2>
+<p>แบบเดิม (LINE Notify ใช้ไม่ได้แล้ว)</p>
+<pre><code>requests.post("https://notify-api.line.me/api/notify",
+    headers={"Authorization": f"Bearer {NOTIFY_TOKEN}"},
+    data={"message": "มีออเดอร์ใหม่"})</code></pre>
+<p>แบบใหม่ (Messaging API push)</p>
+<pre><code>import os, requests
+
+def line_push(text: str) -&gt; None:
+    r = requests.post(
+        "https://api.line.me/v2/bot/message/push",
+        headers={"Authorization": f"Bearer {os.environ['LINE_CHANNEL_TOKEN']}"},
+        json={"to": os.environ["LINE_ADMIN_USER_ID"],
+              "messages": [{"type": "text", "text": text[:5000]}]},
+        timeout=10,
+    )
+    r.raise_for_status()   # ส่งไม่ออกต้องรู้ อย่าปล่อยเงียบ
+
+line_push("มีออเดอร์ใหม่ #1024 ยอด 1,250 บาท")</code></pre>
+<p>ข้อความ text หนึ่งข้อความยาวได้ไม่เกิน 5,000 ตัวอักษร โค้ดข้างบนจึงตัดไว้ก่อน</p>
+<p>เก็บ token และ User ID ไว้ใน environment variable เสมอ อย่าเขียนลงในโค้ดตรงๆ (ดู <a href="/blog/keep-secrets-out-of-git">กัน API key หลุดขึ้น GitHub</a>)</p>
+
+<h2>สิ่งที่ต่างจาก LINE Notify</h2>
+<ul>
+<li><strong>มีโควตาข้อความ</strong> — push message นับโควตารายเดือนของ LINE OA แพ็กเกจฟรีส่งได้จำกัด ถ้าแจ้งเตือนถี่ต้องคิดเรื่องนี้ (รายละเอียดใน <a href="/blog/line-oa-message-quota">โควตา LINE OA</a>)</li>
+<li><strong>ผู้รับต้องเป็นเพื่อนกับบอท</strong> — ถ้าบล็อกบอท ข้อความจะไม่ถึง</li>
+<li><strong>ส่งเข้ากลุ่มได้</strong> — เชิญบอทเข้ากลุ่ม แล้วใช้ Group ID เป็นปลายทาง (Group ID ได้มาจาก webhook event ตอนบอทเข้ากลุ่มหรือมีคนพิมพ์ในกลุ่ม)</li>
+<li><strong>ส่งข้อความสวยขึ้นได้</strong> — ใช้ Flex Message ทำการ์ดแจ้งเตือนที่มีปุ่มกดได้ เช่น ปุ่ม "ดูออเดอร์"</li>
+</ul>
+
+<h2>ประหยัดโควตา: รวบแจ้งเตือน</h2>
+<p>ถ้าระบบเดิมยิงแจ้งเตือนทุกเหตุการณ์ เช่น ทุกออเดอร์ ทุก error ย้ายมาแล้วโควตาหมดเร็ว ทางแก้ที่ใช้บ่อย</p>
+<ul>
+<li>แจ้งทันทีเฉพาะเรื่องด่วน เรื่องที่รอได้ให้รวบเป็นสรุปรายชั่วโมงหรือรายวัน</li>
+<li>error เดิมซ้ำๆ แจ้งครั้งเดียว แล้วรอ 30 นาทีก่อนแจ้งซ้ำ</li>
+<li>แจ้งเตือนที่ไม่ต้องอ่านบนมือถือ ย้ายไปอีเมลหรือ Discord webhook แทน</li>
+</ul>
+
+<p>ถ้าใช้ n8n อยู่ ใช้ HTTP Request node ยิง endpoint เดียวกันนี้ได้เลย ไม่ต้องลงอะไรเพิ่ม (ดู <a href="/blog/n8n-ai-caption-line-approval">n8n ส่งข้อความเข้า LINE</a>)</p>
