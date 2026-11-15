@@ -2977,11 +2977,36 @@ def seo_landing(slug):
 SITE_UPDATED = "2026-08-20"
 
 
+# ---- 301 โดเมนเก่า → โดเมนหลัก (15 พ.ย. 2026 — ผลตรวจ QE ก่อน AdSense: เว็บซ้ำ 2 โดเมน) ----
+# ย้ายเฉพาะ "หน้าเนื้อหาสาธารณะ" ที่ Google index (GET/HEAD เท่านั้น) — ของที่ยังผูกกับโดเมนเก่าห้ามแตะ:
+#   webhook Meta/LINE (POST) · /api/* (pg_cron ยิง hunter) · /monitor (PWA ติดตั้งแล้ว) · /chatapp (TWA)
+#   ไฟล์ยืนยัน GSC · /.well-known · /beauty /portfolio และลิงก์ที่ส่งลูกค้า
+#   /privacy /terms /data-deletion (กรอกไว้ใน Meta App — มี canonical ชี้โดเมนหลักแล้ว)
+# BASE_URL ยังเป็นโดเมนเก่า (เช่น รันในเครื่อง/ไม่ตั้ง env) = ปิดตัวเองอัตโนมัติ
+_OLD_HOST = "forex-ai-demo.onrender.com"
+_MOVED_EXACT = {"/", "/blog", "/about", "/contact", "/botkit", "/chatmaker/"}
+
+
+@app.before_request
+def _redirect_old_host():
+    if request.method not in ("GET", "HEAD"):
+        return None
+    if request.host.split(":")[0].lower() != _OLD_HOST or BASE_HOST.lower() == _OLD_HOST:
+        return None
+    p = request.path
+    if p in _MOVED_EXACT or p.startswith("/blog/") or p.lstrip("/") in SEO_PAGES:
+        qs = request.query_string.decode("utf-8", "ignore")
+        return redirect(f"{BASE_URL}{p}" + (f"?{qs}" if qs else ""), code=301)
+    return None
+
+
 @app.route("/sitemap.xml")
 def sitemap():
     # "/botkit" ไม่อยู่ในนี้แล้ว — มัน 301 มา "/" ซึ่งมีอยู่แล้ว (กัน duplicate content)
     # /demo/* เป็นหน้าเดโม (noindex) — ไม่ใส่ใน sitemap กัน thin/duplicate
-    urls = [("/", SITE_UPDATED), ("/chatmaker/", SITE_UPDATED)] + [
+    # /chatmaker/ ถอดออก 15 พ.ย. 2026 — เป็นหน้าเครื่องมือเต็มจอ ข้อความน้อย (thin) ยังเปิด/ลิงก์ได้ตามเดิม
+    # /privacy /terms ใส่เพิ่ม 15 พ.ย. 2026 — หน้านโยบายที่ AdSense ตรวจ
+    urls = [("/", SITE_UPDATED), ("/privacy", SITE_UPDATED), ("/terms", SITE_UPDATED)] + [
         (f"/{k}", v.get("updated", SITE_UPDATED)) for k, v in SEO_PAGES.items()
     ]
     # ส่วนบทความ (24 ต.ค. 2026) — /botkit เข้า sitemap เฉพาะตอนที่มันเป็นหน้าจริง (HOME_MODE=blog)
@@ -4234,12 +4259,21 @@ def ec_order_status():
     return (r.text or "{}", r.status_code, {"Content-Type": "application/json"})
 
 
+def _policy_html(fname: str, path: str) -> str:
+    """หน้านโยบาย + canonical + แถบเมนูเว็บ (15 พ.ย. 2026 — ผลตรวจ QE ก่อน AdSense)
+    เติมตอนเสิร์ฟ ไม่แตะเนื้อหาไฟล์ — ข้อความในไฟล์คือฉบับที่ส่ง Meta App Review ไปแล้ว"""
+    p = os.path.join(os.path.dirname(__file__), fname)
+    with open(p, "r", encoding="utf-8") as f:
+        html = f.read()
+    if 'rel="canonical"' not in html:
+        html = html.replace("</head>", f'<link rel="canonical" href="{BASE_URL}{path}">\n</head>', 1)
+    return html.replace("<body>", "<body>" + blog.site_header_html(""), 1)
+
+
 @app.route("/privacy")
 def privacy_page():
     """Privacy Policy — จำเป็นสำหรับ Meta App Review (ห้ามลบ)"""
-    p = os.path.join(os.path.dirname(__file__), "privacy.html")
-    with open(p, "r", encoding="utf-8") as f:
-        return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+    return _policy_html("privacy.html", "/privacy"), 200, {"Content-Type": "text/html; charset=utf-8"}
 
 
 @app.route("/data-deletion")
@@ -4254,9 +4288,7 @@ def data_deletion_page():
 def terms_page():
     """Terms of Service — ช่อง "URL ข้อกำหนดของบริการ" ของ Meta App (24 ส.ค. 2026, ห้ามลบ)
     เดิมช่องนั้นชี้ไป https://www.facebook.com/ (ค่าดีฟอลต์ที่ Meta เติมมา) เพราะเรายังไม่มีหน้านี้"""
-    p = os.path.join(os.path.dirname(__file__), "terms.html")
-    with open(p, "r", encoding="utf-8") as f:
-        return f.read(), 200, {"Content-Type": "text/html; charset=utf-8"}
+    return _policy_html("terms.html", "/terms"), 200, {"Content-Type": "text/html; charset=utf-8"}
 
 
 @app.route("/portfolio")
