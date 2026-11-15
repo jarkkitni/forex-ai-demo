@@ -20,6 +20,7 @@ from __future__ import annotations
 import html as _html
 import json
 import os
+import re
 from datetime import date
 
 from flask import abort, request
@@ -100,84 +101,145 @@ def _adsense_tag() -> str:
             f'<meta name="google-adsense-account" content="{_html.escape(ADSENSE_CLIENT)}">\n')
 
 
+# ---- ช่องโฆษณาในบทความ (15 พ.ย. 2026) — ปิดไว้จนกว่า AdSense จะอนุมัติ ----
+# ตั้ง env BLOG_AD_SLOTS บน Render หลังสร้าง ad unit แล้ว เช่น "a=1234567890,b=2345678901,c=3456789012"
+#   a = ในบทความ หลังย่อหน้าแรก · b = กลางบทความ (เฉพาะบทความยาว) · c = Multiplex หลังกล่องผู้เขียน
+# ว่าง = ไม่แสดงอะไรเลย (หน้าเหมือนพรีวิวทุกอย่าง ไม่มีกรอบว่าง)
+def _ad_slots() -> dict:
+    raw = os.environ.get("BLOG_AD_SLOTS", "")
+    out = {}
+    for part in raw.split(","):
+        k, _, v = part.strip().partition("=")
+        if k.strip() in ("a", "b", "c") and v.strip().isdigit():
+            out[k.strip()] = v.strip()
+    return out
+
+
+def _ad(slot_key: str) -> str:
+    sid = _ad_slots().get(slot_key)
+    if not sid or not ADSENSE_CLIENT:
+        return ""
+    fmt = 'data-ad-format="autorelaxed"' if slot_key == "c" else 'data-ad-format="auto" data-full-width-responsive="true"'
+    return (f'<aside class="ad ad-{slot_key}" aria-label="โฆษณา"><span class="ad-tag">โฆษณา</span>'
+            f'<ins class="adsbygoogle" data-ad-client="{_html.escape(ADSENSE_CLIENT)}" data-ad-slot="{sid}" {fmt}></ins>'
+            '<script>(adsbygoogle=window.adsbygoogle||[]).push({});</script></aside>')
+
+
+def _wrap_tables(body_html: str) -> str:
+    """ตารางกว้างเลื่อนแนวนอนได้ในกรอบของมันเอง — หน้าไม่ล้นจอบนมือถือ"""
+    return re.sub(r"(<table\b.*?</table>)", r'<div class="tblwrap">\1</div>', body_html, flags=re.S)
+
+
+def _with_ads(body_html: str) -> str:
+    """แทรกช่อง a หลังย่อหน้าแรก และช่อง b ก่อน h2 ที่อยู่กลางบทความ (เฉพาะบทความยาว ข้อความเกิน ~5,000 ตัวอักษร)"""
+    a, b = _ad("a"), _ad("b")
+    if not a and not b:
+        return body_html
+    if a and "</p>" in body_html:
+        i = body_html.index("</p>") + 4
+        body_html = body_html[:i] + a + body_html[i:]
+    if b and len(re.sub(r"<[^>]+>", "", body_html)) > 5000:
+        h2s = [m.start() for m in re.finditer(r"<h2[ >]", body_html)]
+        if len(h2s) >= 3:
+            j = h2s[len(h2s) // 2]
+            body_html = body_html[:j] + b + body_html[j:]
+    return body_html
+
 CSS = """
-:root{--bg:#0a0f1c;--bg2:#0e1526;--card:#121b30;--line:#1f2b46;--fg:#e8eef9;--muted:#9fb0cf;
---soft:#c9d5ea;--ac:#22d3ee;--ac2:#00e47a;--ink:#04151a}
+/* Paper Notebook (15 พ.ย. 2026) — ชุดสีเดียวกับหน้า /botkit · โหมดมืดอัตโนมัติตามเครื่องผู้อ่าน
+   ระยะห่างตามเลข Fibonacci 5/8/13/21/34/55 · คอลัมน์บทความ 680px */
+:root{--bg:#F2F4EE;--bg2:#FBFCF8;--card:#FBFCF8;--line:#D9DED3;--fg:#0F2A20;--soft:#24392F;--muted:#5C6E64;
+--ac:#0B8A4E;--ac2:#0B9A57;--sun:#F0A00F;--sun-soft:#FFF1D3;--chip:#DCF2E5;--code-bg:#0F2A20;--code-fg:#E6F2EA;
+--inline-code:#E3EBE1;--svc:#0F2A20;--svc-fg:#E6F2EA;--hdr:rgba(242,244,238,.92);
+--f-display:'Bai Jamjuree','Noto Sans Thai',system-ui,sans-serif;
+--f-body:'IBM Plex Sans Thai Looped','Noto Sans Thai',system-ui,sans-serif;
+--f-mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#0E1713;--bg2:#15211B;--card:#15211B;--line:#26362E;--fg:#E6EFE9;
+--soft:#C9D6CF;--muted:#8FA298;--ac:#3DD68C;--ac2:#3DD68C;--sun:#F5B53A;--sun-soft:#2B2414;--chip:#1B2C23;
+--code-bg:#09110D;--code-fg:#D6E8DD;--inline-code:#1B2C23;--svc:#15211B;--svc-fg:#E6EFE9;--hdr:rgba(14,23,19,.92);color-scheme:dark}}
 *{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-text-size-adjust:100%}
-body{background:var(--bg);color:var(--fg);font-family:'Segoe UI',system-ui,-apple-system,Tahoma,'Noto Sans Thai',sans-serif;
-line-height:1.8;font-size:16px}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);line-height:1.8;font-size:16px;-webkit-font-smoothing:antialiased}
 a{color:var(--ac)}
-.top{border-bottom:1px solid var(--line);background:rgba(10,15,28,.92);position:sticky;top:0;z-index:5;backdrop-filter:blur(8px)}
-.top .in{max-width:1080px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
-.brand{font-weight:800;font-size:18px;color:#fff;text-decoration:none;letter-spacing:-.2px}
+:focus-visible{outline:3px solid var(--sun);outline-offset:2px;border-radius:4px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance}
+.top{border-bottom:1px solid var(--line);background:var(--hdr);position:sticky;top:0;z-index:5;backdrop-filter:blur(8px)}
+.top .in{max-width:1080px;margin:0 auto;padding:0 16px;min-height:55px;display:flex;align-items:center;gap:21px;flex-wrap:wrap}
+.brand{font-family:var(--f-display);font-weight:700;font-size:19px;color:var(--fg);text-decoration:none}
 .brand span{color:var(--ac2)}
-.nav{display:flex;gap:4px;flex-wrap:wrap;margin-left:auto}
-.nav a{color:var(--soft);text-decoration:none;font-size:14.5px;padding:6px 10px;border-radius:8px}
-.nav a:hover,.nav a.on{background:var(--card);color:#fff}
-.wrap{max-width:1080px;margin:0 auto;padding:36px 16px 64px}
-.narrow{max-width:740px}
-.hero h1{font-size:clamp(26px,5vw,40px);line-height:1.3;font-weight:800;letter-spacing:-.4px;margin-bottom:12px}
-.hero h1 em{font-style:normal;color:var(--ac2)}
-.hero p{color:var(--muted);font-size:17px;max-width:640px}
-.chips{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0 8px}
-.chip{border:1px solid var(--line);background:var(--bg2);color:var(--soft);font-size:13.5px;padding:5px 12px;
-border-radius:999px;text-decoration:none}
-.chip:hover,.chip.on{border-color:var(--ac);color:#fff}
-h2.sec{font-size:20px;margin:40px 0 16px;color:#fff}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
-.post{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;text-decoration:none;
+.nav{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.nav a{color:var(--muted);text-decoration:none;font-size:15px;padding:6px 10px;border-radius:8px}
+.nav a:hover{color:var(--fg)}
+.nav a.on{color:var(--fg);font-weight:600;box-shadow:inset 0 -2px 0 var(--ac2);border-radius:0}
+.wrap{max-width:1080px;margin:0 auto;padding:34px 16px 89px}
+.narrow{max-width:712px}
+.hero h1{font-size:clamp(30px,5.4vw,46px);line-height:1.3;font-weight:700;letter-spacing:-.01em;margin-bottom:13px}
+.hero h1 em{font-style:normal;background:linear-gradient(transparent 62%,var(--sun-soft) 62%);padding:0 .06em}
+.hero p{color:var(--muted);font-size:17.5px;max-width:640px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:21px 0 8px}
+.chip{border:1px solid var(--line);background:var(--card);color:var(--soft);font-size:14px;padding:5px 13px;border-radius:999px;text-decoration:none}
+.chip:hover{border-color:var(--fg)}
+.chip.on{border-color:var(--fg);color:var(--fg);box-shadow:inset 0 0 0 1px var(--fg);font-weight:600}
+h2.sec{font-size:21px;margin:55px 0 21px;color:var(--fg)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:13px}
+.post{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:21px;text-decoration:none;
 color:var(--fg);display:flex;flex-direction:column;gap:8px;transition:border-color .15s,transform .15s}
-.post:hover{border-color:var(--ac);transform:translateY(-2px)}
-.post .cat{font-size:12.5px;color:var(--ac);font-weight:600}
-.post h3{font-size:17.5px;line-height:1.5;color:#fff}
+.post:hover{border-color:var(--fg);transform:translateY(-2px)}
+.post .cat{font:500 12.5px var(--f-mono);color:var(--ac)}
+.post h3{font-size:18px;line-height:1.45;font-weight:600;color:var(--fg)}
 .post p{font-size:14.5px;color:var(--muted);line-height:1.65}
-.post .meta{font-size:12.5px;color:#71819f;margin-top:auto}
-.tools{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
-.tool{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:18px;text-decoration:none;color:var(--fg)}
-.tool:hover{border-color:var(--ac2)}
-.tool b{display:block;color:#fff;margin-bottom:4px}
+.post .meta{font:12.5px var(--f-mono);color:var(--muted);margin-top:auto}
+.tools{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:13px}
+.tool{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:21px;text-decoration:none;color:var(--fg)}
+.tool:hover{border-color:var(--fg)}
+.tool b{display:block;color:var(--fg);margin-bottom:5px;font-family:var(--f-display);font-weight:600}
 .tool span{font-size:14px;color:var(--muted)}
-.tool .wake{display:block;font-style:normal;font-size:12.5px;color:#fbbf24;margin-top:8px}
-.svc{margin-top:40px;background:linear-gradient(135deg,#0f2233,#111a30);border:1px solid var(--line);border-radius:16px;padding:22px}
-.svc b{color:#fff}
-.svc p{color:var(--muted);font-size:15px;margin:6px 0 12px}
-.btn{display:inline-block;background:var(--ac2);color:#03130b;font-weight:700;text-decoration:none;
-padding:10px 18px;border-radius:10px;font-size:15px}
-/* article */
-.crumb{font-size:13.5px;color:#71819f;margin-bottom:18px}
-.crumb a{color:#9fb0cf;text-decoration:none}
-article h1{font-size:clamp(25px,4.6vw,35px);line-height:1.38;font-weight:800;letter-spacing:-.3px;margin-bottom:12px}
-.byline{color:#8394b4;font-size:14px;margin-bottom:26px;padding-bottom:18px;border-bottom:1px solid var(--line)}
+.tool .wake{display:block;font-style:normal;font-size:12.5px;color:var(--muted);margin-top:8px}
+.svc{margin-top:55px;background:var(--svc);color:var(--svc-fg);border-radius:21px;padding:34px 21px}
+.svc b{font-family:var(--f-display);font-size:21px;color:var(--svc-fg)}
+.svc p{color:var(--svc-fg);opacity:.8;font-size:15px;margin:8px 0 21px}
+.btn{display:inline-block;background:var(--sun);color:#0F2A20;font-weight:600;text-decoration:none;padding:11px 21px;border-radius:999px;font-size:15px}
+.crumb{font:13px var(--f-mono);color:var(--muted);margin-bottom:13px}
+.crumb a{color:var(--muted);text-decoration:none}
+.crumb a:last-child{background:var(--chip);color:var(--ac);border-radius:999px;padding:2px 10px;margin-left:4px}
+article h1{font-size:clamp(28px,5vw,38px);line-height:1.35;font-weight:700;letter-spacing:-.01em;margin-bottom:13px}
+.byline{font:13px var(--f-mono);color:var(--muted);margin-bottom:34px;padding-bottom:21px;border-bottom:1px solid var(--line)}
 .prose{font-size:17px;color:var(--soft)}
-.prose>*+*{margin-top:16px}
-.prose h2{font-size:22px;color:#fff;margin-top:38px;line-height:1.45}
-.prose h3{font-size:18.5px;color:#fff;margin-top:28px}
-.prose strong{color:#fff}
-.prose ul,.prose ol{padding-left:24px}
-.prose li+li{margin-top:6px}
-.prose code{background:#0b1222;border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:14.5px;
-font-family:Consolas,'SFMono-Regular',monospace;color:#d6e4ff;word-break:break-word}
-.prose pre{background:#0b1222;border:1px solid var(--line);border-radius:12px;padding:16px;overflow-x:auto;
-font-size:14px;line-height:1.6}
-.prose pre code{border:0;padding:0;background:none}
-.prose blockquote,.prose .note{border-left:3px solid var(--ac);background:var(--bg2);padding:12px 16px;
-border-radius:0 10px 10px 0;color:var(--soft)}
-.prose .warn{border-left-color:#fbbf24}
-.prose table{width:100%;border-collapse:collapse;font-size:15px;display:block;overflow-x:auto}
-.prose th,.prose td{border-bottom:1px solid var(--line);padding:10px;text-align:left;vertical-align:top}
-.prose th{color:#fff;font-size:14px}
-.toc{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:14px 18px;font-size:15px}
-.toc b{color:#fff}
-.related{margin-top:48px;padding-top:24px;border-top:1px solid var(--line)}
-.about-box{margin-top:36px;background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:18px;font-size:15px;color:var(--muted)}
-.about-box b{color:#fff}
-footer.site{border-top:1px solid var(--line);color:#71819f;font-size:13.5px;line-height:1.9}
-footer.site .in{max-width:1080px;margin:0 auto;padding:26px 16px 40px}
-footer.site a{color:#9fb0cf;text-decoration:none}
-footer.site a:hover{color:#fff}
+.prose>*+*{margin-top:21px}
+.prose h2{font-size:24px;line-height:1.35;color:var(--fg);margin-top:55px}
+.prose h3{font-size:19px;font-weight:600;line-height:1.4;color:var(--fg);margin-top:34px}
+.prose strong{color:var(--fg);font-weight:600}
+.prose ul,.prose ol{padding-left:1.3em}
+.prose li+li{margin-top:5px}
+.prose code{background:var(--inline-code);border-radius:5px;padding:1px 5px;font-size:14.5px;font-family:var(--f-mono);color:var(--fg);word-break:break-word}
+.prose pre{background:var(--code-bg);color:var(--code-fg);border-radius:13px;padding:21px;overflow-x:auto;font-size:13.5px;line-height:1.6}
+.prose pre code{background:none;padding:0;color:inherit;font-size:inherit}
+.prose blockquote,.prose .note{border-left:3px solid var(--ac2);background:var(--card);padding:13px 21px;border-radius:0 13px 13px 0;color:var(--soft)}
+.prose .warn{border-left-color:var(--sun);background:var(--sun-soft)}
+.prose table{width:100%;border-collapse:collapse;font-size:15px}
+.prose th,.prose td{border-bottom:1px solid var(--line);padding:8px 13px;text-align:left;vertical-align:top}
+.prose th{color:var(--fg);font-family:var(--f-display);font-weight:600;border-bottom:2px solid var(--fg)}
 .prose td code{white-space:nowrap;word-break:normal}
+.tblwrap{overflow-x:auto}
+.toc{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:13px 21px;font-size:15px}
+.toc b{color:var(--fg)}
+.related{margin-top:55px}
+.about-box{margin-top:55px;display:grid;grid-template-columns:auto 1fr;gap:13px;align-items:start;background:var(--card);
+border:1px solid var(--line);border-radius:13px;padding:21px;font-size:15px;color:var(--soft);line-height:1.7}
+.about-box .av{width:48px;height:48px;border-radius:50%;background:var(--fg);color:var(--bg);display:grid;place-items:center;font:700 20px var(--f-display)}
+.about-box b{display:block;color:var(--fg);font-family:var(--f-display);font-size:17px}
+.ad{margin:34px 0;text-align:center}
+.ad-tag{display:block;font:11px var(--f-mono);color:var(--muted);letter-spacing:.06em;margin-bottom:5px}
+.ad ins{display:block;min-height:280px}
+.ad.ad-c{margin-top:55px}
+@media (min-width:768px){.ad.ad-a ins{min-height:120px}}
+footer.site{background:#0F2A20;color:#B9C8C0;font-size:13.5px;line-height:1.9}
+footer.site .in{max-width:1080px;margin:0 auto;padding:34px 16px 55px}
+footer.site b{color:#fff!important}
+footer.site a{color:#fff;text-decoration:none}
+footer.site a:hover{color:#F0A00F}
 @media (max-width:560px){.top{position:static}.nav{margin-left:0;width:100%}.prose{font-size:16.5px}}
+@media (prefers-reduced-motion:reduce){.post{transition:none}.post:hover{transform:none}}
 """
 
 
@@ -236,7 +298,9 @@ def _page(*, title: str, desc: str, path: str, body: str, active: str = "",
 <meta name="description" content="{d}">
 <link rel="canonical" href="{url}">
 <meta name="robots" content="{robots}">
-<meta name="theme-color" content="#0a0f1c">
+<meta name="theme-color" content="#F2F4EE" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#0E1713" media="(prefers-color-scheme: dark)">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@700&family=IBM+Plex+Sans+Thai+Looped:wght@400;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <meta property="og:type" content="{og_type}"><meta property="og:locale" content="th_TH">
 <meta property="og:site_name" content="{SITE_NAME}"><meta property="og:title" content="{t}">
 <meta property="og:description" content="{d}"><meta property="og:url" content="{url}">
@@ -343,10 +407,11 @@ def post_page(slug: str) -> str:
 <div class="crumb"><a href="/blog">บทความ</a> › <a href="/blog?cat={p.get('category','')}">{_html.escape(cat)}</a></div>
 <article><h1>{_html.escape(p['title'])}</h1>
 <div class="byline">{byline}</div>
-<div class="prose">{body_html}</div></article>
-<div class="about-box"><b>เกี่ยวกับผู้เขียน</b> — {AUTHOR} นักพัฒนา LINE Bot และระบบ AI อัตโนมัติ
+<div class="prose">{_with_ads(_wrap_tables(body_html))}</div></article>
+<div class="about-box"><span class="av" aria-hidden="true">{AUTHOR[:1]}</span><div><b>{AUTHOR} · นักพัฒนา LINE Bot และระบบ AI อัตโนมัติ</b>
 อยู่เชียงใหม่ ทำระบบตอบแชทและจองคิวให้ร้านค้าจริง บทความในเว็บนี้มาจากงานที่ลงมือทำเอง
-<a href="/about">อ่านเพิ่ม</a></div>
+<a href="/about">อ่านเพิ่มเกี่ยวกับผู้เขียน →</a></div></div>
+{_ad("c")}
 <section class="related"><h2 class="sec" style="margin-top:0">อ่านต่อ</h2><div class="grid">{rel_html}</div></section>
 </main>"""
     robots = "noindex, nofollow" if p.get("draft") else "index, follow"
