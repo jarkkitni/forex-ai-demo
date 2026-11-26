@@ -3043,6 +3043,29 @@ def _stamp_source(resp):
     return resp
 
 
+# ---- noindex หน้าที่ไม่ใช่เนื้อหาหลักของเว็บ (26 พ.ย. 2026 — AdSense ปฏิเสธ "เนื้อหาคุณค่าต่ำ") ----
+# AdSense/Google ประเมินทั้งโดเมน: แอปไพ่ทาโรต์ เกม ร้านเดโม หน้าเสนองานลูกค้ารายเดียว = เนื้อหาบาง/นอกเรื่อง
+# หน้าเหล่านี้ยังเปิดและส่งลิงก์ให้ลูกค้าได้ตามเดิม แค่ไม่ให้ Google เก็บเข้าดัชนี
+# เนื้อหาหลักที่ต้อง index: / /blog* /about /contact /privacy /terms /botkit และหน้า SEO_PAGES
+_NOINDEX_PREFIXES = (
+    "/tarot", "/fourcrowns", "/routewise", "/moto", "/carrent", "/digishop", "/giftshop",
+    "/chatmaker", "/pitch/", "/posttoday", "/portfolio", "/opennest", "/beauty",
+    "/demo/", "/preview/", "/shop-admin/", "/chatapp", "/chat-demo", "/monitor",
+    "/hunter", "/morning-brief", "/data-deletion",
+)
+
+
+@app.after_request
+def _noindex_non_core(resp):
+    try:
+        p = request.path
+        if p.startswith(_NOINDEX_PREFIXES) and "X-Robots-Tag" not in resp.headers:
+            resp.headers["X-Robots-Tag"] = "noindex, follow"
+    except Exception:
+        pass
+    return resp
+
+
 # ---------- Auto-Execution: ลบออกแล้ว 22 ก.ค. 2026 ----------
 # /api/autotrade/tick, /api/autotrade/state, /demo/autotrade และโฟลเดอร์ auto_execution/
 # ถูกลบพร้อมฟีเจอร์ Forex ทั้งหมด (ความเสี่ยง ก.ล.ต.) — ห้ามเพิ่มกลับ
