@@ -212,6 +212,7 @@ article h1{font-size:clamp(28px,5vw,38px);line-height:1.35;font-weight:700;lette
 .prose ul,.prose ol{padding-left:1.3em}
 .prose li+li{margin-top:5px}
 .prose code{background:var(--inline-code);border-radius:5px;padding:1px 5px;font-size:14.5px;font-family:var(--f-mono);color:var(--fg);word-break:break-word}
+.prose figure{margin:28px 0}.prose figure img{display:block;width:100%;height:auto;border-radius:13px;border:1px solid rgba(0,0,0,.08)}.prose figcaption{margin-top:8px;font-size:13.5px;opacity:.7;text-align:center}
 .prose pre{background:var(--code-bg);color:var(--code-fg);border-radius:13px;padding:21px;overflow-x:auto;font-size:13.5px;line-height:1.6}
 .prose pre code{background:none;padding:0;color:inherit;font-size:inherit}
 .prose blockquote,.prose .note{border-left:3px solid var(--ac2);background:var(--card);padding:13px 21px;border-radius:0 13px 13px 0;color:var(--soft)}
